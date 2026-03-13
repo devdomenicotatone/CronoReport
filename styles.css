@@ -1263,6 +1263,13 @@ table tr:hover td {
     display: none;
 }
 
+/* Month section container (shown/hidden dynamically) */
+.qf-month-section {
+    display: none; /* hidden by default */
+    align-items: center;
+    gap: 0.5rem;
+}
+
 /* Chip base */
 .qf-chip {
     display: inline-flex;

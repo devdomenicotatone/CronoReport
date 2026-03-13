@@ -3,8 +3,11 @@
 // Quick filter state
 let activeQuickYear = null;  // null = tutti gli anni
 let activeQuickMonth = null; // null = tutti i mesi
+let availableMonthsByYear = {}; // { 2026: [1, 2, 3], 2025: [1, ..., 12] }
 
-// Funzione per caricare gli anni disponibili e popolare i chip
+const MONTH_NAMES_SHORT = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
+
+// Funzione per caricare gli anni e mesi disponibili e popolare i chip
 function loadAvailableYears() {
     return db.collection('timeLogs')
         .where('uid', '==', currentUser.uid)
@@ -12,15 +15,25 @@ function loadAvailableYears() {
         .orderBy('startTime', 'desc')
         .get()
         .then(snapshot => {
-            const yearsSet = new Set();
+            const yearMonthMap = {};
             snapshot.forEach(doc => {
                 const startTime = doc.data().startTime;
                 if (startTime) {
-                    yearsSet.add(startTime.toDate().getFullYear());
+                    const d = startTime.toDate();
+                    const year = d.getFullYear();
+                    const month = d.getMonth() + 1; // 1-12
+                    if (!yearMonthMap[year]) yearMonthMap[year] = new Set();
+                    yearMonthMap[year].add(month);
                 }
             });
-            const years = Array.from(yearsSet).sort((a, b) => b - a);
+            // Converti Sets in Arrays ordinati
+            availableMonthsByYear = {};
+            for (const year in yearMonthMap) {
+                availableMonthsByYear[year] = Array.from(yearMonthMap[year]).sort((a, b) => a - b);
+            }
+            const years = Object.keys(availableMonthsByYear).map(Number).sort((a, b) => b - a);
             populateYearChips(years);
+            updateQuickFilterBar();
             return years;
         })
         .catch(error => {
@@ -51,6 +64,40 @@ function populateYearChips(years) {
     });
 }
 
+// Popola i chip dei mesi in base all'anno selezionato (solo mesi con dati)
+function populateMonthChips(year) {
+    const container = document.getElementById('qf-month-chips');
+    const section = document.getElementById('qf-month-section');
+    if (!container || !section) return;
+
+    const months = availableMonthsByYear[year] || [];
+    if (months.length === 0) {
+        section.style.display = 'none';
+        return;
+    }
+
+    container.innerHTML = '';
+
+    // Chip "Tutti" per i mesi
+    const allBtn = document.createElement('button');
+    allBtn.className = 'qf-chip qf-chip-all' + (activeQuickMonth === null ? ' qf-chip-active' : '');
+    allBtn.dataset.month = 'all';
+    allBtn.textContent = 'Tutti';
+    container.appendChild(allBtn);
+
+    months.forEach(month => {
+        const btn = document.createElement('button');
+        btn.className = 'qf-chip' + (activeQuickMonth === month ? ' qf-chip-active' : '');
+        btn.dataset.month = month;
+        btn.textContent = MONTH_NAMES_SHORT[month - 1];
+        container.appendChild(btn);
+    });
+
+    // Mostra la sezione mesi con animazione
+    section.style.display = 'flex';
+    section.style.animation = 'qfSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1)';
+}
+
 // Aggiorna lo stato visivo dei chip nella Quick Filter Bar
 function updateQuickFilterBar() {
     // Aggiorna year chips
@@ -62,7 +109,17 @@ function updateQuickFilterBar() {
         chip.classList.toggle('qf-chip-active', isActive);
     });
 
-    // Aggiorna month chips
+    // Mostra/nascondi mesi in base all'anno
+    const section = document.getElementById('qf-month-section');
+    if (activeQuickYear === null) {
+        // Nessun anno selezionato: nascondi mesi
+        if (section) section.style.display = 'none';
+    } else {
+        // Anno selezionato: popola e mostra mesi con dati
+        populateMonthChips(activeQuickYear);
+    }
+
+    // Aggiorna month chips active state
     const monthChips = document.querySelectorAll('#qf-month-chips .qf-chip');
     monthChips.forEach(chip => {
         const val = chip.dataset.month;
