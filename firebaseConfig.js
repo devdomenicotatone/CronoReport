@@ -34,15 +34,19 @@ const DISCOVERY_DOCS = [
   
   // Funzione per inizializzare il client GAPI
   async function initializeGapiClient() {
-    await gapi.client.init({
-        apiKey: API_KEY,
-        discoveryDocs: DISCOVERY_DOCS,
-    });
-    gapiInited = true;
-    maybeEnableButtons();
-  
-    // Dispatch an event to notify that the Google API client is initialized
-    document.dispatchEvent(new Event('google-api-initialized'));
+    try {
+      await gapi.client.init({
+          apiKey: API_KEY,
+          discoveryDocs: DISCOVERY_DOCS,
+      });
+      gapiInited = true;
+      maybeEnableButtons();
+
+      // Dispatch an event to notify that the Google API client is initialized
+      document.dispatchEvent(new Event('google-api-initialized'));
+    } catch (error) {
+      console.warn('Google API client non inizializzato (API key o rete non disponibile):', error.result?.error?.message || error);
+    }
   }
   
   // Funzione chiamata quando la libreria GIS è caricata
@@ -110,7 +114,7 @@ const DISCOVERY_DOCS = [
         initializeGoogleApiClient(accessToken).then(() => {
             maybeEnableButtons();
         }).catch(error => {
-            console.error('Errore durante l\'inizializzazione del client Google API:', error);
+            console.warn('Google API non disponibile — i pulsanti export resteranno disabilitati');
         });
     }
   }

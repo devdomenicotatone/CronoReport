@@ -6,123 +6,116 @@ let companyLogoBase64 = ''; // Variabile per memorizzare il logo in base64
 
 // Template per la sezione Report con layout migliorato
 const reportTemplate = `
-<div id="report-section" class="container mt-5 custom-container">
-    <h2 class="mb-5 text-center text-uppercase font-weight-bold">
-        <i class="fas fa-file-alt mr-2"></i>Genera Report
-    </h2>
+<div id="report-section" class="max-w-6xl mx-auto px-4 py-6">
+    <div class="flex items-center gap-3 mb-8">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg">
+            <i class="fas fa-file-alt text-white text-lg"></i>
+        </div>
+        <h2 class="text-2xl font-bold text-surface-800">Genera Report</h2>
+    </div>
     <form id="report-form">
-        <div class="card mb-4 shadow-sm">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0"><i class="fas fa-file-alt mr-2"></i>Configurazione Report</h5>
+        <div class="cr-card mb-5 overflow-hidden">
+            <div class="px-5 py-3 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white">
+                <span class="font-semibold flex items-center gap-2"><i class="fas fa-file-alt"></i> Configurazione Report</span>
             </div>
-            <div class="card-body">
-                <div class="row">
+            <div class="p-5">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <!-- Colonna Sinistra -->
-                    <div class="col-md-6">
-                        <!-- Selezione della configurazione salvata -->
-                        <div class="form-group">
-                            <label for="saved-config-select" class="font-weight-bold">Configurazione Salvata:</label>
-                            <div class="input-group">
-                                <select id="saved-config-select" class="form-control">
+                    <div class="space-y-4">
+                        <div>
+                            <label for="saved-config-select" class="block text-sm font-semibold text-surface-600 mb-1">Configurazione Salvata</label>
+                            <div class="flex gap-2">
+                                <select id="saved-config-select" class="cr-input flex-1">
                                     <option value="">-- Seleziona una configurazione --</option>
                                 </select>
-                                <div class="input-group-append">
-                                    <button type="button" id="delete-config-btn" class="btn btn-danger" style="display: none;">
-                                        <i class="fas fa-trash-alt"></i>
-                                    </button>
-                                </div>
+                                <button type="button" id="delete-config-btn" class="cr-btn text-rose-400 hover:text-rose-600 hover:bg-rose-50" style="display: none;">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
                             </div>
                         </div>
-                        <!-- Campo per caricare il logo aziendale -->
-                        <div class="form-group">
-                            <label for="company-logo" class="font-weight-bold">Logo Aziendale:</label>
-                            <input type="file" id="company-logo" class="form-control-file" accept="image/*">
+                        <div>
+                            <label for="company-logo" class="block text-sm font-semibold text-surface-600 mb-1">Logo Aziendale</label>
+                            <input type="file" id="company-logo" class="cr-input text-sm file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-indigo-50 file:text-indigo-600 file:font-medium hover:file:bg-indigo-100" accept="image/*">
                             <div id="logo-preview-container" class="mt-2"></div>
                         </div>
-                        <div class="form-group">
-                            <label for="report-header" class="font-weight-bold">Intestazione del Report:</label>
-                            <input type="text" id="report-header" class="form-control" placeholder="Inserisci l'intestazione del report">
+                        <div>
+                            <label for="report-header" class="block text-sm font-semibold text-surface-600 mb-1">Intestazione del Report</label>
+                            <input type="text" id="report-header" class="cr-input" placeholder="Inserisci l'intestazione del report">
                         </div>
-                        <!-- Nome per salvare la configurazione -->
-                        <div class="form-group">
-                            <label for="config-name" class="font-weight-bold">Nome Configurazione (per salvare):</label>
-                            <input type="text" id="config-name" class="form-control" placeholder="Inserisci un nome per questa configurazione">
+                        <div>
+                            <label for="config-name" class="block text-sm font-semibold text-surface-600 mb-1">Nome Configurazione (per salvare)</label>
+                            <input type="text" id="config-name" class="cr-input" placeholder="Inserisci un nome per questa configurazione">
                         </div>
-                        <div class="form-group">
-                            <div class="form-check">
-                                <input type="checkbox" id="only-unreported" class="form-check-input" checked>
-                                <label for="only-unreported" class="form-check-label">Includi solo timer non reportati</label>
-                            </div>
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" id="only-unreported" class="w-4 h-4 text-indigo-600 rounded border-surface-300 focus:ring-indigo-500" checked>
+                            <label for="only-unreported" class="text-sm text-surface-600">Includi solo timer non reportati</label>
                         </div>
                     </div>
                     <!-- Colonna Destra -->
-                    <div class="col-md-6">
+                    <div class="space-y-4">
                         <!-- Selezione Intervallo di Date -->
-                        <div class="form-group">
-                            <label for="report-date-range" class="font-weight-bold">Seleziona Intervallo di Date:</label>
-                            <div class="input-group">
-                                <input type="date" id="start-date" class="form-control">
-                                <div class="input-group-prepend input-group-append">
-                                    <span class="input-group-text">a</span>
-                                </div>
-                                <input type="date" id="end-date" class="form-control">
+                        <div>
+                            <label for="report-date-range" class="block text-sm font-semibold text-surface-600 mb-1">Seleziona Intervallo di Date</label>
+                            <div class="flex items-center gap-2">
+                                <input type="date" id="start-date" class="cr-input flex-1">
+                                <span class="text-surface-400 text-sm font-medium">a</span>
+                                <input type="date" id="end-date" class="cr-input flex-1">
                             </div>
                         </div>
                         <!-- Filtri per cliente, sito e tipo di lavoro -->
-                        <div class="form-group">
-                            <label for="filter-client" class="font-weight-bold">Filtra per Cliente:</label>
-                            <select id="filter-client" class="form-control" required>
+                        <div>
+                            <label for="filter-client" class="block text-sm font-semibold text-surface-600 mb-1">Filtra per Cliente</label>
+                            <select id="filter-client" class="cr-input" required>
                             </select>
                         </div>
-                        <div class="form-group">
-                            <label for="filter-site" class="font-weight-bold">Filtra per Sito:</label>
-                            <select id="filter-site" class="form-control">
+                        <div>
+                            <label for="filter-site" class="block text-sm font-semibold text-surface-600 mb-1">Filtra per Sito</label>
+                            <select id="filter-site" class="cr-input">
                                 <option value="">Tutti i Siti</option>
                             </select>
                         </div>
-                        <div class="form-group">
-                            <label for="filter-worktype" class="font-weight-bold">Filtra per Tipo di Lavoro:</label>
-                            <select id="filter-worktype" class="form-control">
+                        <div>
+                            <label for="filter-worktype" class="block text-sm font-semibold text-surface-600 mb-1">Filtra per Tipo di Lavoro</label>
+                            <select id="filter-worktype" class="cr-input">
                                 <option value="">Tutti i Tipi di Lavoro</option>
                             </select>
                         </div>
-                        <!-- Opzione per includere la Tariffa Oraria -->
-                        <div class="form-group">
-                            <div class="form-check">
-                                <input type="checkbox" id="include-hourly-rate" class="form-check-input">
-                                <label for="include-hourly-rate" class="form-check-label">Includi Tariffa Oraria nel Report</label>
-                            </div>
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" id="include-hourly-rate" class="w-4 h-4 text-indigo-600 rounded border-surface-300 focus:ring-indigo-500">
+                            <label for="include-hourly-rate" class="text-sm text-surface-600">Includi Tariffa Oraria nel Report</label>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
         <!-- Pulsante per generare il report -->
-        <div class="text-right mb-4">
-            <button type="submit" class="btn btn-primary btn-lg"><i class="fas fa-file-alt mr-2"></i>Genera Report</button>
+        <div class="flex justify-end mb-4">
+            <button type="submit" class="cr-btn bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white font-semibold shadow-md px-6 py-2.5">
+                <i class="fas fa-file-alt mr-2"></i>Genera Report
+            </button>
         </div>
     </form>
 </div>
 
 <!-- Modal per visualizzare il report -->
-<div class="modal fade" id="reportModal" tabindex="-1" role="dialog" aria-labelledby="reportModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-scrollable modal-xl" role="document">
-    <div class="modal-content">
-      <div class="modal-header bg-info text-white">
-        <h5 class="modal-title" id="reportModalLabel">Report Generato</h5>
-        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Chiudi">
-          <span aria-hidden="true">&times;</span>
+<div class="modal fade" id="reportModal" tabindex="-1" role="dialog" aria-labelledby="reportModalLabel" aria-hidden="true" style="display:none;">
+  <div class="fixed inset-0 bg-black/50 flex items-start justify-center pt-10 px-4 z-50">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[85vh] overflow-y-auto">
+      <div class="px-5 py-3 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white flex justify-between items-center rounded-t-xl sticky top-0 z-10">
+        <span class="font-semibold flex items-center gap-2" id="reportModalLabel"><i class="fas fa-file-alt"></i> Report Generato</span>
+        <button type="button" class="text-white/80 hover:text-white text-xl" data-cr-dismiss="modal" aria-label="Chiudi">
+          <i class="fas fa-times"></i>
         </button>
       </div>
-      <div class="modal-body">
+      <div class="p-5">
         <div id="report-content" style="display: none;">
             <div id="report-header-display" class="text-center mb-4"></div>
-            <table class="table table-striped table-bordered">
-                <thead class="thead-dark"></thead>
-                <tbody id="report-table-body"></tbody>
+            <table class="w-full text-sm border-collapse">
+                <thead class="bg-surface-800 text-white text-xs uppercase"></thead>
+                <tbody id="report-table-body" class="divide-y divide-surface-100"></tbody>
             </table>
-            <table class="table table-bordered table-striped mt-4" style="max-width: 300px; margin-left: auto;">
-                <thead class="thead-dark">
+            <table class="text-sm border-collapse mt-4 ml-auto" style="max-width: 300px;">
+                <thead class="bg-surface-800 text-white text-xs uppercase">
                     <tr>
                         <th colspan="2" class="text-center">Riepilogo Totali</th>
                     </tr>
@@ -139,14 +132,14 @@ const reportTemplate = `
                 </tbody>
             </table>
             <div class="text-center">
-                <button id="download-pdf-btn" class="btn btn-success mt-3 mr-2">
+                <button id="download-pdf-btn" class="cr-btn bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold shadow-md mr-2">
                     <i class="fas fa-file-pdf mr-2"></i>Scarica PDF
                 </button>
-                <button id="export-google-doc-btn" class="btn btn-primary mt-3 mr-2" disabled>
-                    <i class="fab fa-google-drive mr-2"></i>Esporta in Google Docs
+                <button id="export-google-doc-btn" class="cr-btn bg-gradient-to-r from-indigo-500 to-indigo-600 text-white font-semibold shadow-md mr-2 opacity-50 cursor-not-allowed" disabled>
+                    <i class="fab fa-google-drive mr-2"></i>Google Docs
                 </button>
-                <button id="export-google-sheet-btn" class="btn btn-primary mt-3" disabled>
-                    <i class="fab fa-google-drive mr-2"></i>Esporta in Google Sheets
+                <button id="export-google-sheet-btn" class="cr-btn bg-gradient-to-r from-indigo-500 to-indigo-600 text-white font-semibold shadow-md opacity-50 cursor-not-allowed" disabled>
+                    <i class="fab fa-google-drive mr-2"></i>Google Sheets
                 </button>
             </div>
         </div>
@@ -349,133 +342,239 @@ async function applySavedConfig(configId) {
     }
 }
 
-// Funzione per generare PDF
+// Funzione per generare PDF — Template Ultra Pro
 function generatePDF(reportHeader, reportData, totalHours, totalAmount, companyLogoBase64, reportFileName, includeHourlyRate) {
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
+    const doc = new jsPDF('p', 'mm', 'a4'); // Portrait A4
 
-    // Funzione per convertire totalHours (decimali) in hh:mm:ss
+    // === CONFIG CENTRALIZZATA ===
+    const cfg = {
+        colors: {
+            primary: [79, 70, 229],      // Indigo 600
+            primaryLight: [238, 242, 255], // Indigo 50
+            dark: [30, 41, 59],           // Slate 800
+            medium: [100, 116, 139],      // Slate 500
+            light: [241, 245, 249],       // Slate 100
+            white: [255, 255, 255],
+            accent: [16, 185, 129],       // Emerald 500
+        },
+        page: {
+            width: doc.internal.pageSize.getWidth(),   // 210
+            height: doc.internal.pageSize.getHeight(),  // 297
+            marginLeft: 15,
+            marginRight: 15,
+            marginTop: 35,    // Spazio per header
+            marginBottom: 25, // Spazio per footer
+        },
+        font: {
+            titleSize: 14,
+            subtitleSize: 10,
+            bodySize: 9,
+            smallSize: 7,
+        }
+    };
+    const contentWidth = cfg.page.width - cfg.page.marginLeft - cfg.page.marginRight;
+
+    // === HELPERS ===
     function formatHoursToHMS(hoursDecimal) {
         const totalSeconds = Math.floor(hoursDecimal * 3600);
         const hh = Math.floor(totalSeconds / 3600);
-        const remainder = totalSeconds % 3600;
-        const mm = Math.floor(remainder / 60);
-        const ss = remainder % 60;
-
-        const hhStr = hh.toString().padStart(2, '0');
-        const mmStr = mm.toString().padStart(2, '0');
-        const ssStr = ss.toString().padStart(2, '0');
-        return `${hhStr}:${mmStr}:${ssStr}`;
+        const mm = Math.floor((totalSeconds % 3600) / 60);
+        const ss = totalSeconds % 60;
+        return `${hh.toString().padStart(2, '0')}:${mm.toString().padStart(2, '0')}:${ss.toString().padStart(2, '0')}`;
     }
 
-    function addLogoAndGeneratePDF() {
-        let startY = 30; 
-        if (companyLogoBase64) {
-            const img = new Image();
-            img.src = companyLogoBase64;
-            img.onload = function () {
-                const imgHeight = 15; 
-                const imgWidth = (img.width * imgHeight) / img.height;
-                doc.addImage(companyLogoBase64, 'PNG', 14, 10, imgWidth, imgHeight);
-                doc.setFontSize(16);
-                doc.text(reportHeader, 14 + imgWidth + 10, 20);
-                startY = 30;
-                generatePDFContent(startY);
-            };
-        } else {
-            doc.setFontSize(16);
-            doc.text(reportHeader, 14, 20);
-            generatePDFContent(startY);
-        }
+    function drawHeader(doc) {
+        // Linea accent in alto
+        doc.setFillColor(...cfg.colors.primary);
+        doc.rect(0, 0, cfg.page.width, 3, 'F');
+
+        // Titolo report
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(cfg.font.titleSize);
+        doc.setTextColor(...cfg.colors.dark);
+        doc.text(reportHeader, cfg.page.marginLeft, 15);
+
+        // Data generazione
+        const today = new Date().toLocaleDateString('it-IT', { day: '2-digit', month: 'long', year: 'numeric' });
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(cfg.font.smallSize);
+        doc.setTextColor(...cfg.colors.medium);
+        doc.text(`Generato il ${today}`, cfg.page.marginLeft, 21);
+
+        // Linea separatrice sottile
+        doc.setDrawColor(...cfg.colors.primary);
+        doc.setLineWidth(0.5);
+        doc.line(cfg.page.marginLeft, 25, cfg.page.width - cfg.page.marginRight, 25);
     }
 
-    function generatePDFContent(startY) {
-        const tableColumn = ["Data", "Tipo di Lavoro"];
-        if (includeHourlyRate) {
-            tableColumn.push("Tariffa Oraria (€)");
-        }
-        tableColumn.push("Link", "Tempo Lavorato", "Importo (€)");
+    function drawFooter(doc, pageNum) {
+        const y = cfg.page.height - 10;
+        // Linea separatrice
+        doc.setDrawColor(...cfg.colors.light);
+        doc.setLineWidth(0.3);
+        doc.line(cfg.page.marginLeft, y - 5, cfg.page.width - cfg.page.marginRight, y - 5);
 
-        const linkColumnIndex = includeHourlyRate ? 3 : 2;
+        // CronoReport branding
+        doc.setFontSize(cfg.font.smallSize);
+        doc.setTextColor(...cfg.colors.medium);
+        doc.setFont('helvetica', 'italic');
+        doc.text('CronoReport', cfg.page.marginLeft, y);
 
-        const tableRows = [];
-        reportData.forEach(item => {
-            const rowData = [item.date, item.workType];
-            if (includeHourlyRate) {
-                rowData.push(item.hourlyRate);
-            }
-            rowData.push('', item.timeWorked, item.amount);
-            tableRows.push(rowData);
-        });
+        // Numero pagina (placeholder — aggiornato dopo)
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Pagina ${pageNum}`, cfg.page.width - cfg.page.marginRight, y, { align: 'right' });
+    }
 
+    // === COSTRUZIONE TABELLA ===
+    const tableColumn = ["Data", "Tipo di Lavoro"];
+    if (includeHourlyRate) tableColumn.push("Tariffa (€/h)");
+    tableColumn.push("Link", "Ore", "Importo (€)");
+
+    const linkColumnIndex = includeHourlyRate ? 3 : 2;
+
+    const tableRows = [];
+    reportData.forEach(item => {
+        const rowData = [item.date, item.workType];
+        if (includeHourlyRate) rowData.push(item.hourlyRate);
+        rowData.push('', item.timeWorked, `€ ${item.amount}`);
+        tableRows.push(rowData);
+    });
+
+    // === Prima pagina: Logo + Header ===
+    let tableStartY = cfg.page.marginTop;
+
+    if (companyLogoBase64) {
+        const img = new Image();
+        img.src = companyLogoBase64;
+        img.onload = function() {
+            drawHeader(doc);
+            const logoH = 12;
+            const logoW = (img.width * logoH) / img.height;
+            doc.addImage(companyLogoBase64, 'PNG', cfg.page.width - cfg.page.marginRight - logoW, 8, logoW, logoH);
+            buildTable(tableStartY);
+        };
+    } else {
+        drawHeader(doc);
+        buildTable(tableStartY);
+    }
+
+    function buildTable(startY) {
+        // Tabella principale
         doc.autoTable({
             head: [tableColumn],
             body: tableRows,
             startY: startY,
-            styles: { fontSize: 10 },
-            columnStyles: {
-                [linkColumnIndex]: { cellWidth: 50 }
+            margin: { left: cfg.page.marginLeft, right: cfg.page.marginRight, top: cfg.page.marginTop, bottom: cfg.page.marginBottom },
+            styles: {
+                fontSize: cfg.font.bodySize,
+                cellPadding: 3,
+                overflow: 'linebreak',
+                lineColor: cfg.colors.light,
+                lineWidth: 0.3,
+                textColor: cfg.colors.dark,
             },
-            didParseCell: function (data) {
+            headStyles: {
+                fillColor: cfg.colors.primary,
+                textColor: cfg.colors.white,
+                fontStyle: 'bold',
+                fontSize: 8,
+                halign: 'left',
+            },
+            alternateRowStyles: {
+                fillColor: cfg.colors.primaryLight,
+            },
+            columnStyles: {},
+            // Hook: link ipertestuali nel PDF
+            didParseCell: function(data) {
                 if (data.section === 'body' && data.column.index === linkColumnIndex) {
                     data.cell.text = '';
                 }
             },
-            didDrawCell: function (data) {
+            didDrawCell: function(data) {
                 if (data.section === 'body' && data.column.index === linkColumnIndex) {
-                    const link = reportData[data.row.index].link;
+                    const link = reportData[data.row.index]?.link;
                     if (link) {
-                        doc.setTextColor(0, 0, 255);
+                        doc.setTextColor(79, 70, 229); // Indigo
+                        doc.setFontSize(8);
                         const linkText = extractDomainName(link);
                         const xPos = data.cell.x + data.cell.padding('left');
-                        const textHeight = doc.getTextDimensions(linkText).h;
-                        const cellHeight = data.cell.height - data.cell.padding('top') - data.cell.padding('bottom');
-                        const yPos = data.cell.y + data.cell.padding('top') + (cellHeight + textHeight) / 2 - 1;
+                        const yPos = data.cell.y + data.cell.height / 2 + 1;
                         doc.textWithLink(linkText, xPos, yPos, { url: link });
-                        doc.setTextColor(0, 0, 0);
+                        doc.setTextColor(...cfg.colors.dark);
+                        doc.setFontSize(cfg.font.bodySize);
                     }
                 }
             },
-            headStyles: {
-                fillColor: [102, 126, 234]
+            // Hook: header/footer su ogni nuova pagina
+            didDrawPage: function(data) {
+                if (data.pageNumber > 1) {
+                    drawHeader(doc);
+                }
             },
-            alternateRowStyles: {
-                fillColor: [240, 246, 248]
-            }
         });
 
-        // Convertiamo totalHours in hh:mm:ss
+        // === RIEPILOGO TOTALI ===
+        const lastAutoTable = doc.lastAutoTable;
+        let currentY = lastAutoTable ? lastAutoTable.finalY + 10 : startY + 10;
+
+        // Controlla se c'è spazio, altrimenti nuova pagina
+        if (currentY + 40 > cfg.page.height - cfg.page.marginBottom) {
+            doc.addPage();
+            drawHeader(doc);
+            currentY = cfg.page.marginTop;
+        }
+
+        const boxWidth = 90;
+        const boxX = cfg.page.width - cfg.page.marginRight - boxWidth;
+        const boxY = currentY;
+        const boxHeight = 32;
+
+        // Box sfondo
+        doc.setFillColor(...cfg.colors.light);
+        doc.setDrawColor(...cfg.colors.primary);
+        doc.setLineWidth(0.5);
+        doc.roundedRect(boxX, boxY, boxWidth, boxHeight, 2, 2, 'FD');
+
+        // Titolo riepilogo
+        doc.setFillColor(...cfg.colors.primary);
+        doc.roundedRect(boxX, boxY, boxWidth, 8, 2, 2, 'F');
+        // Rettangolo per coprire angoli arrotondati inferiori del titolo
+        doc.rect(boxX, boxY + 5, boxWidth, 3, 'F');
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.setTextColor(...cfg.colors.white);
+        doc.text('RIEPILOGO TOTALI', boxX + boxWidth / 2, boxY + 5.5, { align: 'center' });
+
+        // Contenuto riepilogo
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(...cfg.colors.dark);
+
         const formattedHours = formatHoursToHMS(totalHours);
 
-        const finalY = doc.lastAutoTable.finalY + 10;
+        doc.setFont('helvetica', 'bold');
+        doc.text('Totale Ore:', boxX + 5, boxY + 16);
+        doc.setFont('helvetica', 'normal');
+        doc.text(formattedHours, boxX + boxWidth - 5, boxY + 16, { align: 'right' });
 
-        const summaryHead = [["Riepilogo Totali", ""]];
-        const summaryBody = [
-            ["Totale Ore", `${formattedHours}`],
-            ["Totale Importo", `€ ${totalAmount.toFixed(2)}`]
-        ];
+        doc.setFont('helvetica', 'bold');
+        doc.text('Totale Importo:', boxX + 5, boxY + 24);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...cfg.colors.accent);
+        doc.text(`€ ${totalAmount.toFixed(2)}`, boxX + boxWidth - 5, boxY + 24, { align: 'right' });
 
-        doc.autoTable({
-            head: summaryHead,
-            body: summaryBody,
-            startY: finalY,
-            styles: { fontSize: 12 },
-            headStyles: {
-                fillColor: [102, 126, 234],
-                textColor: 255,
-                halign: 'center'
-            },
-            columnStyles: {
-                0: { fontStyle: 'bold', cellWidth: 40 },
-                1: { cellWidth: 60 },
-            },
-            theme: 'striped'
-        });
+        // === NUMERI DI PAGINA (X di Y) — Loop finale ===
+        const totalPages = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= totalPages; i++) {
+            doc.setPage(i);
+            drawFooter(doc, `${i} di ${totalPages}`);
+        }
 
+        // Salva
         doc.save(`${reportFileName}.pdf`);
     }
-
-    addLogoAndGeneratePDF();
 }
 
 function exportReportToGoogleSheet(reportValues, fileName) {

@@ -1,5 +1,12 @@
 // login.js
 
+// DEV MODE — Se su localhost, salta il login
+if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    window.location.href = 'index.html';
+    // Blocca esecuzione del resto dello script
+    throw new Error('DEV_MODE: redirect to index.html');
+}
+
 // Ottieni l'elemento del pulsante di login
 const googleLoginBtn = document.getElementById('google-login-btn');
 

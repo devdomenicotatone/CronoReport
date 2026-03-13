@@ -13,139 +13,7 @@ let timerCardsContainer;
 // Gestione dei timer attivi
 let activeTimers = [];
 
-// Template per la sezione Timer
-const timerTemplate = `
-<div id="timer-section" class="container mt-5 custom-container">
-    <h2 class="mb-5 text-center text-uppercase font-weight-bold">
-        <i class="fas fa-clock mr-2"></i>Timer di Lavoro
-    </h2>
-
-    <div class="row">
-        <!-- Selezione Cliente e Dettagli -->
-        <div class="col-md-6">
-            <div class="card mb-4 shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0"><i class="fas fa-user mr-2"></i>Seleziona Dettagli</h5>
-                </div>
-                <div class="card-body">
-                    <!-- Seleziona Cliente -->
-                    <div class="form-group">
-                        <label for="client-select" class="font-weight-bold">Cliente:</label>
-                        <select id="client-select" class="form-control">
-                            <option value="">--Seleziona Cliente--</option>
-                        </select>
-                    </div>
-                    <!-- Seleziona Sito -->
-                    <div class="form-group">
-                        <label for="site-select" class="font-weight-bold">Sito:</label>
-                        <select id="site-select" class="form-control">
-                            <option value="">--Seleziona Sito--</option>
-                        </select>
-                    </div>
-                    <!-- Seleziona Tipo di Lavoro -->
-                    <div class="form-group">
-                        <label for="worktype-select" class="font-weight-bold">Tipo di Lavoro:</label>
-                        <select id="worktype-select" class="form-control">
-                            <option value="">--Seleziona Tipo di Lavoro--</option>
-                        </select>
-                    </div>
-                    <!-- Inserisci Link -->
-                    <div class="form-group">
-                        <label for="link-input" class="font-weight-bold">Link (opzionale):</label>
-                        <input type="url" id="link-input" class="form-control" placeholder="https://esempio.com">
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Impostazioni Timer -->
-        <div class="col-md-6">
-            <div class="card mb-4 shadow-sm">
-                <div class="card-header bg-success text-white">
-                    <h5 class="mb-0"><i class="fas fa-clock mr-2"></i>Impostazioni Timer</h5>
-                </div>
-                <div class="card-body">
-                    <!-- Ora di Inizio -->
-                    <div class="form-group">
-                        <label for="manual-start-time" class="font-weight-bold">Ora di Inizio (opzionale):</label>
-                        <input type="text" id="manual-start-time" class="form-control" placeholder="DD/MM/YYYY HH:mm:ss" />
-                    </div>
-                    <!-- Ora di Fine -->
-                    <div class="form-group">
-                        <label for="manual-end-time" class="font-weight-bold">Ora di Fine (opzionale):</label>
-                        <input type="text" id="manual-end-time" class="form-control" placeholder="DD/MM/YYYY HH:mm:ss" />
-                    </div>
-                    <!-- Pulsante Avvia Timer -->
-                    <button id="start-timer-btn" class="btn btn-success btn-block mt-4"><i class="fas fa-play mr-2"></i>Avvia Timer</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Sezione Timer Attivi -->
-    <div id="active-timers" class="mt-5">
-    <h2 class="mb-4 text-center text-uppercase font-weight-bold">
-        <i class="fas fa-play-circle mr-2"></i>Timer Attivi
-    </h2>
-        <div id="timer-cards" class="row">
-            <!-- Le card dei timer attivi saranno aggiunte dinamicamente -->
-        </div>
-    </div>
-</div>
-
-<!-- Modale per modificare il timer -->
-<div class="modal fade" id="edit-timer-modal" tabindex="-1" role="dialog" aria-labelledby="editTimerModalLabel">
-  <div class="modal-dialog" role="document">
-    <div class="modal-content">
-      <div class="modal-header bg-primary text-white">
-        <h5 class="modal-title" id="editTimerModalLabel">Modifica Timer</h5>
-        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Chiudi">
-          <span aria-hidden="true">&times;</span>
-        </button>
-      </div>
-      <div class="modal-body">
-        <form id="edit-timer-form">
-          <input type="hidden" id="edit-timer-id">
-          <div class="form-group">
-            <label for="edit-client-select" class="font-weight-bold">Cliente:</label>
-            <select id="edit-client-select" class="form-control"></select>
-          </div>
-          <div class="form-group">
-            <label for="edit-site-select" class="font-weight-bold">Sito:</label>
-            <select id="edit-site-select" class="form-control"></select>
-          </div>
-          <div class="form-group">
-            <label for="edit-worktype-select" class="font-weight-bold">Tipo di Lavoro:</label>
-            <select id="edit-worktype-select" class="form-control"></select>
-          </div>
-          <div class="form-group">
-            <label for="edit-link-input" class="font-weight-bold">Link (opzionale):</label>
-            <input type="url" id="edit-link-input" class="form-control" placeholder="https://esempio.com">
-          </div>
-          <div class="form-group">
-            <label for="edit-accumulated-time" class="font-weight-bold">Tempo accumulato (hh:mm:ss):</label>
-            <input type="text" id="edit-accumulated-time" class="form-control" placeholder="Es: 01:23:45">
-            <small class="form-text text-muted">Inserisci il tempo nel formato hh:mm:ss</small>
-          </div>
-          <div class="form-group">
-            <label for="edit-start-time" class="font-weight-bold">Data/Ora Inizio:</label>
-            <input type="text" id="edit-start-time" class="form-control" placeholder="DD/MM/YYYY HH:mm:ss">
-          </div>
-          <div class="form-group">
-            <label for="edit-end-time" class="font-weight-bold">Data/Ora Fine (opzionale):</label>
-            <input type="text" id="edit-end-time" class="form-control" placeholder="DD/MM/YYYY HH:mm:ss">
-          </div>
-        </form>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-danger" id="delete-timer-btn">Elimina Timer</button>
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">Annulla</button>
-        <button type="button" class="btn btn-primary" id="save-timer-changes-btn">Salva Modifiche</button>
-      </div>
-    </div>
-  </div>
-</div>
-`;
+// Template: timerTemplate è definito in templates.js
 
 // Funzione per inizializzare gli eventi della sezione Timer
 async function initializeTimerEvents() {
@@ -644,7 +512,7 @@ function openEditTimerModal(timer) {
         document.getElementById('edit-end-time').value = '';
     }
 
-    $('#edit-timer-modal').modal('show');
+    CrModal.show('edit-timer-modal');
 }
 
 // Funzione per convertire secondi in hh:mm:ss
@@ -776,7 +644,7 @@ function deleteTimerFromModal() {
                         text: 'Il timer è stato eliminato con successo.',
                         confirmButtonText: 'OK'
                     });
-                    $('#edit-timer-modal').modal('hide');
+                    CrModal.hide('edit-timer-modal');
 
                     const index = activeTimers.findIndex(t => t.id === timerId);
                     if (index > -1) {
@@ -914,7 +782,7 @@ function saveTimerChanges() {
                             text: 'Il timer è stato aggiornato con successo e segnato come concluso.',
                             confirmButtonText: 'OK'
                         });
-                        $('#edit-timer-modal').modal('hide');
+                        CrModal.hide('edit-timer-modal');
 
                         const timer = activeTimers.find(t => t.id === timerId);
                         if (timer) {
@@ -924,7 +792,7 @@ function saveTimerChanges() {
                             }
                             const oldCard = document.querySelector(`.timer-card[data-timer-id="${timer.id}"]`);
                             if (oldCard) {
-                                oldCard.parentElement.remove();
+                                oldCard.remove();
                             }
                         }
                     });
@@ -948,7 +816,7 @@ function saveTimerChanges() {
                     text: 'Il timer è stato aggiornato con successo.',
                     confirmButtonText: 'OK'
                 });
-                $('#edit-timer-modal').modal('hide');
+                CrModal.hide('edit-timer-modal');
 
                 const timer = activeTimers.find(t => t.id === timerId);
                 if (timer) {
@@ -973,7 +841,7 @@ function saveTimerChanges() {
 
                             const oldCard = document.querySelector(`.timer-card[data-timer-id="${timer.id}"]`);
                             if (oldCard) {
-                                oldCard.parentElement.remove();
+                                oldCard.remove();
                             }
 
                             const newCard = createTimerCard(timer);
@@ -986,7 +854,7 @@ function saveTimerChanges() {
                     } else {
                         const oldCard = document.querySelector(`.timer-card[data-timer-id="${timer.id}"]`);
                         if (oldCard) {
-                            oldCard.parentElement.remove();
+                            oldCard.remove();
                         }
 
                         const newCard = createTimerCard(timer);
@@ -1006,121 +874,124 @@ function saveTimerChanges() {
     });
 }
 
-// Funzione per creare la scheda del timer
 function createTimerCard(timer) {
-    // Crea l'elemento colonna
-    const col = document.createElement('div');
-    col.classList.add('col-md-6', 'col-lg-4', 'mb-4');
-
-    // Crea la card
+    // Container card (il parent #timer-cards è un grid, non serve col wrapper)
     const card = document.createElement('div');
-    card.classList.add('card', 'h-100', 'shadow-sm', 'timer-card');
+    card.className = 'cr-card overflow-hidden timer-card transition-all duration-300 hover:shadow-xl';
     card.setAttribute('data-timer-id', timer.id);
 
-    // Crea il corpo della card
-    const cardBody = document.createElement('div');
-    cardBody.classList.add('card-body', 'd-flex', 'flex-column');
+    // Accent bar colorato in alto
+    const accentBar = document.createElement('div');
+    accentBar.className = 'h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500';
 
-    // Header con nome cliente e sito
-    const cardHeader = document.createElement('div');
-    cardHeader.classList.add('d-flex', 'justify-content-between', 'align-items-center', 'mb-3');
+    // Body
+    const body = document.createElement('div');
+    body.className = 'p-5 flex flex-col h-full';
 
-    const cardTitle = document.createElement('h5');
-    cardTitle.classList.add('card-title', 'mb-0');
-    cardTitle.textContent = timer.clientName;
+    // Header: cliente + sito
+    const header = document.createElement('div');
+    header.className = 'flex justify-between items-start mb-3';
 
-    const cardSubtitle = document.createElement('small');
-    cardSubtitle.classList.add('text-muted');
-    cardSubtitle.textContent = timer.siteName;
+    const titleWrap = document.createElement('div');
+    const title = document.createElement('h4');
+    title.className = 'text-base font-bold text-surface-800 leading-tight';
+    title.textContent = timer.clientName;
+    const subtitle = document.createElement('p');
+    subtitle.className = 'text-xs text-surface-400 mt-0.5';
+    subtitle.textContent = timer.siteName;
+    titleWrap.appendChild(title);
+    titleWrap.appendChild(subtitle);
 
-    cardHeader.appendChild(cardTitle);
-    cardHeader.appendChild(cardSubtitle);
+    // Badge tipo lavoro
+    const badge = document.createElement('span');
+    badge.className = 'inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700';
+    badge.textContent = timer.worktypeName;
 
-    // Badge per il tipo di lavoro
-    const worktypeBadge = document.createElement('span');
-    worktypeBadge.classList.add('badge', 'badge-primary', 'mb-2');
-    worktypeBadge.textContent = timer.worktypeName;
+    header.appendChild(titleWrap);
+    header.appendChild(badge);
 
-    // Display del timer
-    const timerDisplay = document.createElement('h4');
-    timerDisplay.classList.add('timer-display', 'mb-3');
+    // Timer display (grande, monospace)
+    const timerWrap = document.createElement('div');
+    timerWrap.className = 'text-center py-4 my-3 rounded-xl bg-surface-50';
+    const timerDisplay = document.createElement('div');
+    timerDisplay.className = 'text-3xl font-mono font-bold text-surface-800 tracking-wider';
     timerDisplay.textContent = formatDuration(timer.accumulatedElapsedTime);
+    timerWrap.appendChild(timerDisplay);
 
-    // Sezione link (se presente)
-    const linkElement = document.createElement('p');
-    linkElement.classList.add('card-text');
+    // Link (se presente)
+    let linkEl = null;
     if (timer.link) {
-        const linkAnchor = document.createElement('a');
-        linkAnchor.href = timer.link;
-        linkAnchor.target = '_blank';
-        linkAnchor.textContent = 'Apri Link';
-        linkAnchor.classList.add('btn', 'btn-link', 'p-0');
-        linkElement.appendChild(linkAnchor);
+        linkEl = document.createElement('a');
+        linkEl.href = timer.link;
+        linkEl.target = '_blank';
+        linkEl.className = 'inline-flex items-center gap-1.5 text-sm text-indigo-500 hover:text-indigo-700 transition-colors mb-3';
+        linkEl.innerHTML = '<i class="fas fa-external-link-alt text-xs"></i> Apri Link';
     }
 
-    // Gruppo di pulsanti
-    const buttonGroup = document.createElement('div');
-    buttonGroup.classList.add('btn-group', 'mt-auto');
+    // Azioni
+    const actions = document.createElement('div');
+    actions.className = 'flex gap-2 mt-auto pt-3 border-t border-surface-100';
 
     const pauseBtn = document.createElement('button');
-    pauseBtn.classList.add('btn', 'btn-warning');
-    pauseBtn.textContent = 'Pausa';
+    pauseBtn.className = 'cr-btn cr-btn-sm flex-1 bg-amber-500 hover:bg-amber-600 text-white';
+    pauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
+    pauseBtn.title = 'Pausa';
+    pauseBtn.style.display = timer.isPaused ? 'none' : '';
 
     const resumeBtn = document.createElement('button');
-    resumeBtn.classList.add('btn', 'btn-success');
-    resumeBtn.textContent = 'Riprendi';
-    resumeBtn.style.display = timer.isPaused ? 'inline-block' : 'none';
+    resumeBtn.className = 'cr-btn cr-btn-sm flex-1 bg-emerald-500 hover:bg-emerald-600 text-white';
+    resumeBtn.innerHTML = '<i class="fas fa-play"></i>';
+    resumeBtn.title = 'Riprendi';
+    resumeBtn.style.display = timer.isPaused ? '' : 'none';
 
     const stopBtn = document.createElement('button');
-    stopBtn.classList.add('btn', 'btn-danger');
-    stopBtn.textContent = 'Stop';
+    stopBtn.className = 'cr-btn cr-btn-sm flex-1 bg-rose-500 hover:bg-rose-600 text-white';
+    stopBtn.innerHTML = '<i class="fas fa-stop"></i>';
+    stopBtn.title = 'Stop';
 
     const editBtn = document.createElement('button');
-    editBtn.classList.add('btn', 'btn-info');
-    editBtn.textContent = 'Modifica';
+    editBtn.className = 'cr-btn cr-btn-sm flex-1 bg-surface-100 hover:bg-surface-200 text-surface-600';
+    editBtn.innerHTML = '<i class="fas fa-pen"></i>';
+    editBtn.title = 'Modifica';
 
-    // Event listeners per i pulsanti
+    // Event listeners
     pauseBtn.addEventListener('click', () => {
         pauseTimer(timer);
         pauseBtn.style.display = 'none';
-        resumeBtn.style.display = 'inline-block';
+        resumeBtn.style.display = '';
     });
 
     resumeBtn.addEventListener('click', () => {
         resumeTimer(timer);
-        pauseBtn.style.display = 'inline-block';
+        pauseBtn.style.display = '';
         resumeBtn.style.display = 'none';
     });
 
     stopBtn.addEventListener('click', () => {
-        stopTimer(timer, col);
+        stopTimer(timer, card);
     });
 
     editBtn.addEventListener('click', () => {
         openEditTimerModal(timer);
     });
 
-    buttonGroup.appendChild(pauseBtn);
-    buttonGroup.appendChild(resumeBtn);
-    buttonGroup.appendChild(stopBtn);
-    buttonGroup.appendChild(editBtn);
+    actions.appendChild(pauseBtn);
+    actions.appendChild(resumeBtn);
+    actions.appendChild(stopBtn);
+    actions.appendChild(editBtn);
 
-    // Assembla la card
-    cardBody.appendChild(cardHeader);
-    cardBody.appendChild(worktypeBadge);
-    cardBody.appendChild(timerDisplay);
-    if (timer.link) {
-        cardBody.appendChild(linkElement);
-    }
-    cardBody.appendChild(buttonGroup);
+    // Assembla
+    body.appendChild(header);
+    body.appendChild(timerWrap);
+    if (linkEl) body.appendChild(linkEl);
+    body.appendChild(actions);
 
-    card.appendChild(cardBody);
-    col.appendChild(card);
+    card.appendChild(accentBar);
+    card.appendChild(body);
 
-    // Aggiungi riferimento alla visualizzazione del timer nell'oggetto timer
     timer.timerDisplay = timerDisplay;
 
-    return col;
+    return card;
 }
 
 // Funzione per avviare il timer

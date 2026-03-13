@@ -1,215 +1,229 @@
 // savedTimersUI.js
 
-// Template per la sezione Timer Salvati
+// Template per la sezione Timer Salvati — Timeline View
 const savedTimersTemplate = `
-<div id="saved-timers-section" class="container mt-5 custom-container">
-    <h2 class="mb-5 text-center text-uppercase font-weight-bold">
-        <i class="fas fa-stopwatch mr-2"></i>Timer Salvati
-    </h2>
-
-    <!-- Sezione Filtri -->
-    <div class="card mb-4 shadow-sm">
-        <div class="card-header bg-primary text-white">
-            <h5 class="mb-0"><i class="fas fa-filter mr-2"></i>Filtri</h5>
+<div id="saved-timers-section" class="max-w-6xl mx-auto px-4 py-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
+                <i class="fas fa-stopwatch text-white text-lg"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-surface-800">Timer Salvati</h2>
         </div>
-        <div class="card-body">
-            <form id="filter-form" class="row">
-                <div class="col-md-3">
-                    <label for="filter-date-start" class="font-weight-bold">Data Inizio:</label>
-                    <input type="date" id="filter-date-start" class="form-control">
-                </div>
-                <div class="col-md-3">
-                    <label for="filter-date-end" class="font-weight-bold">Data Fine:</label>
-                    <input type="date" id="filter-date-end" class="form-control">
-                </div>
-                <div class="col-md-3">
-                    <label for="filter-client" class="font-weight-bold">Cliente:</label>
-                    <select id="filter-client" class="form-control">
-                        <option value="">Tutti i Clienti</option>
-                    </select>
-                </div>
-                <div class="col-md-3 d-flex align-items-end">
-                    <button id="filter-timers-btn" type="button" class="btn btn-primary btn-block mt-2">
-                        <i class="fas fa-search mr-2"></i>Filtra Timer
-                    </button>
-                </div>
-            </form>
+        <div class="flex flex-wrap gap-2">
+            <button id="undo-action-btn" class="cr-btn cr-btn-sm bg-surface-100 hover:bg-surface-200 text-surface-600" title="Annulla ultima operazione">
+                <i class="fas fa-undo"></i>
+            </button>
+            <button id="export-google-doc-btn" class="cr-btn cr-btn-sm bg-indigo-500 hover:bg-indigo-600 text-white" disabled title="Esporta in Google Docs">
+                <i class="fab fa-google-drive"></i><span class="hidden sm:inline ml-1">Docs</span>
+            </button>
+            <button id="export-google-sheet-btn" class="cr-btn cr-btn-sm bg-emerald-500 hover:bg-emerald-600 text-white" disabled title="Esporta in Google Sheets">
+                <i class="fas fa-table"></i><span class="hidden sm:inline ml-1">Sheets</span>
+            </button>
         </div>
     </div>
 
-    <!-- Sezione Azioni -->
-    <div class="card mb-4 shadow-sm">
-        <div class="card-header bg-secondary text-white">
-            <h5 class="mb-0"><i class="fas fa-tools mr-2"></i>Azioni</h5>
-        </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-6">
-                    <label for="unmark-action-select" class="font-weight-bold">Seleziona Azione:</label>
-                    <select id="unmark-action-select" class="form-control">
-                        <option value="">-- Seleziona Azione --</option>
-                        <option value="unmark-all">Segna Tutti i Timer come Non Reportati</option>
-                        <option value="unmark-selected">Segna i Timer Selezionati come Non Reportati</option>
-                        <option value="unmark-filtered">Segna i Timer Filtrati come Non Reportati</option>
-                    </select>
+    <!-- Stats Cards -->
+    <div id="tl-stats-bar" class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
+        <div class="tl-stats-card">
+            <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center">
+                    <i class="fas fa-coins text-amber-500"></i>
                 </div>
-                <div class="col-md-6 d-flex align-items-end">
-                    <button id="apply-action-btn" class="btn btn-success btn-block mt-2">
-                        <i class="fas fa-check mr-2"></i>Applica
+                <div>
+                    <div class="text-xs font-medium text-surface-400 uppercase tracking-wide">Non Riscosso</div>
+                    <div id="tl-stat-unreported" class="text-lg font-bold text-surface-800">€ 0.00</div>
+                </div>
+            </div>
+        </div>
+        <div class="tl-stats-card">
+            <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center">
+                    <i class="fas fa-clock text-indigo-500"></i>
+                </div>
+                <div>
+                    <div class="text-xs font-medium text-surface-400 uppercase tracking-wide">Ore Totali</div>
+                    <div id="tl-stat-hours" class="text-lg font-bold text-surface-800">00:00</div>
+                </div>
+            </div>
+        </div>
+        <div class="tl-stats-card">
+            <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center">
+                    <i class="fas fa-layer-group text-emerald-500"></i>
+                </div>
+                <div>
+                    <div class="text-xs font-medium text-surface-400 uppercase tracking-wide">Timer</div>
+                    <div id="tl-stat-count" class="text-lg font-bold text-surface-800">0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toolbar Compatta: Filtri + Azioni -->
+    <div class="cr-card mb-5 overflow-hidden">
+        <div class="p-4">
+            <div class="flex flex-col lg:flex-row gap-3 items-stretch lg:items-end">
+                <!-- Filtri inline -->
+                <div class="flex flex-col sm:flex-row gap-3 flex-1">
+                    <div class="flex-1 min-w-0">
+                        <input type="text" id="search-timers-input" class="cr-input" placeholder="🔍 Cerca timer...">
+                    </div>
+                    <div class="w-full sm:w-36">
+                        <input type="date" id="filter-date-start" class="cr-input" title="Data Inizio">
+                    </div>
+                    <div class="w-full sm:w-36">
+                        <input type="date" id="filter-date-end" class="cr-input" title="Data Fine">
+                    </div>
+                    <div class="w-full sm:w-44">
+                        <select id="filter-client" class="cr-select">
+                            <option value="">Tutti i Clienti</option>
+                        </select>
+                    </div>
+                </div>
+                <!-- Azioni inline -->
+                <div class="flex gap-2 flex-shrink-0">
+                    <select id="unmark-action-select" class="cr-select text-sm" style="min-width: 160px;">
+                        <option value="">⚙ Azione...</option>
+                        <option value="unmark-all">Segna Tutti Non Reportati</option>
+                        <option value="unmark-selected">Segna Selezionati Non Reportati</option>
+                        <option value="unmark-filtered">Segna Filtrati Non Reportati</option>
+                    </select>
+                    <button id="apply-action-btn" class="cr-btn cr-btn-sm bg-surface-700 hover:bg-surface-800 text-white" title="Applica azione">
+                        <i class="fas fa-check"></i>
+                    </button>
+                    <button id="filter-timers-btn" type="button" class="cr-btn cr-btn-sm bg-indigo-500 hover:bg-indigo-600 text-white" title="Filtra timer">
+                        <i class="fas fa-filter"></i>
                     </button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Sezione Ricerca e Pulsanti -->
-    <div class="d-flex justify-content-between mb-4">
-        <div class="search-container">
-            <input type="text" id="search-timers-input" class="form-control" placeholder="Cerca tra i timer...">
-        </div>
-        <div class="action-buttons">
-            <button id="undo-action-btn" class="btn btn-outline-secondary mr-2">
-                <i class="fas fa-undo mr-2"></i>Annulla Ultima Operazione
-            </button>
-            <button id="export-google-doc-btn" class="btn btn-primary mr-2" disabled>
-                <i class="fab fa-google-drive mr-2"></i>Esporta in Google Docs
-            </button>
-            <button id="export-google-sheet-btn" class="btn btn-primary" disabled>
-                <i class="fab fa-google-drive mr-2"></i>Esporta in Google Sheets
-            </button>
-        </div>
-    </div>
-
-    <!-- Lista Timer Salvati -->
-    <div id="savedTimersAccordion" class="accordion">
-        <!-- Timer salvati saranno inseriti qui -->
+    <!-- Timeline Container -->
+    <div id="savedTimersAccordion" class="space-y-4">
+        <!-- Timer timeline will be rendered here -->
     </div>
 </div>
 
-<!-- Modal per impostare il promemoria -->
+<!-- Modal Promemoria -->
 <div class="modal fade" id="setReminderModal" tabindex="-1" role="dialog" aria-labelledby="setReminderModalLabel">
   <div class="modal-dialog" role="document">
-    <div class="modal-content">
-      <div class="modal-header bg-primary text-white">
-        <h5 class="modal-title" id="setReminderModalLabel">Imposta Promemoria per <span id="modal-client-name"></span></h5>
-        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Chiudi">
-          <span aria-hidden="true">&times;</span>
-        </button>
+    <div class="modal-content" style="border:none; border-radius:1rem; overflow:hidden;">
+      <div class="px-5 py-3 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white flex justify-between items-center">
+        <h5 class="font-semibold" id="setReminderModalLabel">Promemoria per <span id="modal-client-name"></span></h5>
+        <button type="button" class="text-white/80 hover:text-white text-xl" data-cr-dismiss="modal" aria-label="Chiudi">&times;</button>
       </div>
-      <div class="modal-body">
-        <!-- Form per impostare il promemoria -->
-        <form id="reminderForm">
-          <div class="form-group">
-            <label for="reminder-amount">Importo Obiettivo (€):</label>
-            <input type="number" step="0.01" min="0" class="form-control" id="reminder-amount" placeholder="Es: 1000">
+      <div class="p-5 space-y-4">
+        <form id="reminderForm" class="space-y-4">
+          <div>
+            <label for="reminder-amount" class="cr-label">Importo Obiettivo (€)</label>
+            <input type="number" step="0.01" min="0" class="cr-input" id="reminder-amount" placeholder="Es: 1000">
           </div>
-          <div class="form-group">
-            <label for="reminder-date">Data Scadenza:</label>
-            <input type="date" class="form-control" id="reminder-date">
+          <div>
+            <label for="reminder-date" class="cr-label">Data Scadenza</label>
+            <input type="date" class="cr-input" id="reminder-date">
           </div>
         </form>
       </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">Annulla</button>
-        <button type="button" class="btn btn-primary" id="save-reminder-btn">Salva Promemoria</button>
+      <div class="px-5 py-3 bg-surface-50 flex justify-end gap-2 border-t border-surface-100">
+        <button type="button" class="cr-btn bg-surface-200 hover:bg-surface-300 text-surface-600" data-cr-dismiss="modal">Annulla</button>
+        <button type="button" class="cr-btn bg-indigo-500 hover:bg-indigo-600 text-white" id="save-reminder-btn">Salva</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Modal per modificare un timer salvato -->
+<!-- Modal Modifica Timer Salvato -->
 <div class="modal fade" id="edit-saved-timer-modal" tabindex="-1" role="dialog" aria-labelledby="editSavedTimerModalLabel">
   <div class="modal-dialog" role="document">
-    <div class="modal-content">
-      <div class="modal-header bg-info text-white">
-        <h5 class="modal-title" id="editSavedTimerModalLabel">Modifica Timer Salvato</h5>
-        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Chiudi">
-          <span aria-hidden="true">&times;</span>
-        </button>
+    <div class="modal-content" style="border:none; border-radius:1rem; overflow:hidden;">
+      <div class="px-5 py-3 bg-gradient-to-r from-cyan-500 to-indigo-500 text-white flex justify-between items-center">
+        <h5 class="font-semibold" id="editSavedTimerModalLabel">Modifica Timer Salvato</h5>
+        <button type="button" class="text-white/80 hover:text-white text-xl" data-cr-dismiss="modal" aria-label="Chiudi">&times;</button>
       </div>
-      <div class="modal-body">
-        <form id="edit-saved-timer-form">
+      <div class="p-5 space-y-4">
+        <form id="edit-saved-timer-form" class="space-y-4">
           <input type="hidden" id="edit-saved-timer-id">
 
-          <div class="form-group">
-            <label for="edit-saved-client-select" class="font-weight-bold">Cliente:</label>
-            <select id="edit-saved-client-select" class="form-control"></select>
+          <div>
+            <label for="edit-saved-client-select" class="cr-label">Cliente</label>
+            <select id="edit-saved-client-select" class="cr-select"></select>
           </div>
-
-          <div class="form-group">
-            <label for="edit-saved-site-select" class="font-weight-bold">Sito:</label>
-            <select id="edit-saved-site-select" class="form-control"></select>
+          <div>
+            <label for="edit-saved-site-select" class="cr-label">Sito</label>
+            <select id="edit-saved-site-select" class="cr-select"></select>
           </div>
-
-          <div class="form-group">
-            <label for="edit-saved-worktype-select" class="font-weight-bold">Tipo di Lavoro:</label>
-            <select id="edit-saved-worktype-select" class="form-control"></select>
+          <div>
+            <label for="edit-saved-worktype-select" class="cr-label">Tipo di Lavoro</label>
+            <select id="edit-saved-worktype-select" class="cr-select"></select>
           </div>
-
-          <div class="form-group">
-            <label for="edit-saved-link" class="font-weight-bold">Link (opzionale):</label>
-            <input type="url" id="edit-saved-link" class="form-control" placeholder="https://esempio.com">
+          <div>
+            <label for="edit-saved-link" class="cr-label">Link (opzionale)</label>
+            <input type="url" id="edit-saved-link" class="cr-input" placeholder="https://esempio.com">
           </div>
-
-          <div class="form-group">
-            <label for="edit-saved-duration" class="font-weight-bold">Durata (hh:mm:ss):</label>
-            <input type="text" id="edit-saved-duration" class="form-control" placeholder="Es: 01:23:45">
-            <small class="form-text text-muted">Inserisci il tempo nel formato hh:mm:ss</small>
+          <div>
+            <label for="edit-saved-duration" class="cr-label">Durata (hh:mm:ss)</label>
+            <input type="text" id="edit-saved-duration" class="cr-input" placeholder="Es: 01:23:45">
+            <p class="text-xs text-surface-400 mt-1">Formato: hh:mm:ss</p>
           </div>
-
-          <div class="form-group">
-            <label for="edit-saved-start-time" class="font-weight-bold">Data/Ora Inizio:</label>
-            <input type="text" id="edit-saved-start-time" class="form-control" placeholder="DD/MM/YYYY HH:mm:ss">
-          </div>
-
-          <div class="form-group">
-            <label for="edit-saved-end-time" class="font-weight-bold">Data/Ora Fine (opzionale):</label>
-            <input type="text" id="edit-saved-end-time" class="form-control" placeholder="DD/MM/YYYY HH:mm:ss">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label for="edit-saved-start-time" class="cr-label">Data/Ora Inizio</label>
+              <input type="text" id="edit-saved-start-time" class="cr-input" placeholder="DD/MM/YYYY HH:mm:ss">
+            </div>
+            <div>
+              <label for="edit-saved-end-time" class="cr-label">Data/Ora Fine</label>
+              <input type="text" id="edit-saved-end-time" class="cr-input" placeholder="DD/MM/YYYY HH:mm:ss">
+            </div>
           </div>
         </form>
       </div>
-      <div class="modal-footer">
-        <!-- Pulsante Elimina Timer -->
-        <button type="button" class="btn btn-danger" id="delete-saved-timer-btn">Elimina Timer</button>
-        <!-- Pulsante Annulla -->
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">Annulla</button>
-        <!-- Pulsante Salva Modifiche -->
-        <button type="button" class="btn btn-primary" id="save-edited-saved-timer-btn">Salva Modifiche</button>
+      <div class="px-5 py-3 bg-surface-50 flex justify-between border-t border-surface-100">
+        <button type="button" class="cr-btn bg-rose-500 hover:bg-rose-600 text-white" id="delete-saved-timer-btn">
+            <i class="fas fa-trash-alt mr-1"></i>Elimina
+        </button>
+        <div class="flex gap-2">
+          <button type="button" class="cr-btn bg-surface-200 hover:bg-surface-300 text-surface-600" data-cr-dismiss="modal">Annulla</button>
+          <button type="button" class="cr-btn bg-indigo-500 hover:bg-indigo-600 text-white" id="save-edited-saved-timer-btn">Salva</button>
+        </div>
       </div>
     </div>
   </div>
 </div>
 
 <!-- Sezione Cestino -->
-<div id="recycle-bin-section" class="container mt-5 custom-container" style="display: none;">
-    <h2 class="mb-5 text-center text-uppercase font-weight-bold">
-        <i class="fas fa-trash-alt mr-2"></i>Cestino
-    </h2>
+<div id="recycle-bin-section" class="max-w-6xl mx-auto px-4 py-6" style="display: none;">
+    <div class="flex items-center gap-3 mb-8">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center shadow-lg">
+            <i class="fas fa-trash-alt text-white text-lg"></i>
+        </div>
+        <h2 class="text-2xl font-bold text-surface-800">Cestino</h2>
+    </div>
 
-    <!-- Navigazione tra Timer e Report Eliminati -->
-    <ul class="nav nav-tabs" id="recycleBinTabs" role="tablist">
-        <li class="nav-item">
-            <a class="nav-link active" id="timers-tab" data-toggle="tab" href="#timers" role="tab" aria-controls="timers" aria-selected="true">
-                <i class="fas fa-stopwatch mr-2"></i>Timer Eliminati
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" id="reports-tab" data-toggle="tab" href="#reports" role="tab" aria-controls="reports" aria-selected="false">
-                <i class="fas fa-file-alt mr-2"></i>Report Eliminati
-            </a>
-        </li>
-    </ul>
+    <!-- Tabs senza Bootstrap nav-tabs: custom Tailwind tabs -->
+    <div class="flex gap-1 mb-4 border-b border-surface-200" id="recycleBinTabs" role="tablist">
+        <button class="px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors text-indigo-600 border-b-2 border-indigo-500 bg-white" 
+                id="timers-tab" data-cr-tab="timers" role="tab">
+            <i class="fas fa-stopwatch mr-1.5"></i>Timer Eliminati
+        </button>
+        <button class="px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors text-surface-500 hover:text-surface-700" 
+                id="reports-tab" data-cr-tab="reports" role="tab">
+            <i class="fas fa-file-alt mr-1.5"></i>Report Eliminati
+        </button>
+    </div>
 
-    <div class="tab-content" id="recycleBinTabsContent">
+    <div id="recycleBinTabsContent">
         <!-- Tab Timer Eliminati -->
-        <div class="tab-pane fade show active" id="timers" role="tabpanel" aria-labelledby="timers-tab">
+        <div id="timers" role="tabpanel" aria-labelledby="timers-tab">
             <div id="recycle-bin-timers" class="mt-4">
                 <!-- I timer eliminati saranno caricati qui -->
             </div>
         </div>
 
         <!-- Tab Report Eliminati -->
-        <div class="tab-pane fade" id="reports" role="tabpanel" aria-labelledby="reports-tab">
+        <div id="reports" role="tabpanel" aria-labelledby="reports-tab" style="display:none;">
             <div id="recycle-bin-reports" class="mt-4">
                 <!-- I report eliminati saranno caricati qui -->
             </div>
@@ -238,7 +252,7 @@ function deleteTimerById(timerId) {
             confirmButtonText: 'OK'
         });
         // Chiudi la modale
-        $('#edit-saved-timer-modal').modal('hide');
+        CrModal.hide('edit-saved-timer-modal');
         // Ricarica la lista dei timer salvati per riflettere il cambiamento
         const filters = getCurrentFilters();
         loadSavedTimers(filters);
@@ -260,10 +274,10 @@ function createTimerRow(timerId, logData, isRecycleBin = false) {
     // Se NON siamo nel cestino, creiamo la colonna checkbox
     if (!isRecycleBin) {
         const checkboxCell = document.createElement('td');
-        checkboxCell.classList.add('text-center');
+        checkboxCell.className = 'text-center align-middle';
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
-        checkbox.classList.add('form-check-input', 'timer-checkbox');
+        checkbox.className = 'w-4 h-4 accent-indigo-500 timer-checkbox';
         checkbox.value = timerId;
         checkbox.id = 'checkbox-' + timerId;
         checkboxCell.appendChild(checkbox);
@@ -307,36 +321,33 @@ function createTimerRow(timerId, logData, isRecycleBin = false) {
     row.appendChild(linkCell);
 
     const statusCell = document.createElement('td');
-    statusCell.classList.add('text-center', 'align-middle');
+    statusCell.className = 'text-center align-middle';
     if (logData.isReported) {
         const checkmarkIcon = document.createElement('i');
-        checkmarkIcon.classList.add('fas', 'fa-check-circle', 'text-success');
+        checkmarkIcon.className = 'fas fa-check-circle text-emerald-500';
         statusCell.appendChild(checkmarkIcon);
     } else {
         const pendingIcon = document.createElement('i');
-        pendingIcon.classList.add('fas', 'fa-hourglass-half', 'text-warning');
+        pendingIcon.className = 'fas fa-hourglass-half text-amber-500';
         statusCell.appendChild(pendingIcon);
     }
     row.appendChild(statusCell);
 
     const actionCell = document.createElement('td');
-    actionCell.classList.add('text-center', 'align-middle');
+    actionCell.className = 'text-center align-middle';
 
     if (isRecycleBin) {
-        // Nel cestino: pulsante Ripristina
         const restoreBtn = document.createElement('button');
-        restoreBtn.classList.add('btn', 'btn-sm', 'btn-success');
-        restoreBtn.innerHTML = '<i class="fas fa-undo"></i> Ripristina';
+        restoreBtn.className = 'cr-btn cr-btn-sm bg-emerald-500 hover:bg-emerald-600 text-white';
+        restoreBtn.innerHTML = '<i class="fas fa-undo mr-1"></i> Ripristina';
         restoreBtn.addEventListener('click', () => {
             restoreTimer(timerId, row);
         });
         actionCell.appendChild(restoreBtn);
     } else {
-        // Nella scheda normale: pulsante Modifica
         const editBtn = document.createElement('button');
-        editBtn.classList.add('btn', 'btn-sm', 'btn-info');
-        editBtn.setAttribute('title', 'Modifica Timer');
-        editBtn.setAttribute('data-toggle', 'tooltip');
+        editBtn.className = 'cr-btn cr-btn-sm bg-indigo-100 hover:bg-indigo-200 text-indigo-700';
+        editBtn.title = 'Modifica Timer';
         editBtn.innerHTML = '<i class="fas fa-edit"></i>';
         editBtn.addEventListener('click', () => {
             openEditSavedTimerModal(timerId);
@@ -531,7 +542,7 @@ function openEditSavedTimerModal(timerId) {
           .catch(error => console.error("Errore durante l'aggiornamento di siti e tipi di lavoro:", error));
     });
 
-    $('#edit-saved-timer-modal').modal('show');
+    CrModal.show('edit-saved-timer-modal');
 }
 
 function saveEditedSavedTimer() {
@@ -655,7 +666,7 @@ function saveEditedSavedTimer() {
           text: 'Il timer è stato aggiornato con successo.',
           confirmButtonText: 'OK'
       });
-      $('#edit-saved-timer-modal').modal('hide');
+      CrModal.hide('edit-saved-timer-modal');
       // Ricarica la lista dei timer per mostrare le modifiche
       loadSavedTimers(getCurrentFilters());
       console.log("Fine saveEditedSavedTimer");
@@ -713,19 +724,19 @@ function createRecycleBinRow(timerId, logData) {
 
     // Colonna per le Azioni (Ripristina ed Elimina Definitivamente)
     const actionCell = document.createElement('td');
-    actionCell.classList.add('text-center', 'align-middle');
+    actionCell.className = 'text-center align-middle';
 
     const restoreBtn = document.createElement('button');
-    restoreBtn.classList.add('btn', 'btn-success', 'btn-sm', 'mr-2');
-    restoreBtn.setAttribute('title', 'Ripristina Timer');
+    restoreBtn.className = 'cr-btn cr-btn-sm bg-emerald-500 hover:bg-emerald-600 text-white mr-1';
+    restoreBtn.title = 'Ripristina Timer';
     restoreBtn.innerHTML = '<i class="fas fa-undo"></i>';
     restoreBtn.addEventListener('click', () => {
         restoreTimer(timerId, row);
     });
 
     const deleteBtn = document.createElement('button');
-    deleteBtn.classList.add('btn', 'btn-sm', 'btn-danger');
-    deleteBtn.setAttribute('title', 'Elimina Definitivamente');
+    deleteBtn.className = 'cr-btn cr-btn-sm bg-rose-500 hover:bg-rose-600 text-white';
+    deleteBtn.title = 'Elimina Definitivamente';
     deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
     deleteBtn.addEventListener('click', () => {
         permanentlyDeleteTimer(timerId, row);
@@ -771,6 +782,11 @@ function formatTime(date) {
 function formatTimeWithSeconds(timestamp) {
     const date = timestamp.toDate();
     return date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+function formatTimeShort(timestamp) {
+    const date = timestamp.toDate();
+    return date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
 }
 
 function formatDate(date) {

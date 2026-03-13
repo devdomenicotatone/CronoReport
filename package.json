@@ -1,0 +1,25 @@
+{
+  "name": "cronoreport",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+    "dev": "live-server --port=3000 --no-browser",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/devdomenicotatone/CronoReport.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/devdomenicotatone/CronoReport/issues"
+  },
+  "homepage": "https://github.com/devdomenicotatone/CronoReport#readme",
+  "devDependencies": {
+    "live-server": "^1.2.2"
+  }
+}

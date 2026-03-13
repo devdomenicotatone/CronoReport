@@ -1,129 +1,54 @@
 // main.js
+// DEV_MODE, auth, db, currentUser sono definiti globalmente in index.html
 
-// Inizializza Firebase Auth e Firestore
-const auth = firebase.auth();
-const db = firebase.firestore();
+if (DEV_MODE) {
+    // Fake user per sviluppo
+    currentUser = {
+        uid: 'dev-user-001',
+        displayName: 'Dev User',
+        email: 'dev@cronoreport.local',
+        photoURL: null
+    };
+    console.log('%c🚀 DEV MODE ATTIVO — Login bypassato', 'color: #10b981; font-weight: bold; font-size: 14px;');
 
-// Variabile globale per l'utente corrente
-let currentUser = null;
-
-// Listener per lo stato di autenticazione
-auth.onAuthStateChanged(async (user) => {
-    if (user) {
-        currentUser = user;
-        console.log("Utente autenticato:", currentUser.uid);
-
+    // Defer: i template (const) sono dichiarati più avanti nel file
+    setTimeout(() => {
+        if (typeof updateUserDisplay === 'function') {
+            updateUserDisplay(currentUser);
+        }
         loadSection('data-management');
+        setActiveNav('data-management');
+    }, 0);
 
-        await initializeTimerEvents();
+    // Preveni qualsiasi redirect da Firebase auth
+    auth.onAuthStateChanged(() => {
+        // No-op in dev mode — ignora lo stato auth
+    });
+} else {
+    // Listener per lo stato di autenticazione (PRODUCTION)
+    auth.onAuthStateChanged(async (user) => {
+        if (user) {
+            currentUser = user;
+            console.log("Utente autenticato:", currentUser.uid);
 
-    } else {
-        currentUser = null;
-        window.location.href = 'login.html';
-    }
-});
+            // Update user display in navbar
+            if (typeof updateUserDisplay === 'function') {
+                updateUserDisplay(user);
+            }
 
-// Template per la sezione Gestione Dati
-const dataManagementTemplate = `
-<div id="data-management" class="container mt-5 custom-container">
-    <h2 class="mb-5 text-center text-uppercase font-weight-bold">
-        <i class="fas fa-database mr-2"></i>Gestione Dati
-    </h2>
+            loadSection('data-management');
+            setActiveNav('data-management');
 
-    <div class="row">
-        <!-- Aggiungi Cliente -->
-        <div class="col-lg-12">
-            <div class="card mb-4 shadow-sm">
-                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="fas fa-user-plus mr-2"></i>Aggiungi Nuovo Cliente</h5>
-                    <button id="toggle-client-list-btn" class="btn btn-outline-light btn-sm">
-                        <i class="fas fa-list"></i> Mostra/Nascondi Elenco Clienti
-                    </button>
-                </div>
-                <div class="card-body">
-                    <div class="input-group">
-                        <input type="text" id="new-client-name" class="form-control" placeholder="Nome Cliente">
-                        <div class="input-group-append">
-                            <button id="add-client-btn" class="btn btn-success"><i class="fas fa-plus"></i> Aggiungi Cliente</button>
-                        </div>
-                    </div>
-                </div>
-                <!-- Lista Clienti -->
-                <ul id="client-list" class="list-group list-group-flush" style="display: none;">
-                    <!-- Clienti saranno popolati dinamicamente -->
-                </ul>
-            </div>
-        </div>
-    </div>
+            await initializeTimerEvents();
 
-    <div class="row">
-        <!-- Gestione Siti -->
-<div class="col-md-6">
-    <div class="card mb-4 shadow-sm">
-        <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
-            <h5 class="mb-0"><i class="fas fa-map-marker-alt mr-2"></i>Gestione Siti</h5>
-            <button id="toggle-site-list-btn" class="btn btn-outline-light btn-sm">
-                <i class="fas fa-list"></i> Mostra/Nascondi Elenco Siti
-            </button>
-        </div>
-        <div class="card-body">
-                    <div class="form-group">
-                        <label for="select-client-for-site" class="font-weight-bold">Seleziona Cliente:</label>
-                        <select id="select-client-for-site" class="form-control">
-                            <option value="">--Seleziona Cliente--</option>
-                            <!-- Le opzioni saranno popolate dinamicamente -->
-                        </select>
-                    </div>
-                    <div class="input-group mb-3">
-                        <input type="text" id="new-site-name" class="form-control" placeholder="Nome del Sito">
-                        <div class="input-group-append">
-                            <button id="add-site-btn" class="btn btn-success"><i class="fas fa-plus"></i> Aggiungi Sito</button>
-                        </div>
-                    </div>
-                    <!-- Lista Siti -->
-                    <div id="site-list" style="display: none;">
-                        <!-- Siti saranno popolati dinamicamente come sottocategorie dei clienti -->
-                    </div>
-                </div>
-            </div>
-        </div>
+        } else {
+            currentUser = null;
+            window.location.href = 'login.html';
+        }
+    });
+}
 
-        <!-- Gestione Tipi di Lavoro -->
-<div class="col-md-6">
-    <div class="card mb-4 shadow-sm">
-        <div class="card-header bg-warning text-white d-flex justify-content-between align-items-center">
-            <h5 class="mb-0"><i class="fas fa-tools mr-2"></i>Gestione Tipi di Lavoro</h5>
-            <button id="toggle-worktype-list-btn" class="btn btn-outline-light btn-sm">
-                <i class="fas fa-list"></i> Mostra/Nascondi Elenco Tipi di Lavoro
-            </button>
-        </div>
-        <div class="card-body">
-                    <div class="form-group">
-                        <label for="select-client-for-worktype" class="font-weight-bold">Seleziona Cliente:</label>
-                        <select id="select-client-for-worktype" class="form-control">
-                            <option value="">--Seleziona Cliente--</option>
-                            <!-- Le opzioni saranno popolate dinamicamente -->
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="new-worktype-name" class="font-weight-bold">Tipo di Lavoro:</label>
-                        <input type="text" id="new-worktype-name" class="form-control" placeholder="Tipo di Lavoro">
-                    </div>
-                    <div class="form-group">
-                        <label for="new-worktype-hourly-rate" class="font-weight-bold">Tariffa Oraria (€):</label>
-                        <input type="number" id="new-worktype-hourly-rate" class="form-control" placeholder="Es: 50">
-                    </div>
-                    <button id="add-worktype-btn" class="btn btn-success btn-block"><i class="fas fa-plus"></i> Aggiungi Tipo di Lavoro</button>
-                    <!-- Lista Tipi di Lavoro -->
-                    <div id="worktype-list" class="mt-3" style="display: none;">
-                        <!-- Tipi di Lavoro saranno popolati dinamicamente come sottocategorie dei clienti -->
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-`;
+// Template: dataManagementTemplate è definito in templates.js
 
 /**
  * Funzione per caricare le sezioni in base al menu
@@ -151,12 +76,10 @@ function loadSection(section) {
             }
             break;
         case 'recycle-bin':
-            contentSection.innerHTML = savedTimersTemplate; // Use the updated template
-            // Mostra la sezione del cestino e nasconde le altre
-            document.getElementById('saved-timers-section').style.display = 'none';
-            document.getElementById('recycle-bin-section').style.display = 'block';
-            initializeRecycleBinTimersEvents(); // Inizializza gli eventi per i timer nel cestino
-            initializeRecycleBinReportsEvents(); // Inizializza gli eventi per i report nel cestino
+            contentSection.innerHTML = recycleBinTemplate;
+            CrTabs.init('#recycleBinTabs');
+            initializeRecycleBinTimersEvents();
+            initializeRecycleBinReportsEvents();
             break;
         case 'report':
             contentSection.innerHTML = reportTemplate;
@@ -175,10 +98,7 @@ function loadSection(section) {
             contentSection.innerHTML = '<p>Sezione non trovata.</p>';
     }
 
-    // **Inizializza i tooltip di Bootstrap qui**
-    $(function () {
-        $('[data-toggle="tooltip"]').tooltip();
-    });
+    // Tooltips handled natively via title attribute (no jQuery needed)
 }
 
 /**
@@ -428,15 +348,16 @@ function loadDataManagementClientList(selectElement = null) {
             .then(snapshot => {
                 snapshot.forEach(doc => {
                     const li = document.createElement('li');
-                    li.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-center');
+                    li.className = 'flex items-center justify-between px-4 py-3 bg-surface-50 rounded-lg mb-2 group hover:bg-surface-100 transition-colors';
 
                     const nameSpan = document.createElement('span');
                     nameSpan.textContent = doc.data().name;
-                    nameSpan.classList.add('flex-grow-1');
+                    nameSpan.className = 'flex-1 text-sm font-medium text-surface-700';
 
                     const deleteBtn = document.createElement('button');
                     deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
-                    deleteBtn.classList.add('btn', 'btn-sm', 'p-1');
+                    deleteBtn.className = 'p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all opacity-0 group-hover:opacity-100';
+                    deleteBtn.title = 'Elimina';
 
                     deleteBtn.addEventListener('click', () => {
                         Swal.fire({
@@ -444,8 +365,8 @@ function loadDataManagementClientList(selectElement = null) {
                             text: `Vuoi eliminare il cliente "${doc.data().name}"?`,
                             icon: 'warning',
                             showCancelButton: true,
-                            confirmButtonColor: '#d33',
-                            cancelButtonColor: '#3085d6',
+                            confirmButtonColor: '#ef4444',
+                            cancelButtonColor: '#6b7280',
                             confirmButtonText: 'Sì, elimina!',
                             cancelButtonText: 'Annulla'
                         }).then((result) => {
@@ -522,26 +443,26 @@ function loadSites(selectElement = null, clientId = null) {
         
                     // Crea un div per la sezione del cliente
                     const clientSectionDiv = document.createElement('div');
-                    clientSectionDiv.classList.add('mb-3');
+                    clientSectionDiv.className = 'mb-4';
         
                     // Crea l'header per il Cliente con un pulsante di toggle
                     const clientHeaderDiv = document.createElement('div');
-                    clientHeaderDiv.classList.add('d-flex', 'justify-content-between', 'align-items-center');
+                    clientHeaderDiv.className = 'flex justify-between items-center';
         
                     const clientHeader = document.createElement('h5');
                     clientHeader.textContent = clientData.name;
-                    clientHeader.classList.add('mt-3');
+                    clientHeader.className = 'text-sm font-semibold text-surface-800 mt-3';
         
                     const toggleSitesBtn = document.createElement('button');
-                    toggleSitesBtn.classList.add('btn', 'btn-sm', 'btn-outline-secondary');
-                    toggleSitesBtn.innerHTML = '<i class="fas fa-eye"></i> Mostra/Nascondi Siti';
+                    toggleSitesBtn.className = 'text-xs text-indigo-500 hover:text-indigo-700 font-medium flex items-center gap-1 transition-colors';
+                    toggleSitesBtn.innerHTML = '<i class="fas fa-eye text-xs"></i> Mostra/Nascondi';
         
                     clientHeaderDiv.appendChild(clientHeader);
                     clientHeaderDiv.appendChild(toggleSitesBtn);
         
                     // Crea la lista dei Siti per questo Cliente
                     const siteUl = document.createElement('ul');
-                    siteUl.classList.add('list-group');
+                    siteUl.className = 'mt-2 space-y-1';
                     siteUl.style.display = 'none'; // Nasconde i siti inizialmente
         
                     db.collection('sites')
@@ -553,21 +474,22 @@ function loadSites(selectElement = null, clientId = null) {
                             if (siteSnapshot.empty) {
                                 const noSitesLi = document.createElement('li');
                                 noSitesLi.textContent = 'Nessun sito associato.';
-                                noSitesLi.classList.add('list-group-item');
+                                noSitesLi.className = 'text-sm text-surface-400 italic px-4 py-2';
                                 siteUl.appendChild(noSitesLi);
                             } else {
                                 siteSnapshot.forEach(siteDoc => {
                                     const siteData = siteDoc.data();
                                     const li = document.createElement('li');
-                                    li.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-center');
+                                    li.className = 'flex items-center justify-between px-4 py-2.5 bg-surface-50 rounded-lg group hover:bg-surface-100 transition-colors';
         
                                     const nameSpan = document.createElement('span');
                                     nameSpan.textContent = siteData.name;
-                                    nameSpan.classList.add('flex-grow-1');
+                                    nameSpan.className = 'flex-1 text-sm text-surface-700';
         
                                     const deleteBtn = document.createElement('button');
                                     deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
-                                    deleteBtn.classList.add('btn', 'btn-sm', 'p-1');
+                                    deleteBtn.className = 'p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all opacity-0 group-hover:opacity-100';
+                                    deleteBtn.title = 'Elimina';
         
                                     deleteBtn.addEventListener('click', () => {
                                         Swal.fire({
@@ -575,8 +497,8 @@ function loadSites(selectElement = null, clientId = null) {
                                             text: `Vuoi eliminare il sito "${siteData.name}"?`,
                                             icon: 'warning',
                                             showCancelButton: true,
-                                            confirmButtonColor: '#d33',
-                                            cancelButtonColor: '#3085d6',
+                                            confirmButtonColor: '#ef4444',
+                                            cancelButtonColor: '#6b7280',
                                             confirmButtonText: 'Sì, elimina!',
                                             cancelButtonText: 'Annulla'
                                         }).then((result) => {
@@ -674,26 +596,26 @@ function loadWorktypes(selectElement = null, clientId = null) {
         
                     // Crea un div per la sezione del cliente
                     const clientSectionDiv = document.createElement('div');
-                    clientSectionDiv.classList.add('mb-3');
+                    clientSectionDiv.className = 'mb-4';
         
                     // Crea l'header per il Cliente con un pulsante di toggle
                     const clientHeaderDiv = document.createElement('div');
-                    clientHeaderDiv.classList.add('d-flex', 'justify-content-between', 'align-items-center');
+                    clientHeaderDiv.className = 'flex justify-between items-center';
         
                     const clientHeader = document.createElement('h5');
                     clientHeader.textContent = clientData.name;
-                    clientHeader.classList.add('mt-3');
+                    clientHeader.className = 'text-sm font-semibold text-surface-800 mt-3';
         
                     const toggleWorktypesBtn = document.createElement('button');
-                    toggleWorktypesBtn.classList.add('btn', 'btn-sm', 'btn-outline-secondary');
-                    toggleWorktypesBtn.innerHTML = '<i class="fas fa-eye"></i> Mostra/Nascondi Tipi di Lavoro';
+                    toggleWorktypesBtn.className = 'text-xs text-indigo-500 hover:text-indigo-700 font-medium flex items-center gap-1 transition-colors';
+                    toggleWorktypesBtn.innerHTML = '<i class="fas fa-eye text-xs"></i> Mostra/Nascondi';
         
                     clientHeaderDiv.appendChild(clientHeader);
                     clientHeaderDiv.appendChild(toggleWorktypesBtn);
         
                     // Crea la lista dei Tipi di Lavoro per questo Cliente
                     const worktypeUl = document.createElement('ul');
-                    worktypeUl.classList.add('list-group');
+                    worktypeUl.className = 'mt-2 space-y-1';
                     worktypeUl.style.display = 'none'; // Nasconde i tipi di lavoro inizialmente
         
                     db.collection('worktypes')
@@ -705,21 +627,22 @@ function loadWorktypes(selectElement = null, clientId = null) {
                             if (worktypeSnapshot.empty) {
                                 const noWorktypesLi = document.createElement('li');
                                 noWorktypesLi.textContent = 'Nessun tipo di lavoro associato.';
-                                noWorktypesLi.classList.add('list-group-item');
+                                noWorktypesLi.className = 'text-sm text-surface-400 italic px-4 py-2';
                                 worktypeUl.appendChild(noWorktypesLi);
                             } else {
                                 worktypeSnapshot.forEach(worktypeDoc => {
                                     const worktypeData = worktypeDoc.data();
                                     const li = document.createElement('li');
-                                    li.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-center');
+                                    li.className = 'flex items-center justify-between px-4 py-2.5 bg-surface-50 rounded-lg group hover:bg-surface-100 transition-colors';
         
                                     const nameSpan = document.createElement('span');
-                                    nameSpan.textContent = `${worktypeData.name} (Tariffa Oraria: ${worktypeData.hourlyRate || 0} €)`;
-                                    nameSpan.classList.add('flex-grow-1');
+                                    nameSpan.className = 'flex-1 text-sm text-surface-700';
+                                    nameSpan.innerHTML = `${worktypeData.name} <span class="text-xs text-surface-400 ml-2">${worktypeData.hourlyRate || 0} €/h</span>`;
         
                                     const deleteBtn = document.createElement('button');
                                     deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
-                                    deleteBtn.classList.add('btn', 'btn-sm', 'p-1');
+                                    deleteBtn.className = 'p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all opacity-0 group-hover:opacity-100';
+                                    deleteBtn.title = 'Elimina';
         
                                     deleteBtn.addEventListener('click', () => {
                                         Swal.fire({
@@ -727,8 +650,8 @@ function loadWorktypes(selectElement = null, clientId = null) {
                                             text: `Vuoi eliminare il tipo di lavoro "${worktypeData.name}"?`,
                                             icon: 'warning',
                                             showCancelButton: true,
-                                            confirmButtonColor: '#d33',
-                                            cancelButtonColor: '#3085d6',
+                                            confirmButtonColor: '#ef4444',
+                                            cancelButtonColor: '#6b7280',
                                             confirmButtonText: 'Sì, elimina!',
                                             cancelButtonText: 'Annulla'
                                         }).then((result) => {
@@ -788,8 +711,3 @@ function loadWorktypes(selectElement = null, clientId = null) {
 /**
  * Inserimento dei template nel DOM
  */
-const dataManagementDiv = document.createElement('div');
-dataManagementDiv.id = 'data-management-template';
-dataManagementDiv.style.display = 'none';
-dataManagementDiv.innerHTML = dataManagementTemplate;
-document.body.appendChild(dataManagementDiv);

@@ -456,7 +456,7 @@ function setupReportSection() {
                         console.error('Errore nel salvataggio del report nello storico:', error);
                     });
     
-                $('#reportModal').modal('show');
+                CrModal.show('reportModal');
                 reportContent.style.display = 'block';
     
             })
@@ -492,7 +492,7 @@ firebase.auth().onAuthStateChanged(function (user) {
     if (user) {
         currentUser = user;
         initializeReportEvents();
-    } else {
+    } else if (!DEV_MODE) {
         window.location.href = 'login.html';
     }
 });

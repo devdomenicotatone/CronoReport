@@ -4,105 +4,96 @@ let earningsChartViewMode = 'combined';
 const MAX_TOTAL_TIMELOGS = 500;
 
 const dashboardTemplate = `
-<div id="dashboard-section" class="container mt-5 custom-container">
-    <h2 class="mb-5 text-center text-uppercase font-weight-bold">
-        <i class="fas fa-chart-line mr-2"></i>Dashboard Analitica
-    </h2>
-    <!-- Sezione Filtri -->
-    <div class="card mb-4 shadow-sm">
-        <div class="card-header bg-primary text-white">
-            <h5 class="mb-0"><i class="fas fa-filter mr-2"></i>Filtri</h5>
+<div id="dashboard-section" class="max-w-6xl mx-auto px-4 py-6">
+    <div class="flex items-center gap-3 mb-8">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg">
+            <i class="fas fa-chart-line text-white text-lg"></i>
         </div>
-        <div class="card-body">
-            <form id="dashboard-filter-form" class="row">
-                <div class="col-md-2">
-                    <label for="dashboard-filter-date-start" class="font-weight-bold">Data Inizio:</label>
-                    <input type="date" id="dashboard-filter-date-start" class="form-control">
+        <h2 class="text-2xl font-bold text-surface-800">Dashboard Analitica</h2>
+    </div>
+    <!-- Sezione Filtri -->
+    <div class="cr-card mb-5 overflow-hidden">
+        <div class="px-5 py-3 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white">
+            <span class="font-semibold flex items-center gap-2"><i class="fas fa-filter"></i> Filtri</span>
+        </div>
+        <div class="p-5">
+            <form id="dashboard-filter-form" class="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+                <div>
+                    <label for="dashboard-filter-date-start" class="block text-sm font-semibold text-surface-600 mb-1">Data Inizio</label>
+                    <input type="date" id="dashboard-filter-date-start" class="cr-input">
                 </div>
-                <div class="col-md-2">
-                    <label for="dashboard-filter-date-end" class="font-weight-bold">Data Fine:</label>
-                    <input type="date" id="dashboard-filter-date-end" class="form-control">
+                <div>
+                    <label for="dashboard-filter-date-end" class="block text-sm font-semibold text-surface-600 mb-1">Data Fine</label>
+                    <input type="date" id="dashboard-filter-date-end" class="cr-input">
                 </div>
-                <div class="col-md-2">
-                    <label for="dashboard-filter-client" class="font-weight-bold">Cliente:</label>
-                    <select id="dashboard-filter-client" class="form-control">
+                <div>
+                    <label for="dashboard-filter-client" class="block text-sm font-semibold text-surface-600 mb-1">Cliente</label>
+                    <select id="dashboard-filter-client" class="cr-input">
                         <option value="">Tutti i Clienti</option>
                     </select>
                 </div>
-                <div class="col-md-3">
-                    <label for="dashboard-filter-max-timelogs" class="font-weight-bold">
-                        Max TimeLogs per Cliente 
-                        <span id="max-timelogs-info" class="text-primary" data-toggle="tooltip" data-placement="top" title="Facoltativo. Imposta il numero massimo di timeLogs per cliente da visualizzare.">
+                <div>
+                    <label for="dashboard-filter-max-timelogs" class="block text-sm font-semibold text-surface-600 mb-1">
+                        Max TimeLogs
+                        <span id="max-timelogs-info" class="text-indigo-400 ml-1" title="Facoltativo. Max timeLogs per cliente.">
                             <i class="fas fa-info-circle"></i>
                         </span>
                     </label>
-                    <input type="number" id="dashboard-filter-max-timelogs" class="form-control" placeholder="Es. 50" value="150">
+                    <input type="number" id="dashboard-filter-max-timelogs" class="cr-input" placeholder="Es. 50" value="150">
                 </div>
-                <div class="col-md-3 d-flex align-items-end">
-                    <button id="dashboard-filter-btn" type="button" class="btn btn-primary btn-block mt-2">
-                        <i class="fas fa-search mr-2"></i>Filtra Statistiche
+                <div>
+                    <button id="dashboard-filter-btn" type="button" class="cr-btn w-full bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white font-semibold shadow-md">
+                        <i class="fas fa-search mr-2"></i>Filtra
                     </button>
                 </div>
             </form>
         </div>
     </div>
     <!-- Grafici -->
-    <div class="row">
-        <div class="col-md-6">
-            <!-- Carta per il tempo lavorato -->
-            <div class="card mb-4 shadow-sm">
-                <div class="card-header bg-success text-white">
-                    <h5 class="mb-0"><i class="fas fa-clock mr-2"></i>Tempo Lavorato</h5>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <!-- Tempo Lavorato -->
+        <div class="cr-card overflow-hidden">
+            <div class="px-5 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white">
+                <span class="font-semibold flex items-center gap-2"><i class="fas fa-clock"></i> Tempo Lavorato</span>
+            </div>
+            <div class="p-5">
+                <canvas id="workedTimeChart"></canvas>
+            </div>
+        </div>
+        <!-- Guadagni Totali -->
+        <div class="cr-card overflow-hidden">
+            <div class="px-5 py-3 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white flex justify-between items-center">
+                <span class="font-semibold flex items-center gap-2"><i class="fas fa-euro-sign"></i> Guadagni Totali</span>
+                <div class="flex items-center gap-2">
+                    <label for="earnings-view-mode" class="text-xs text-white/80">Visualizza:</label>
+                    <select id="earnings-view-mode" class="bg-white/20 border-0 text-white text-xs rounded px-2 py-1 focus:outline-none">
+                        <option value="combined">Combinato</option>
+                        <option value="perClient">Per Cliente</option>
+                    </select>
                 </div>
-                <div class="card-body">
-                    <canvas id="workedTimeChart"></canvas>
+            </div>
+            <div class="p-5">
+                <canvas id="earningsChart"></canvas>
+            </div>
+        </div>
+        <!-- Distribuzione Tipi di Lavoro -->
+        <div class="cr-card overflow-hidden">
+            <div class="px-5 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-white">
+                <span class="font-semibold flex items-center gap-2"><i class="fas fa-chart-pie"></i> Distribuzione Tipi di Lavoro</span>
+            </div>
+            <div class="p-5" style="position:relative; min-height:400px;">
+                <div style="position: relative; height:100%; width:100%;">
+                    <canvas id="worktypeDistributionChart"></canvas>
                 </div>
             </div>
         </div>
-        <div class="col-md-6">
-            <!-- Carta per i guadagni totali -->
-            <div class="card mb-4 shadow-sm">
-                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="fas fa-euro-sign mr-2"></i>Guadagni Totali</h5>
-                    <!-- Switch per modalità di visualizzazione -->
-                    <div>
-                        <label for="earnings-view-mode" class="font-weight-bold mr-2">Visualizza:</label>
-                        <select id="earnings-view-mode" class="form-control form-control-sm d-inline-block w-auto">
-                            <option value="combined">Combinato</option>
-                            <option value="perClient">Per Cliente</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <canvas id="earningsChart"></canvas>
-                </div>
+        <!-- Tempo Lavorato per Cliente -->
+        <div class="cr-card overflow-hidden">
+            <div class="px-5 py-3 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white">
+                <span class="font-semibold flex items-center gap-2"><i class="fas fa-user-clock"></i> Tempo Lavorato per Cliente</span>
             </div>
-        </div>
-    </div>
-    <!-- Altre carte per KPI rilevanti -->
-    <div class="row">
-        <div class="col-md-6">
-            <!-- Carta per distribuzione tipi di lavoro -->
-            <div class="card mb-4 shadow-sm">
-                <div class="card-header bg-warning text-white">
-                    <h5 class="mb-0"><i class="fas fa-chart-pie mr-2"></i>Distribuzione Tipi di Lavoro</h5>
-                </div>
-                <div class="card-body" style="position:relative; min-height:400px;">
-                    <div style="position: relative; height:100%; width:100%;">
-                        <canvas id="worktypeDistributionChart"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <!-- Carta per tempo lavorato per cliente -->
-            <div class="card mb-4 shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0"><i class="fas fa-user-clock mr-2"></i>Tempo Lavorato per Cliente</h5>
-                </div>
-                <div class="card-body">
-                    <canvas id="clientWorkedTimeChart"></canvas>
-                </div>
+            <div class="p-5">
+                <canvas id="clientWorkedTimeChart"></canvas>
             </div>
         </div>
     </div>
@@ -154,10 +145,7 @@ function initializeDashboardEvents() {
     contentSection.innerHTML = dashboardTemplate;
 
     requestAnimationFrame(() => {
-        // Inizializza tooltips Bootstrap
-        $(function () {
-            $('[data-toggle="tooltip"]').tooltip();
-        });
+        // Tooltips handled natively via title attribute
 
         loadClientsForDashboardFilter();
 

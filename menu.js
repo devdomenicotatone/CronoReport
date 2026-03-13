@@ -1,90 +1,186 @@
-// menu.js
+// menu.js — Vanilla JS (no jQuery)
 
-// Function to initialize menu events
+/**
+ * Initialize all menu functionality: sidebar nav, bottom nav, more menu, logout
+ */
 function initializeMenu() {
-    // Function to handle the animation of the menu
-    function test() {
-        var tabsNewAnim = $('#navbarSupportedContent');
-        var activeItemNewAnim = tabsNewAnim.find('.active');
-        var activeHeight = activeItemNewAnim.innerHeight();
-        var activeWidth = activeItemNewAnim.innerWidth();
-        var itemOffset = activeItemNewAnim.offset();
-        var containerOffset = tabsNewAnim.offset();
+    // === Sidebar Navigation (Desktop) ===
+    const sidebarLinks = document.querySelectorAll('#sidebar-nav .nav-link');
+    sidebarLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const section = link.getAttribute('data-section');
+            if (section) {
+                loadSection(section);
+                setActiveNav(section);
+            }
+        });
+    });
 
-        $(".hori-selector").css({
-            "top": itemOffset.top - containerOffset.top + "px",
-            "left": itemOffset.left - containerOffset.left + "px",
-            "height": activeHeight + "px",
-            "width": activeWidth + "px"
+    // === Bottom Navigation (Mobile) ===
+    const bottomLinks = document.querySelectorAll('#bottom-nav .bottom-nav-link');
+    bottomLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const section = link.getAttribute('data-section');
+            if (section) {
+                loadSection(section);
+                setActiveNav(section);
+                closeMoreMenu();
+            }
+        });
+    });
+
+    // === More Menu (Mobile) ===
+    const moreBtn = document.getElementById('more-menu-btn');
+    const morePopup = document.getElementById('more-menu-popup');
+
+    if (moreBtn && morePopup) {
+        moreBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            morePopup.classList.toggle('hidden');
+        });
+
+        // Close more menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!morePopup.contains(e.target) && e.target !== moreBtn) {
+                closeMoreMenu();
+            }
+        });
+
+        // More menu links
+        const moreLinks = morePopup.querySelectorAll('.more-nav-link');
+        moreLinks.forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const section = link.getAttribute('data-section');
+                if (section) {
+                    loadSection(section);
+                    setActiveNav(section);
+                    closeMoreMenu();
+                }
+            });
         });
     }
 
-    $(document).ready(function () {
-        setTimeout(function () { test(); }, 100); // Slight delay to ensure elements are rendered
-    });
+    // === Logout ===
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            auth.signOut().then(() => {
+                window.location.href = 'login.html';
+            }).catch((error) => {
+                console.error('Errore durante il logout:', error);
+            });
+        });
+    }
 
-    $(window).on('resize', function () {
-        setTimeout(function () { test(); }, 500);
-    });
+    const mobileLogoutBtn = document.getElementById('mobile-logout-btn');
+    if (mobileLogoutBtn) {
+        mobileLogoutBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            auth.signOut().then(() => {
+                window.location.href = 'login.html';
+            }).catch((error) => {
+                console.error('Errore durante il logout:', error);
+            });
+        });
+    }
+}
 
-    $(".navbar-toggler").click(function () {
-        $(".navbar-collapse").slideToggle(300);
-        setTimeout(function () { test(); }, 300); // Delay to match the slideToggle animation
-    });
+/**
+ * Close the mobile "More" popup menu
+ */
+function closeMoreMenu() {
+    const morePopup = document.getElementById('more-menu-popup');
+    if (morePopup) {
+        morePopup.classList.add('hidden');
+    }
+}
 
-    // Handle menu item clicks
-    $('#navbarSupportedContent ul li a').click(function (e) {
-        e.preventDefault();
-        var section = $(this).data('section');
-        if (section) {
-            loadSection(section);
-            updateActiveMenuItem(section); // Update the active menu item
+/**
+ * Set the active navigation item across sidebar and bottom nav
+ * @param {string} section - The section identifier
+ */
+function setActiveNav(section) {
+    // Update sidebar links
+    document.querySelectorAll('#sidebar-nav .nav-link').forEach(link => {
+        if (link.getAttribute('data-section') === section) {
+            link.classList.add('active');
+            link.classList.remove('text-white/60');
+            link.classList.add('text-white', 'bg-brand-600/20');
+        } else {
+            link.classList.remove('active', 'text-white', 'bg-brand-600/20');
+            link.classList.add('text-white/60');
         }
-        test(); // Update the selector position after click
     });
 
-    // Logout button functionality
-    $('#logout-btn').click(function () {
-        auth.signOut().then(() => {
-            // Redirect to login.html after logout
-            window.location.href = 'login.html';
-        }).catch((error) => {
-            console.error('Errore durante il logout:', error);
-        });
+    // Update bottom nav links
+    document.querySelectorAll('#bottom-nav .bottom-nav-link').forEach(link => {
+        if (link.getAttribute('data-section') === section) {
+            link.classList.add('active');
+            link.classList.remove('text-white/40');
+            link.classList.add('text-brand-400');
+        } else {
+            link.classList.remove('active', 'text-brand-400');
+            link.classList.add('text-white/40');
+        }
+    });
+
+    // Update more menu links
+    document.querySelectorAll('#more-menu-popup .more-nav-link').forEach(link => {
+        if (link.getAttribute('data-section') === section) {
+            link.classList.add('text-brand-400');
+            link.classList.remove('text-white/60');
+        } else {
+            link.classList.remove('text-brand-400');
+            link.classList.add('text-white/60');
+        }
     });
 }
 
-// Initialize the menu after loading
+/**
+ * Update the user display info in sidebar and mobile header
+ * @param {object} user - Firebase user object
+ */
+function updateUserDisplay(user) {
+    if (!user) return;
+
+    const initial = (user.displayName || user.email || '?').charAt(0).toUpperCase();
+    const name = user.displayName || user.email || 'Utente';
+
+    const avatar = document.getElementById('user-avatar');
+    const mobileAvatar = document.getElementById('mobile-user-avatar');
+    const userName = document.getElementById('user-name');
+
+    if (avatar) avatar.textContent = initial;
+    if (mobileAvatar) mobileAvatar.textContent = initial;
+    if (userName) userName.textContent = name;
+
+    // If user has a photo, use it
+    if (user.photoURL) {
+        if (avatar) {
+            avatar.innerHTML = `<img src="${user.photoURL}" alt="" class="w-8 h-8 rounded-full object-cover">`;
+        }
+        if (mobileAvatar) {
+            mobileAvatar.innerHTML = `<img src="${user.photoURL}" alt="" class="w-7 h-7 rounded-full object-cover">`;
+        }
+    }
+}
+
+// The menu is now inline in index.html, so we just initialize directly
+// Keep the loadMenu function for backwards compatibility
 function loadMenu() {
-    fetch('menu.html')
-        .then(response => response.text())
-        .then(data => {
-            document.getElementById('menu-container').innerHTML = data;
-            initializeMenu(); // Initialize the menu after loading
-        })
-        .catch(error => console.error('Errore nel caricamento del menu:', error));
+    initializeMenu();
 }
 
-// Function to update the active menu item
+// Alias for backwards compatibility
 function updateActiveMenuItem(section) {
-    $('#navbarSupportedContent ul li').removeClass("active");
-    $('#navbarSupportedContent ul li a[data-section="' + section + '"]').parent().addClass('active');
-    setTimeout(function () {
-        var tabsNewAnim = $('#navbarSupportedContent');
-        var activeItemNewAnim = tabsNewAnim.find('.active');
-        var activeHeight = activeItemNewAnim.innerHeight();
-        var activeWidth = activeItemNewAnim.innerWidth();
-        var itemOffset = activeItemNewAnim.offset();
-        var containerOffset = tabsNewAnim.offset();
-
-        $(".hori-selector").css({
-            "top": itemOffset.top - containerOffset.top + "px",
-            "left": itemOffset.left - containerOffset.left + "px",
-            "height": activeHeight + "px",
-            "width": activeWidth + "px"
-        });
-    }, 100); // Slight delay to ensure class changes are applied
+    setActiveNav(section);
 }
 
-// Load the menu on page load
-loadMenu();
+// Auto-initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+    initializeMenu();
+});

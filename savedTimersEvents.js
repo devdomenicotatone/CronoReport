@@ -223,14 +223,14 @@ function undoDeleteYear(operation) {
 
     batch.commit().then(() => {
         // Re-inserisci la sezione dell'anno nell'interfaccia
-        const clientSections = document.querySelectorAll('.card');
+        const clientSections = document.querySelectorAll('.cr-card');
         let inserted = false;
 
         clientSections.forEach(clientSection => {
-            const clientHeader = clientSection.querySelector('.card-header button');
+            const clientHeader = clientSection.querySelector('button[data-cr-toggle]');
             if (clientHeader && clientHeader.textContent.trim() === clientName) {
-                const clientBody = clientSection.querySelector('.card-body');
-                clientBody.appendChild(yearSection);
+                const clientBody = clientSection.querySelector('.cr-collapsible > div');
+                if (clientBody) clientBody.appendChild(yearSection);
                 inserted = true;
             }
         });
@@ -272,14 +272,14 @@ function undoDeleteMonth(operation) {
 
     batch.commit().then(() => {
         // Re-inserisci la sezione del mese nell'interfaccia
-        const yearSections = document.querySelectorAll('.card');
+        const yearSections = document.querySelectorAll('.cr-card');
         let inserted = false;
 
         yearSections.forEach(yearSection => {
-            const yearHeader = yearSection.querySelector('.card-header button');
+            const yearHeader = yearSection.querySelector('button[data-cr-toggle]');
             if (yearHeader && yearHeader.textContent.trim() === year) {
-                const yearBody = yearSection.querySelector('.card-body');
-                yearBody.appendChild(monthSection);
+                const yearBody = yearSection.querySelector('.cr-collapsible > div');
+                if (yearBody) yearBody.appendChild(monthSection);
                 inserted = true;
             }
         });
@@ -765,8 +765,8 @@ firebase.auth().onAuthStateChanged(function (user) {
                 loadRecycleBin();
             });
         }
-    } else {
-        // L'utente non è autenticato, reindirizza alla pagina di login
+    } else if (!DEV_MODE) {
+        // L'utente non è autenticato, reindirizza alla pagina di login (solo in produzione)
         window.location.href = 'login.html';
     }
 });
