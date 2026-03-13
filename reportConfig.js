@@ -4,7 +4,6 @@
 let savedConfigs = {}; // Oggetto per memorizzare le configurazioni salvate
 let companyLogoBase64 = ''; // Variabile per memorizzare il logo in base64
 
-// Template per la sezione Report con layout migliorato
 const reportTemplate = `
 <div id="report-section" class="max-w-6xl mx-auto px-4 py-6">
     <div class="flex items-center gap-3 mb-8">
@@ -14,86 +13,142 @@ const reportTemplate = `
         <h2 class="text-2xl font-bold text-surface-800">Genera Report</h2>
     </div>
     <form id="report-form">
+
+        <!-- ═══ SEZIONE 1: Configurazione ═══ -->
         <div class="cr-card mb-5 overflow-hidden">
             <div class="px-5 py-3 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white">
-                <span class="font-semibold flex items-center gap-2"><i class="fas fa-file-alt"></i> Configurazione Report</span>
+                <span class="font-semibold flex items-center gap-2"><i class="fas fa-cog"></i> Configurazione</span>
             </div>
             <div class="p-5">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Colonna Sinistra -->
-                    <div class="space-y-4">
-                        <div>
-                            <label for="saved-config-select" class="block text-sm font-semibold text-surface-600 mb-1">Configurazione Salvata</label>
-                            <div class="flex gap-2">
-                                <select id="saved-config-select" class="cr-input flex-1">
-                                    <option value="">-- Seleziona una configurazione --</option>
-                                </select>
-                                <button type="button" id="delete-config-btn" class="cr-btn text-rose-400 hover:text-rose-600 hover:bg-rose-50" style="display: none;">
-                                    <i class="fas fa-trash-alt"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <div>
-                            <label for="company-logo" class="block text-sm font-semibold text-surface-600 mb-1">Logo Aziendale</label>
-                            <input type="file" id="company-logo" class="cr-input text-sm file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-indigo-50 file:text-indigo-600 file:font-medium hover:file:bg-indigo-100" accept="image/*">
-                            <div id="logo-preview-container" class="mt-2"></div>
-                        </div>
-                        <div>
-                            <label for="report-header" class="block text-sm font-semibold text-surface-600 mb-1">Intestazione del Report</label>
-                            <input type="text" id="report-header" class="cr-input" placeholder="Inserisci l'intestazione del report">
-                        </div>
-                        <div>
-                            <label for="config-name" class="block text-sm font-semibold text-surface-600 mb-1">Nome Configurazione (per salvare)</label>
-                            <input type="text" id="config-name" class="cr-input" placeholder="Inserisci un nome per questa configurazione">
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <input type="checkbox" id="only-unreported" class="w-4 h-4 text-indigo-600 rounded border-surface-300 focus:ring-indigo-500" checked>
-                            <label for="only-unreported" class="text-sm text-surface-600">Includi solo timer non reportati</label>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="saved-config-select" class="block text-sm font-semibold text-surface-600 mb-1">Configurazione Salvata</label>
+                        <div class="flex gap-2">
+                            <select id="saved-config-select" class="cr-input flex-1">
+                                <option value="">-- Seleziona una configurazione --</option>
+                            </select>
+                            <button type="button" id="delete-config-btn" class="cr-btn text-rose-400 hover:text-rose-600 hover:bg-rose-50" style="display: none;">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
                         </div>
                     </div>
-                    <!-- Colonna Destra -->
-                    <div class="space-y-4">
-                        <!-- Selezione Intervallo di Date -->
-                        <div>
-                            <label for="report-date-range" class="block text-sm font-semibold text-surface-600 mb-1">Seleziona Intervallo di Date</label>
-                            <div class="flex items-center gap-2">
-                                <input type="date" id="start-date" class="cr-input flex-1">
-                                <span class="text-surface-400 text-sm font-medium">a</span>
-                                <input type="date" id="end-date" class="cr-input flex-1">
-                            </div>
-                        </div>
-                        <!-- Filtri per cliente, sito e tipo di lavoro -->
-                        <div>
-                            <label for="filter-client" class="block text-sm font-semibold text-surface-600 mb-1">Filtra per Cliente</label>
-                            <select id="filter-client" class="cr-input" required>
-                            </select>
-                        </div>
-                        <div>
-                            <label for="filter-site" class="block text-sm font-semibold text-surface-600 mb-1">Filtra per Sito</label>
-                            <select id="filter-site" class="cr-input">
-                                <option value="">Tutti i Siti</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label for="filter-worktype" class="block text-sm font-semibold text-surface-600 mb-1">Filtra per Tipo di Lavoro</label>
-                            <select id="filter-worktype" class="cr-input">
-                                <option value="">Tutti i Tipi di Lavoro</option>
-                            </select>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <input type="checkbox" id="include-hourly-rate" class="w-4 h-4 text-indigo-600 rounded border-surface-300 focus:ring-indigo-500">
-                            <label for="include-hourly-rate" class="text-sm text-surface-600">Includi Tariffa Oraria nel Report</label>
-                        </div>
+                    <div>
+                        <label for="report-header" class="block text-sm font-semibold text-surface-600 mb-1">Intestazione del Report</label>
+                        <input type="text" id="report-header" class="cr-input" placeholder="Inserisci l'intestazione del report">
+                    </div>
+                    <div>
+                        <label for="company-logo" class="block text-sm font-semibold text-surface-600 mb-1">Logo Aziendale</label>
+                        <input type="file" id="company-logo" class="cr-input text-sm file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-indigo-50 file:text-indigo-600 file:font-medium hover:file:bg-indigo-100" accept="image/*">
+                        <div id="logo-preview-container" class="mt-2"></div>
+                    </div>
+                    <div>
+                        <label for="config-name" class="block text-sm font-semibold text-surface-600 mb-1">Nome Configurazione (per salvare)</label>
+                        <input type="text" id="config-name" class="cr-input" placeholder="Inserisci un nome per questa configurazione">
                     </div>
                 </div>
             </div>
         </div>
-        <!-- Pulsante per generare il report -->
-        <div class="flex justify-end mb-4">
-            <button type="submit" class="cr-btn bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white font-semibold shadow-md px-6 py-2.5">
-                <i class="fas fa-file-alt mr-2"></i>Genera Report
-            </button>
+
+        <!-- ═══ SEZIONE 2: Periodo & Filtri ═══ -->
+        <div class="cr-card mb-5 overflow-hidden">
+            <div class="px-5 py-3 bg-gradient-to-r from-violet-500 to-purple-600 text-white">
+                <span class="font-semibold flex items-center gap-2"><i class="fas fa-calendar-alt"></i> Periodo & Filtri</span>
+            </div>
+            <div class="p-5 space-y-4">
+                <!-- Chip periodo rapido -->
+                <div>
+                    <label class="block text-sm font-semibold text-surface-600 mb-2">Periodo Rapido</label>
+                    <div class="rw-period-chips" id="rw-period-chips">
+                        <button type="button" class="rw-period-chip" data-period="this-month"><i class="fas fa-calendar-day"></i> Questo Mese</button>
+                        <button type="button" class="rw-period-chip" data-period="last-month"><i class="fas fa-calendar-minus"></i> Mese Scorso</button>
+                        <button type="button" class="rw-period-chip" data-period="last-3-months"><i class="fas fa-calendar-week"></i> Ultimi 3 Mesi</button>
+                        <button type="button" class="rw-period-chip" data-period="this-year"><i class="fas fa-calendar"></i> Anno Corrente</button>
+                        <button type="button" class="rw-period-chip" data-period="custom"><i class="fas fa-sliders-h"></i> Personalizzato</button>
+                    </div>
+                    <!-- Date range (visibile solo con "Personalizzato") -->
+                    <div class="rw-date-range" id="rw-date-range">
+                        <input type="date" id="start-date" class="cr-input flex-1">
+                        <span class="rw-date-sep">→</span>
+                        <input type="date" id="end-date" class="cr-input flex-1">
+                    </div>
+                </div>
+
+                <!-- Filtri -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                        <label for="filter-client" class="block text-sm font-semibold text-surface-600 mb-1">Cliente</label>
+                        <select id="filter-client" class="cr-input" required></select>
+                    </div>
+                    <div>
+                        <label for="filter-site" class="block text-sm font-semibold text-surface-600 mb-1">Sito</label>
+                        <select id="filter-site" class="cr-input">
+                            <option value="">Tutti i Siti</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="filter-worktype" class="block text-sm font-semibold text-surface-600 mb-1">Tipo di Lavoro</label>
+                        <select id="filter-worktype" class="cr-input">
+                            <option value="">Tutti i Tipi di Lavoro</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Opzioni -->
+                <div class="flex flex-wrap gap-6">
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" id="only-unreported" class="w-4 h-4 text-indigo-600 rounded border-surface-300 focus:ring-indigo-500" checked>
+                        <label for="only-unreported" class="text-sm text-surface-600">Solo timer non reportati</label>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" id="include-hourly-rate" class="w-4 h-4 text-indigo-600 rounded border-surface-300 focus:ring-indigo-500">
+                        <label for="include-hourly-rate" class="text-sm text-surface-600">Includi Tariffa Oraria</label>
+                    </div>
+                </div>
+            </div>
         </div>
+
+        <!-- ═══ SEZIONE 3: Anteprima & Genera ═══ -->
+        <div class="cr-card mb-5 overflow-hidden">
+            <div class="px-5 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white">
+                <span class="font-semibold flex items-center gap-2"><i class="fas fa-eye"></i> Anteprima</span>
+            </div>
+            <div class="p-5 space-y-4">
+                <!-- KPI Stat Cards -->
+                <div class="rw-stats-grid" id="rw-stats-grid">
+                    <div class="rw-stat-card stat-hours">
+                        <div class="rw-stat-icon"><i class="fas fa-clock"></i></div>
+                        <div class="rw-stat-label">Ore Totali</div>
+                        <div class="rw-stat-value" id="rw-stat-hours">—</div>
+                    </div>
+                    <div class="rw-stat-card stat-amount">
+                        <div class="rw-stat-icon"><i class="fas fa-euro-sign"></i></div>
+                        <div class="rw-stat-label">Importo Totale</div>
+                        <div class="rw-stat-value" id="rw-stat-amount">—</div>
+                    </div>
+                    <div class="rw-stat-card stat-count">
+                        <div class="rw-stat-icon"><i class="fas fa-layer-group"></i></div>
+                        <div class="rw-stat-label">Timer</div>
+                        <div class="rw-stat-value" id="rw-stat-count">—</div>
+                    </div>
+                </div>
+
+                <!-- Preview Table -->
+                <div id="rw-preview-container">
+                    <div class="rw-empty-preview">
+                        <i class="fas fa-search"></i>
+                        <p>Seleziona periodo e cliente per vedere l'anteprima</p>
+                    </div>
+                </div>
+
+                <!-- Pulsante Genera -->
+                <div class="flex justify-end pt-2">
+                    <button type="submit" id="rw-generate-btn" class="cr-btn bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white font-semibold shadow-md px-6 py-2.5 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                        <i class="fas fa-file-alt mr-2"></i>Genera Report
+                    </button>
+                </div>
+            </div>
+        </div>
+
     </form>
 </div>
 

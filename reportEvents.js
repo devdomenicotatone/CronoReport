@@ -57,6 +57,8 @@ function setupReportSection() {
     const filterSiteSelect = document.getElementById('filter-site');
     const filterWorktypeSelect = document.getElementById('filter-worktype');
 
+    const generateBtn = document.getElementById('rw-generate-btn');
+
     // Carica i clienti
     loadClients(filterClientSelect);
 
@@ -69,7 +71,13 @@ function setupReportSection() {
             filterSiteSelect.innerHTML = '<option value="">Tutti i Siti</option>';
             filterWorktypeSelect.innerHTML = '<option value="">Tutti i Tipi di Lavoro</option>';
         }
+        tryLoadPreview();
     });
+
+    // Trigger preview anche quando cambiano sito/worktype/checkbox
+    filterSiteSelect.addEventListener('change', () => tryLoadPreview());
+    filterWorktypeSelect.addEventListener('change', () => tryLoadPreview());
+    document.getElementById('only-unreported').addEventListener('change', () => tryLoadPreview());
 
     exportGoogleDocBtn = document.getElementById('export-google-doc-btn');
     exportGoogleSheetBtn = document.getElementById('export-google-sheet-btn');
@@ -77,8 +85,233 @@ function setupReportSection() {
     if (exportGoogleDocBtn) exportGoogleDocBtn.disabled = true;
     if (exportGoogleSheetBtn) exportGoogleSheetBtn.disabled = true;
 
+    // === PERIOD CHIPS ===
+    const periodChipsContainer = document.getElementById('rw-period-chips');
+    const dateRangeContainer = document.getElementById('rw-date-range');
+    let activePeriod = null;
+
+    function setPeriodDates(period) {
+        const now = new Date();
+        let start, end;
+
+        switch (period) {
+            case 'this-month':
+                start = new Date(now.getFullYear(), now.getMonth(), 1);
+                end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                break;
+            case 'last-month':
+                start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                end = new Date(now.getFullYear(), now.getMonth(), 0);
+                break;
+            case 'last-3-months':
+                start = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+                end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                break;
+            case 'this-year':
+                start = new Date(now.getFullYear(), 0, 1);
+                end = new Date(now.getFullYear(), 11, 31);
+                break;
+            default:
+                return;
+        }
+
+        startDateInput.value = start.toISOString().split('T')[0];
+        endDateInput.value = end.toISOString().split('T')[0];
+    }
+
+    function updatePeriodChipsUI() {
+        periodChipsContainer.querySelectorAll('.rw-period-chip').forEach(chip => {
+            chip.classList.toggle('rw-period-chip-active', chip.dataset.period === activePeriod);
+        });
+        // Show/hide date range for custom
+        if (activePeriod === 'custom') {
+            dateRangeContainer.classList.add('visible');
+        } else {
+            dateRangeContainer.classList.remove('visible');
+        }
+    }
+
+    periodChipsContainer.addEventListener('click', (e) => {
+        const chip = e.target.closest('.rw-period-chip');
+        if (!chip) return;
+        activePeriod = chip.dataset.period;
+        updatePeriodChipsUI();
+
+        if (activePeriod !== 'custom') {
+            setPeriodDates(activePeriod);
+            tryLoadPreview();
+        }
+    });
+
+    // When dates change manually update preview
+    startDateInput.addEventListener('change', () => {
+        if (!activePeriod || activePeriod === 'custom') {
+            activePeriod = 'custom';
+            updatePeriodChipsUI();
+        }
+        tryLoadPreview();
+    });
+    endDateInput.addEventListener('change', () => {
+        if (!activePeriod || activePeriod === 'custom') {
+            activePeriod = 'custom';
+            updatePeriodChipsUI();
+        }
+        tryLoadPreview();
+    });
+
+    // Auto-set dates from unreported timers fallback
     setAutoDateRange();
 
+    // === LIVE PREVIEW ===
+    let previewDebounceTimer = null;
+    let lastPreviewData = null; // cache for preview results
+
+    function tryLoadPreview() {
+        // Debounce 300ms
+        clearTimeout(previewDebounceTimer);
+        previewDebounceTimer = setTimeout(() => {
+            loadPreview();
+        }, 300);
+    }
+
+    function loadPreview() {
+        const startVal = startDateInput.value;
+        const endVal = endDateInput.value;
+        const clientId = filterClientSelect.value;
+        const siteId = filterSiteSelect.value;
+        const worktypeId = filterWorktypeSelect.value;
+        const onlyUnreported = document.getElementById('only-unreported').checked;
+
+        // Reset if not enough data
+        if (!startVal || !endVal || !clientId) {
+            document.getElementById('rw-stat-hours').textContent = '—';
+            document.getElementById('rw-stat-amount').textContent = '—';
+            document.getElementById('rw-stat-count').textContent = '—';
+            document.getElementById('rw-preview-container').innerHTML = `
+                <div class="rw-empty-preview">
+                    <i class="fas fa-search"></i>
+                    <p>Seleziona periodo e cliente per vedere l'anteprima</p>
+                </div>
+            `;
+            if (generateBtn) generateBtn.disabled = true;
+            lastPreviewData = null;
+            return;
+        }
+
+        // Show loading
+        document.getElementById('rw-preview-container').innerHTML = `
+            <div class="rw-loading">
+                <div class="spinner"></div>
+                Caricamento anteprima...
+            </div>
+        `;
+
+        const startDate = new Date(startVal);
+        const endDate = new Date(endVal);
+        endDate.setHours(23, 59, 59, 999);
+
+        // Load worktype rates first
+        loadWorktypeRates().then(() => {
+            let query = db.collection('timeLogs')
+                .where('uid', '==', currentUser.uid)
+                .where('isDeleted', '==', false)
+                .where('startTime', '>=', firebase.firestore.Timestamp.fromDate(startDate))
+                .where('startTime', '<=', firebase.firestore.Timestamp.fromDate(endDate));
+
+            if (clientId) query = query.where('clientId', '==', clientId);
+            if (siteId) query = query.where('siteId', '==', siteId);
+            if (worktypeId) query = query.where('worktypeId', '==', worktypeId);
+            if (onlyUnreported) query = query.where('isReported', '==', false);
+
+            return query.orderBy('startTime', 'asc').get();
+        }).then(snapshot => {
+            let totalHours = 0;
+            let totalAmount = 0;
+            let count = 0;
+            const previewRows = [];
+
+            snapshot.forEach(doc => {
+                const d = doc.data();
+                const durationH = d.duration / 3600;
+                const rate = worktypeRates[d.worktypeId] || 0;
+                const amount = durationH * rate;
+                totalHours += durationH;
+                totalAmount += amount;
+                count++;
+
+                previewRows.push({
+                    date: new Date(d.startTime.seconds * 1000).toLocaleDateString('it-IT', { day: '2-digit', month: 'short' }),
+                    workType: d.worktypeName || '—',
+                    hours: formatDuration(d.duration),
+                    amount: `€ ${amount.toFixed(2)}`
+                });
+            });
+
+            // Store for later
+            lastPreviewData = { totalHours, totalAmount, count };
+
+            // Update stat cards
+            const totalSec = Math.floor(totalHours * 3600);
+            const hh = Math.floor(totalSec / 3600);
+            const mm = Math.floor((totalSec % 3600) / 60);
+            document.getElementById('rw-stat-hours').textContent = `${hh}h ${mm.toString().padStart(2, '0')}m`;
+            document.getElementById('rw-stat-amount').textContent = `€ ${totalAmount.toFixed(2)}`;
+            document.getElementById('rw-stat-count').textContent = count;
+
+            // Update preview table
+            const container = document.getElementById('rw-preview-container');
+            if (count === 0) {
+                container.innerHTML = `
+                    <div class="rw-empty-preview">
+                        <i class="fas fa-inbox"></i>
+                        <p>Nessun timer trovato per il periodo e i filtri selezionati</p>
+                    </div>
+                `;
+                if (generateBtn) generateBtn.disabled = true;
+            } else {
+                const maxShow = 10;
+                const showAll = count <= maxShow;
+                let html = `
+                    <table class="rw-preview-table">
+                        <thead><tr>
+                            <th>Data</th>
+                            <th>Tipo</th>
+                            <th>Durata</th>
+                            <th style="text-align:right;">Importo</th>
+                        </tr></thead>
+                        <tbody>
+                `;
+                const rowsToShow = showAll ? previewRows : previewRows.slice(0, maxShow);
+                rowsToShow.forEach(r => {
+                    html += `<tr>
+                        <td>${r.date}</td>
+                        <td>${r.workType}</td>
+                        <td>${r.hours}</td>
+                        <td style="text-align:right; font-weight:600;">${r.amount}</td>
+                    </tr>`;
+                });
+                html += '</tbody></table>';
+                if (!showAll) {
+                    html += `<div class="text-center mt-2">
+                        <span class="text-xs text-surface-400">e altri ${count - maxShow} timer…</span>
+                    </div>`;
+                }
+                container.innerHTML = html;
+                if (generateBtn) generateBtn.disabled = false;
+            }
+        }).catch(error => {
+            console.error('Errore anteprima:', error);
+            document.getElementById('rw-preview-container').innerHTML = `
+                <div class="rw-empty-preview">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p>Errore nel caricamento dell'anteprima</p>
+                </div>
+            `;
+            if (generateBtn) generateBtn.disabled = true;
+        });
+    }
+
+    // === CONFIG MANAGEMENT (invariato) ===
     savedConfigSelect = document.getElementById('saved-config-select');
     deleteConfigBtn = document.getElementById('delete-config-btn');
     configNameInput = document.getElementById('config-name');
@@ -182,6 +415,7 @@ function setupReportSection() {
             });
     }
 
+    // === REPORT GENERATION (invariato) ===
     reportForm.addEventListener('submit', (e) => {
         e.preventDefault();
         loadWorktypeRates().then(() => {
@@ -307,7 +541,7 @@ function setupReportSection() {
                 reportTableHeader.innerHTML = tableHeaders;
     
                 let totalAmount = 0;
-                let totalHours = 0; // Somma totale delle ore
+                let totalHours = 0;
                 let reportData = [];
                 let timerIds = [];
     
@@ -320,7 +554,7 @@ function setupReportSection() {
                     const hourlyRate = worktypeRates[worktypeId] || 0;
                     const amount = durationInHours * hourlyRate;
                     totalAmount += amount;
-                    totalHours += durationInHours; // Aggiunta totale ore
+                    totalHours += durationInHours;
     
                     const linkText = logData.link ? extractDomainName(logData.link) : '-';
     
@@ -376,7 +610,6 @@ function setupReportSection() {
                     reportTableBody.appendChild(tr);
                 });
     
-                // Aggiorna la visualizzazione totale
                 totalAmountDisplay.textContent = totalAmount.toFixed(2);
                 
                 const totalSeconds = Math.floor(totalHours * 3600);
@@ -393,7 +626,6 @@ function setupReportSection() {
     
                 markTimersAsReported(timerIds);
     
-                // Impostazione pulsanti di export PDF/Docs/Sheets
                 document.getElementById('download-pdf-btn').onclick = () => generatePDF(reportHeader, reportData, totalHours, totalAmount, companyLogoBase64, sanitizedReportFileName, includeHourlyRate);
                 
                 if (exportGoogleDocBtn) {
@@ -445,7 +677,7 @@ function setupReportSection() {
                     reportName: sanitizedReportFileName,
                     reportDataArray: reportData,
                     includeHourlyRate: includeHourlyRate,
-                    totalHours: totalHours // salva anche le ore totali nel DB
+                    totalHours: totalHours
                 };
     
                 db.collection('reports').add(reportDetails)
