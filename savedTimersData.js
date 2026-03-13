@@ -396,6 +396,10 @@ function displayTimers(timers) {
         return;
     }
 
+    const TIMERS_PER_PAGE = 20; // Timer visibili per mese inizialmente
+    const now = new Date();
+    const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
     // === Raggruppa timer per cliente ===
     const timersByClient = {};
 
@@ -407,7 +411,7 @@ function displayTimers(timers) {
         timersByClient[clientName].push(timerObj);
     });
 
-    // Ordina i clienti per totale ore (decrescente) per dare priorità visiva
+    // Ordina i clienti per totale ore (decrescente)
     const sortedClients = Object.keys(timersByClient).sort((a, b) => {
         const totalA = timersByClient[a].reduce((sum, t) => sum + (t.data.duration || 0), 0);
         const totalB = timersByClient[b].reduce((sum, t) => sum + (t.data.duration || 0), 0);
@@ -431,7 +435,7 @@ function displayTimers(timers) {
         const clientSection = document.createElement('div');
         clientSection.className = 'animate-slide-up';
 
-        // Client Header (con badge UNA SOLA VOLTA)
+        // Client Header
         const clientHeader = document.createElement('div');
         clientHeader.className = 'tl-day-header';
         clientHeader.innerHTML = `
@@ -451,132 +455,211 @@ function displayTimers(timers) {
         `;
         clientSection.appendChild(clientHeader);
 
-        // Timer Rows (ordinate per data decrescente)
-        const timersList = document.createElement('div');
-        timersList.className = 'space-y-1';
-
+        // === Sub-raggruppa per mese ===
         clientTimers.sort((a, b) => b.data.startTime.seconds - a.data.startTime.seconds);
 
-        clientTimers.forEach(timerObj => {
-            const logData = timerObj.data;
-
-            const row = document.createElement('div');
-            row.className = 'tl-timer-row';
-
-            // Checkbox
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.className = 'w-4 h-4 accent-indigo-500 timer-checkbox flex-shrink-0 mt-1';
-            checkbox.value = timerObj.id;
-            checkbox.id = 'checkbox-' + timerObj.id;
-
-            // Content wrapper (2 righe)
-            const content = document.createElement('div');
-            content.className = 'flex-1 min-w-0';
-
-            // === RIGA 1: Data + Sito + Durata ===
-            const mainRow = document.createElement('div');
-            mainRow.className = 'flex items-center gap-3';
-
-            // Data
-            const dateSpan = document.createElement('span');
-            dateSpan.className = 'text-xs font-semibold text-surface-500 flex-shrink-0';
-            const startDate = logData.startTime.toDate();
-            dateSpan.textContent = startDate.toLocaleDateString('it-IT', { day: '2-digit', month: 'short' });
-
-            // Site name
-            const siteSpan = document.createElement('span');
-            siteSpan.className = 'text-sm font-medium text-surface-700 truncate';
-            siteSpan.textContent = logData.siteName || '—';
-
-            // Spacer
-            const spacer = document.createElement('span');
-            spacer.className = 'flex-1';
-
-            // Duration
-            const durationSpan = document.createElement('span');
-            durationSpan.className = 'font-mono text-base font-bold text-surface-800 flex-shrink-0';
-            const dur = logData.duration || 0;
-            durationSpan.textContent = `${Math.floor(dur / 3600)}h ${Math.floor((dur % 3600) / 60).toString().padStart(2, '0')}m`;
-
-            mainRow.appendChild(dateSpan);
-            mainRow.appendChild(siteSpan);
-            mainRow.appendChild(spacer);
-            mainRow.appendChild(durationSpan);
-
-            // === RIGA 2: Tipo lavoro · Orari · Stato · Azioni ===
-            const detailRow = document.createElement('div');
-            detailRow.className = 'flex items-center gap-3 mt-1';
-
-            // Worktype
-            const worktypeSpan = document.createElement('span');
-            worktypeSpan.className = 'text-xs text-surface-400';
-            worktypeSpan.textContent = logData.worktypeName || '';
-
-            // Orari
-            const timesSpan = document.createElement('span');
-            timesSpan.className = 'text-xs text-surface-400';
-            const startH = logData.startTime ? formatTimeShort(logData.startTime) : '—';
-            const endH = logData.endTime ? formatTimeShort(logData.endTime) : '—';
-            timesSpan.textContent = `${startH} – ${endH}`;
-
-            // Spacer
-            const spacer2 = document.createElement('span');
-            spacer2.className = 'flex-1';
-
-            // Status badge
-            const statusBadge = document.createElement('span');
-            if (logData.isReported) {
-                statusBadge.className = 'text-xs text-emerald-500 flex items-center gap-1';
-                statusBadge.innerHTML = '<i class="fas fa-check-circle"></i> Reportato';
-            } else {
-                statusBadge.className = 'text-xs text-amber-500 flex items-center gap-1';
-                statusBadge.innerHTML = '<i class="fas fa-clock"></i> Pending';
-            }
-
-            detailRow.appendChild(worktypeSpan);
-            if (logData.worktypeName) {
-                const sep = document.createElement('span');
-                sep.className = 'text-surface-200';
-                sep.textContent = '·';
-                detailRow.appendChild(sep);
-            }
-            detailRow.appendChild(timesSpan);
-            detailRow.appendChild(spacer2);
-            detailRow.appendChild(statusBadge);
-
-            // Link icon
-            if (logData.link) {
-                const a = document.createElement('a');
-                a.href = logData.link;
-                a.target = '_blank';
-                a.className = 'text-xs text-indigo-400 hover:text-indigo-600 transition-colors ml-2';
-                a.innerHTML = '<i class="fas fa-external-link-alt"></i>';
-                a.title = 'Apri link';
-                detailRow.appendChild(a);
-            }
-
-            // Edit button
-            const editBtn = document.createElement('button');
-            editBtn.className = 'tl-edit-btn ml-1';
-            editBtn.title = 'Modifica';
-            editBtn.innerHTML = '<i class="fas fa-pen text-xs"></i>';
-            editBtn.addEventListener('click', () => {
-                openEditSavedTimerModal(timerObj.id);
-            });
-            detailRow.appendChild(editBtn);
-
-            content.appendChild(mainRow);
-            content.appendChild(detailRow);
-
-            // Assemble row
-            row.appendChild(checkbox);
-            row.appendChild(content);
-
-            timersList.appendChild(row);
+        const timersByMonth = {};
+        clientTimers.forEach(t => {
+            const d = t.data.startTime.toDate();
+            const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            if (!timersByMonth[key]) timersByMonth[key] = [];
+            timersByMonth[key].push(t);
         });
 
-        clientSection.appendChild(timersList);
+        const monthNames = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+                            'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+
+        // Ordina mesi decrescente
+        const sortedMonths = Object.keys(timersByMonth).sort((a, b) => b.localeCompare(a));
+
+        sortedMonths.forEach((monthKey, monthIdx) => {
+            const monthTimers = timersByMonth[monthKey];
+            const [year, month] = monthKey.split('-');
+            const monthName = `${monthNames[parseInt(month) - 1]} ${year}`;
+            const isCurrentMonth = monthKey === currentMonthKey;
+
+            // Totali del mese
+            let monthSeconds = 0;
+            monthTimers.forEach(t => { monthSeconds += t.data.duration || 0; });
+
+            // --- Month Section ---
+            const monthSection = document.createElement('div');
+            monthSection.className = 'mb-2';
+
+            // Month Header (collapsibile)
+            const monthHeader = document.createElement('div');
+            monthHeader.className = 'flex items-center gap-3 px-4 py-2 cursor-pointer hover:bg-surface-50 rounded-lg transition-colors';
+            monthHeader.innerHTML = `
+                <i class="fas fa-chevron-${isCurrentMonth || monthIdx === 0 ? 'down' : 'right'} text-xs text-surface-400 month-chevron transition-transform"></i>
+                <span class="text-sm font-semibold text-surface-600">${monthName}</span>
+                <span class="text-xs text-surface-400">${monthTimers.length} timer</span>
+                <span class="flex-1"></span>
+                <span class="text-xs font-mono text-surface-500">${Math.floor(monthSeconds / 3600)}h ${Math.floor((monthSeconds % 3600) / 60).toString().padStart(2, '0')}m</span>
+            `;
+
+            // Month Body
+            const monthBody = document.createElement('div');
+            monthBody.className = 'space-y-1';
+            // Solo primo mese espanso, gli altri compressi
+            const startExpanded = monthIdx === 0;
+            monthBody.style.display = startExpanded ? 'block' : 'none';
+
+            // Toggle mese
+            monthHeader.addEventListener('click', () => {
+                const isOpen = monthBody.style.display !== 'none';
+                monthBody.style.display = isOpen ? 'none' : 'block';
+                const chevron = monthHeader.querySelector('.month-chevron');
+                if (chevron) {
+                    chevron.classList.toggle('fa-chevron-down', !isOpen);
+                    chevron.classList.toggle('fa-chevron-right', isOpen);
+                }
+            });
+
+            // === Paginazione: mostra solo TIMERS_PER_PAGE alla volta ===
+            let visibleCount = 0;
+
+            function renderTimerRow(timerObj) {
+                const logData = timerObj.data;
+                const row = document.createElement('div');
+                row.className = 'tl-timer-row';
+
+                // Checkbox
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'w-4 h-4 accent-indigo-500 timer-checkbox flex-shrink-0 mt-1';
+                checkbox.value = timerObj.id;
+                checkbox.id = 'checkbox-' + timerObj.id;
+
+                const content = document.createElement('div');
+                content.className = 'flex-1 min-w-0';
+
+                // RIGA 1: Data + Sito + Durata
+                const mainRow = document.createElement('div');
+                mainRow.className = 'flex items-center gap-3';
+
+                const dateSpan = document.createElement('span');
+                dateSpan.className = 'text-xs font-semibold text-surface-500 flex-shrink-0';
+                const startDate = logData.startTime.toDate();
+                dateSpan.textContent = startDate.toLocaleDateString('it-IT', { day: '2-digit', month: 'short' });
+
+                const siteSpan = document.createElement('span');
+                siteSpan.className = 'text-sm font-medium text-surface-700 truncate';
+                siteSpan.textContent = logData.siteName || '—';
+
+                const spacer = document.createElement('span');
+                spacer.className = 'flex-1';
+
+                const durationSpan = document.createElement('span');
+                durationSpan.className = 'font-mono text-base font-bold text-surface-800 flex-shrink-0';
+                const dur = logData.duration || 0;
+                durationSpan.textContent = `${Math.floor(dur / 3600)}h ${Math.floor((dur % 3600) / 60).toString().padStart(2, '0')}m`;
+
+                mainRow.appendChild(dateSpan);
+                mainRow.appendChild(siteSpan);
+                mainRow.appendChild(spacer);
+                mainRow.appendChild(durationSpan);
+
+                // RIGA 2: Tipo lavoro · Orari · Stato · Azioni
+                const detailRow = document.createElement('div');
+                detailRow.className = 'flex items-center gap-3 mt-1';
+
+                const worktypeSpan = document.createElement('span');
+                worktypeSpan.className = 'text-xs text-surface-400';
+                worktypeSpan.textContent = logData.worktypeName || '';
+
+                const timesSpan = document.createElement('span');
+                timesSpan.className = 'text-xs text-surface-400';
+                const startH = logData.startTime ? formatTimeShort(logData.startTime) : '—';
+                const endH = logData.endTime ? formatTimeShort(logData.endTime) : '—';
+                timesSpan.textContent = `${startH} – ${endH}`;
+
+                const spacer2 = document.createElement('span');
+                spacer2.className = 'flex-1';
+
+                const statusBadge = document.createElement('span');
+                if (logData.isReported) {
+                    statusBadge.className = 'text-xs text-emerald-500 flex items-center gap-1';
+                    statusBadge.innerHTML = '<i class="fas fa-check-circle"></i> Reportato';
+                } else {
+                    statusBadge.className = 'text-xs text-amber-500 flex items-center gap-1';
+                    statusBadge.innerHTML = '<i class="fas fa-clock"></i> Pending';
+                }
+
+                detailRow.appendChild(worktypeSpan);
+                if (logData.worktypeName) {
+                    const sep = document.createElement('span');
+                    sep.className = 'text-surface-200';
+                    sep.textContent = '·';
+                    detailRow.appendChild(sep);
+                }
+                detailRow.appendChild(timesSpan);
+                detailRow.appendChild(spacer2);
+                detailRow.appendChild(statusBadge);
+
+                if (logData.link) {
+                    const a = document.createElement('a');
+                    a.href = logData.link;
+                    a.target = '_blank';
+                    a.className = 'text-xs text-indigo-400 hover:text-indigo-600 transition-colors ml-2';
+                    a.innerHTML = '<i class="fas fa-external-link-alt"></i>';
+                    a.title = 'Apri link';
+                    detailRow.appendChild(a);
+                }
+
+                const editBtn = document.createElement('button');
+                editBtn.className = 'tl-edit-btn ml-1';
+                editBtn.title = 'Modifica';
+                editBtn.innerHTML = '<i class="fas fa-pen text-xs"></i>';
+                editBtn.addEventListener('click', () => {
+                    openEditSavedTimerModal(timerObj.id);
+                });
+                detailRow.appendChild(editBtn);
+
+                content.appendChild(mainRow);
+                content.appendChild(detailRow);
+
+                row.appendChild(checkbox);
+                row.appendChild(content);
+                return row;
+            }
+
+            // Render primi N timer
+            const initialBatch = monthTimers.slice(0, TIMERS_PER_PAGE);
+            initialBatch.forEach(t => {
+                monthBody.appendChild(renderTimerRow(t));
+            });
+            visibleCount = initialBatch.length;
+
+            // Pulsante "Mostra altri" se ci sono più timer
+            if (monthTimers.length > TIMERS_PER_PAGE) {
+                const loadMoreBtn = document.createElement('button');
+                const remaining = monthTimers.length - visibleCount;
+                loadMoreBtn.className = 'w-full py-2.5 text-sm font-medium text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-lg transition-all flex items-center justify-center gap-2 mt-2';
+                loadMoreBtn.innerHTML = `<i class="fas fa-chevron-down text-xs"></i> Mostra altri ${Math.min(remaining, TIMERS_PER_PAGE)} di ${remaining}`;
+
+                loadMoreBtn.addEventListener('click', () => {
+                    const nextBatch = monthTimers.slice(visibleCount, visibleCount + TIMERS_PER_PAGE);
+                    nextBatch.forEach(t => {
+                        monthBody.insertBefore(renderTimerRow(t), loadMoreBtn);
+                    });
+                    visibleCount += nextBatch.length;
+
+                    const newRemaining = monthTimers.length - visibleCount;
+                    if (newRemaining <= 0) {
+                        loadMoreBtn.remove();
+                    } else {
+                        loadMoreBtn.innerHTML = `<i class="fas fa-chevron-down text-xs"></i> Mostra altri ${Math.min(newRemaining, TIMERS_PER_PAGE)} di ${newRemaining}`;
+                    }
+                });
+
+                monthBody.appendChild(loadMoreBtn);
+            }
+
+            monthSection.appendChild(monthHeader);
+            monthSection.appendChild(monthBody);
+            clientSection.appendChild(monthSection);
+        });
+
         savedTimersList.appendChild(clientSection);
     });
 }
