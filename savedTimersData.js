@@ -1,5 +1,77 @@
 // savedTimersData.js
 
+// Quick filter state
+let activeQuickYear = null;  // null = tutti gli anni
+let activeQuickMonth = null; // null = tutti i mesi
+
+// Funzione per caricare gli anni disponibili e popolare i chip
+function loadAvailableYears() {
+    return db.collection('timeLogs')
+        .where('uid', '==', currentUser.uid)
+        .where('isDeleted', '==', false)
+        .orderBy('startTime', 'desc')
+        .get()
+        .then(snapshot => {
+            const yearsSet = new Set();
+            snapshot.forEach(doc => {
+                const startTime = doc.data().startTime;
+                if (startTime) {
+                    yearsSet.add(startTime.toDate().getFullYear());
+                }
+            });
+            const years = Array.from(yearsSet).sort((a, b) => b - a);
+            populateYearChips(years);
+            return years;
+        })
+        .catch(error => {
+            console.error('Errore nel caricamento degli anni disponibili:', error);
+            return [];
+        });
+}
+
+// Popola i chip degli anni nella Quick Filter Bar
+function populateYearChips(years) {
+    const container = document.getElementById('qf-year-chips');
+    if (!container) return;
+    container.innerHTML = '';
+
+    // Chip "Tutti"
+    const allBtn = document.createElement('button');
+    allBtn.className = 'qf-chip qf-chip-all' + (activeQuickYear === null ? ' qf-chip-active' : '');
+    allBtn.dataset.year = 'all';
+    allBtn.textContent = 'Tutti';
+    container.appendChild(allBtn);
+
+    years.forEach(year => {
+        const btn = document.createElement('button');
+        btn.className = 'qf-chip' + (activeQuickYear === year ? ' qf-chip-active' : '');
+        btn.dataset.year = year;
+        btn.textContent = year;
+        container.appendChild(btn);
+    });
+}
+
+// Aggiorna lo stato visivo dei chip nella Quick Filter Bar
+function updateQuickFilterBar() {
+    // Aggiorna year chips
+    const yearChips = document.querySelectorAll('#qf-year-chips .qf-chip');
+    yearChips.forEach(chip => {
+        const val = chip.dataset.year;
+        const isActive = (val === 'all' && activeQuickYear === null) ||
+                         (val !== 'all' && parseInt(val) === activeQuickYear);
+        chip.classList.toggle('qf-chip-active', isActive);
+    });
+
+    // Aggiorna month chips
+    const monthChips = document.querySelectorAll('#qf-month-chips .qf-chip');
+    monthChips.forEach(chip => {
+        const val = chip.dataset.month;
+        const isActive = (val === 'all' && activeQuickMonth === null) ||
+                         (val !== 'all' && parseInt(val) === activeQuickMonth);
+        chip.classList.toggle('qf-chip-active', isActive);
+    });
+}
+
 // Funzione per caricare i timer salvati in base ai filtri
 function loadSavedTimers(filters = {}) {
     const savedTimersList = document.getElementById('savedTimersAccordion');
@@ -14,14 +86,38 @@ function loadSavedTimers(filters = {}) {
         .where('uid', '==', currentUser.uid)
         .where('isDeleted', '==', false);
 
-    if (filters.startDate) {
-        query = query.where('startTime', '>=', firebase.firestore.Timestamp.fromDate(new Date(filters.startDate)));
+    // Quick Filter Bar: se c'è un anno/mese selezionato, usa quelli come filtri date
+    // MA solo se non ci sono filtri manuali dalla toolbar
+    const hasManualDateFilter = filters.startDate || filters.endDate;
+
+    if (hasManualDateFilter) {
+        // Filtri manuali dalla toolbar: hanno precedenza
+        if (filters.startDate) {
+            query = query.where('startTime', '>=', firebase.firestore.Timestamp.fromDate(new Date(filters.startDate)));
+        }
+        if (filters.endDate) {
+            const endDateObj = new Date(filters.endDate);
+            endDateObj.setHours(23, 59, 59, 999);
+            query = query.where('startTime', '<=', firebase.firestore.Timestamp.fromDate(endDateObj));
+        }
+    } else if (activeQuickYear !== null) {
+        // Quick filter: filtra per anno (e opzionalmente mese)
+        const year = activeQuickYear;
+        const month = activeQuickMonth; // 1-12 or null
+        let startDate, endDate;
+
+        if (month !== null) {
+            startDate = new Date(year, month - 1, 1);
+            endDate = new Date(year, month, 0, 23, 59, 59, 999); // ultimo giorno del mese
+        } else {
+            startDate = new Date(year, 0, 1);
+            endDate = new Date(year, 11, 31, 23, 59, 59, 999);
+        }
+
+        query = query.where('startTime', '>=', firebase.firestore.Timestamp.fromDate(startDate));
+        query = query.where('startTime', '<=', firebase.firestore.Timestamp.fromDate(endDate));
     }
-    if (filters.endDate) {
-        const endDateObj = new Date(filters.endDate);
-        endDateObj.setHours(23, 59, 59, 999);
-        query = query.where('startTime', '<=', firebase.firestore.Timestamp.fromDate(endDateObj));
-    }
+
     if (filters.client) {
         query = query.where('clientId', '==', filters.client);
     }
@@ -35,6 +131,7 @@ function loadSavedTimers(filters = {}) {
                 const noTimersMessage = document.createElement('p');
                 noTimersMessage.textContent = 'Non ci sono timer salvati.';
                 savedTimersList.appendChild(noTimersMessage);
+                updateQuickFilterBar();
                 return;
             }
 
@@ -73,6 +170,7 @@ function loadSavedTimers(filters = {}) {
 
                     displayTimers(displayedTimers);
                     displayUnreportedAmounts(unreportedAmounts);
+                    updateQuickFilterBar();
                 })
                 .catch(error => {
                     console.error('Errore nel caricamento delle tariffe dei tipi di lavoro:', error);

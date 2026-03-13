@@ -142,6 +142,61 @@ async function initializeSavedTimersEvents() {
     console.log("Carico tutti i timer salvati...");
     await loadSavedTimers(); // Assicurati che i timer e il DOM siano pronti
 
+    // Carica gli anni disponibili per la Quick Filter Bar
+    console.log("Carico gli anni disponibili per la Quick Filter Bar...");
+    await loadAvailableYears();
+
+    // === Quick Filter Bar: Event Listeners ===
+    const qfYearContainer = document.getElementById('qf-year-chips');
+    const qfMonthContainer = document.getElementById('qf-month-chips');
+
+    if (qfYearContainer) {
+        qfYearContainer.addEventListener('click', (e) => {
+            const chip = e.target.closest('.qf-chip');
+            if (!chip) return;
+            const val = chip.dataset.year;
+            if (val === 'all') {
+                activeQuickYear = null;
+                activeQuickMonth = null;
+            } else {
+                activeQuickYear = parseInt(val);
+            }
+            // Reset date inputs manuali per evitare conflitti
+            const dateStart = document.getElementById('filter-date-start');
+            const dateEnd = document.getElementById('filter-date-end');
+            if (dateStart) dateStart.value = '';
+            if (dateEnd) dateEnd.value = '';
+
+            updateQuickFilterBar();
+            loadSavedTimers(getCurrentFilters());
+        });
+    }
+
+    if (qfMonthContainer) {
+        qfMonthContainer.addEventListener('click', (e) => {
+            const chip = e.target.closest('.qf-chip');
+            if (!chip) return;
+            const val = chip.dataset.month;
+            if (val === 'all') {
+                activeQuickMonth = null;
+            } else {
+                activeQuickMonth = parseInt(val);
+                // Se non c'è un anno selezionato, usa l'anno corrente
+                if (activeQuickYear === null) {
+                    activeQuickYear = new Date().getFullYear();
+                }
+            }
+            // Reset date inputs manuali
+            const dateStart = document.getElementById('filter-date-start');
+            const dateEnd = document.getElementById('filter-date-end');
+            if (dateStart) dateStart.value = '';
+            if (dateEnd) dateEnd.value = '';
+
+            updateQuickFilterBar();
+            loadSavedTimers(getCurrentFilters());
+        });
+    }
+
     // QUI aggiungiamo i listener ai pulsanti all'interno della modale, dopo che i timer sono caricati e il DOM è pronto
     const saveEditedBtn = document.getElementById('save-edited-saved-timer-btn');
     if (saveEditedBtn) {

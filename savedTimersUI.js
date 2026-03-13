@@ -105,6 +105,36 @@ const savedTimersTemplate = `
     <div id="savedTimersAccordion" class="space-y-4">
         <!-- Timer timeline will be rendered here -->
     </div>
+
+    <!-- Floating Quick Filter Bar -->
+    <div id="quick-filter-bar" class="quick-filter-bar">
+        <div class="qf-inner">
+            <!-- Single row: Anno chips + divider + Mese chips -->
+            <div class="qf-row">
+                <span class="qf-label"><i class="fas fa-calendar-alt" style="margin-right: 4px;"></i>Anno</span>
+                <div id="qf-year-chips" class="qf-chips">
+                    <!-- Populated dynamically -->
+                </div>
+                <div class="qf-divider"></div>
+                <span class="qf-label" style="min-width: auto;"><i class="fas fa-th" style="margin-right: 4px;"></i></span>
+                <div id="qf-month-chips" class="qf-chips qf-chips-scroll">
+                    <button class="qf-chip qf-chip-all qf-chip-active" data-month="all">Tutti</button>
+                    <button class="qf-chip" data-month="1">Gen</button>
+                    <button class="qf-chip" data-month="2">Feb</button>
+                    <button class="qf-chip" data-month="3">Mar</button>
+                    <button class="qf-chip" data-month="4">Apr</button>
+                    <button class="qf-chip" data-month="5">Mag</button>
+                    <button class="qf-chip" data-month="6">Giu</button>
+                    <button class="qf-chip" data-month="7">Lug</button>
+                    <button class="qf-chip" data-month="8">Ago</button>
+                    <button class="qf-chip" data-month="9">Set</button>
+                    <button class="qf-chip" data-month="10">Ott</button>
+                    <button class="qf-chip" data-month="11">Nov</button>
+                    <button class="qf-chip" data-month="12">Dic</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Modal Promemoria -->
