@@ -61,30 +61,23 @@ const savedTimersTemplate = `
         </div>
     </div>
 
-    <!-- Toolbar Compatta: Filtri + Azioni -->
+    <!-- Toolbar Compatta: Cerca + Cliente + Azioni -->
     <div class="cr-card mb-5 overflow-hidden">
-        <div class="p-4">
-            <div class="flex flex-col lg:flex-row gap-3 items-stretch lg:items-end">
-                <!-- Filtri inline -->
-                <div class="flex flex-col sm:flex-row gap-3 flex-1">
-                    <div class="flex-1 min-w-0">
-                        <input type="text" id="search-timers-input" class="cr-input" placeholder="🔍 Cerca timer...">
-                    </div>
-                    <div class="w-full sm:w-36">
-                        <input type="date" id="filter-date-start" class="cr-input" title="Data Inizio">
-                    </div>
-                    <div class="w-full sm:w-36">
-                        <input type="date" id="filter-date-end" class="cr-input" title="Data Fine">
-                    </div>
-                    <div class="w-full sm:w-44">
-                        <select id="filter-client" class="cr-select">
-                            <option value="">Tutti i Clienti</option>
-                        </select>
-                    </div>
+        <div class="p-3 sm:p-4">
+            <div class="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center">
+                <!-- Cerca -->
+                <div class="flex-1 min-w-0">
+                    <input type="text" id="search-timers-input" class="cr-input" placeholder="🔍 Cerca timer...">
                 </div>
-                <!-- Azioni inline -->
+                <!-- Cliente -->
+                <div class="w-full sm:w-44">
+                    <select id="filter-client" class="cr-select">
+                        <option value="">Tutti i Clienti</option>
+                    </select>
+                </div>
+                <!-- Azioni -->
                 <div class="flex gap-2 flex-shrink-0">
-                    <select id="unmark-action-select" class="cr-select text-sm" style="min-width: 160px;">
+                    <select id="unmark-action-select" class="cr-select text-sm" style="min-width: 140px;">
                         <option value="">⚙ Azione...</option>
                         <option value="unmark-all">Segna Tutti Non Reportati</option>
                         <option value="unmark-selected">Segna Selezionati Non Reportati</option>
@@ -93,13 +86,15 @@ const savedTimersTemplate = `
                     <button id="apply-action-btn" class="cr-btn cr-btn-sm bg-surface-700 hover:bg-surface-800 text-white" title="Applica azione">
                         <i class="fas fa-check"></i>
                     </button>
-                    <button id="filter-timers-btn" type="button" class="cr-btn cr-btn-sm bg-indigo-500 hover:bg-indigo-600 text-white" title="Filtra timer">
-                        <i class="fas fa-filter"></i>
-                    </button>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Hidden date inputs per compatibilità con getCurrentFilters() -->
+    <input type="hidden" id="filter-date-start" value="">
+    <input type="hidden" id="filter-date-end" value="">
+    <button id="filter-timers-btn" type="button" style="display:none;"></button>
 
     <!-- Timeline Container -->
     <div id="savedTimersAccordion" class="space-y-4">
