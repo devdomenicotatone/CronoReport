@@ -2,7 +2,7 @@
 
 // Template per la sezione Storico Report
 const reportHistoryTemplate = `
-<div id="report-history-section" class="max-w-6xl mx-auto px-4 py-6">
+<div id="report-history-section" class="max-w-6xl mx-auto px-4 py-6" style="padding-bottom: 5.5rem;">
     <div class="flex items-center justify-between mb-6">
         <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center shadow-lg">
@@ -29,6 +29,25 @@ const reportHistoryTemplate = `
 
     <!-- Report list -->
     <div id="reportHistoryAccordion"></div>
+
+    <!-- Floating Quick Filter Bar -->
+    <div id="rh-quick-filter-bar" class="quick-filter-bar">
+        <div class="qf-inner">
+            <div class="qf-row">
+                <span class="qf-label"><i class="fas fa-calendar-alt" style="margin-right: 4px;"></i>Anno</span>
+                <div id="rh-year-chips" class="qf-chips">
+                    <!-- Populated dynamically -->
+                </div>
+                <div id="rh-month-section" class="qf-month-section" style="display: none;">
+                    <div class="qf-divider"></div>
+                    <span class="qf-label" style="min-width: auto;"><i class="fas fa-th" style="margin-right: 4px;"></i></span>
+                    <div id="rh-month-chips" class="qf-chips qf-chips-scroll">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 `;
 
@@ -39,6 +58,12 @@ function initializeReportHistoryEvents() {
     const reportHistoryAccordion = document.getElementById('reportHistoryAccordion');
     const refreshReportHistoryBtn = document.getElementById('refresh-report-history-btn');
     const searchReportInput = document.getElementById('search-report-input');
+
+    // === Quick Filter State (locale a Storico Report) ===
+    let rhActiveYear = new Date().getFullYear(); // default: anno corrente
+    let rhActiveMonth = null;
+    let rhAvailableMonthsByYear = {};
+    const RH_MONTH_NAMES = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
 
     // Palette colori per badge clienti (riusa la stessa dei Timer Salvati)
     const rhColorPalette = [
@@ -61,16 +86,142 @@ function initializeReportHistoryEvents() {
         return rhColorMap[name];
     }
 
+    // === Quick Filter: Year/Month Detection ===
+    function loadRhAvailableYears() {
+        return db.collection('reports')
+            .where('uid', '==', currentUser.uid)
+            .orderBy('timestamp', 'desc')
+            .get()
+            .then(snapshot => {
+                const yearMonthMap = {};
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (data.isDeleted) return;
+                    const ts = data.timestamp;
+                    if (ts) {
+                        const d = ts.toDate();
+                        const year = d.getFullYear();
+                        const month = d.getMonth() + 1;
+                        if (!yearMonthMap[year]) yearMonthMap[year] = new Set();
+                        yearMonthMap[year].add(month);
+                    }
+                });
+                rhAvailableMonthsByYear = {};
+                for (const year in yearMonthMap) {
+                    rhAvailableMonthsByYear[year] = Array.from(yearMonthMap[year]).sort((a, b) => a - b);
+                }
+                const years = Object.keys(rhAvailableMonthsByYear).map(Number).sort((a, b) => b - a);
+                populateRhYearChips(years);
+                updateRhQuickFilterBar();
+                return years;
+            })
+            .catch(error => {
+                console.error('Errore caricamento anni report:', error);
+                return [];
+            });
+    }
+
+    function populateRhYearChips(years) {
+        const container = document.getElementById('rh-year-chips');
+        if (!container) return;
+        container.innerHTML = '';
+
+        const allBtn = document.createElement('button');
+        allBtn.className = 'qf-chip qf-chip-all' + (rhActiveYear === null ? ' qf-chip-active' : '');
+        allBtn.dataset.year = 'all';
+        allBtn.textContent = 'Tutti';
+        container.appendChild(allBtn);
+
+        years.forEach(year => {
+            const btn = document.createElement('button');
+            btn.className = 'qf-chip' + (rhActiveYear === year ? ' qf-chip-active' : '');
+            btn.dataset.year = year;
+            btn.textContent = year;
+            container.appendChild(btn);
+        });
+    }
+
+    function populateRhMonthChips(year) {
+        const container = document.getElementById('rh-month-chips');
+        const section = document.getElementById('rh-month-section');
+        if (!container || !section) return;
+
+        const months = rhAvailableMonthsByYear[year] || [];
+        if (months.length === 0) {
+            section.style.display = 'none';
+            return;
+        }
+
+        container.innerHTML = '';
+
+        const allBtn = document.createElement('button');
+        allBtn.className = 'qf-chip qf-chip-all' + (rhActiveMonth === null ? ' qf-chip-active' : '');
+        allBtn.dataset.month = 'all';
+        allBtn.textContent = 'Tutti';
+        container.appendChild(allBtn);
+
+        months.forEach(month => {
+            const btn = document.createElement('button');
+            btn.className = 'qf-chip' + (rhActiveMonth === month ? ' qf-chip-active' : '');
+            btn.dataset.month = month;
+            btn.textContent = RH_MONTH_NAMES[month - 1];
+            container.appendChild(btn);
+        });
+
+        section.style.display = 'flex';
+        section.style.animation = 'qfSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1)';
+    }
+
+    function updateRhQuickFilterBar() {
+        // Year chips
+        document.querySelectorAll('#rh-year-chips .qf-chip').forEach(chip => {
+            const val = chip.dataset.year;
+            const isActive = (val === 'all' && rhActiveYear === null) ||
+                             (val !== 'all' && parseInt(val) === rhActiveYear);
+            chip.classList.toggle('qf-chip-active', isActive);
+        });
+
+        // Month section
+        const section = document.getElementById('rh-month-section');
+        if (rhActiveYear === null) {
+            if (section) section.style.display = 'none';
+        } else {
+            populateRhMonthChips(rhActiveYear);
+        }
+
+        // Month chips
+        document.querySelectorAll('#rh-month-chips .qf-chip').forEach(chip => {
+            const val = chip.dataset.month;
+            const isActive = (val === 'all' && rhActiveMonth === null) ||
+                             (val !== 'all' && parseInt(val) === rhActiveMonth);
+            chip.classList.toggle('qf-chip-active', isActive);
+        });
+    }
+
     /**
      * Carica lo storico dei report con layout flat per cliente
      */
     function loadReportHistory(searchTerm = '') {
         reportHistoryAccordion.innerHTML = '';
 
-        db.collection('reports')
-            .where('uid', '==', currentUser.uid)
-            .orderBy('timestamp', 'desc')
-            .get()
+        let query = db.collection('reports')
+            .where('uid', '==', currentUser.uid);
+
+        // Quick filter: anno/mese
+        if (rhActiveYear !== null) {
+            let startDate, endDate;
+            if (rhActiveMonth !== null) {
+                startDate = new Date(rhActiveYear, rhActiveMonth - 1, 1);
+                endDate = new Date(rhActiveYear, rhActiveMonth, 0, 23, 59, 59, 999);
+            } else {
+                startDate = new Date(rhActiveYear, 0, 1);
+                endDate = new Date(rhActiveYear, 11, 31, 23, 59, 59, 999);
+            }
+            query = query.where('timestamp', '>=', firebase.firestore.Timestamp.fromDate(startDate));
+            query = query.where('timestamp', '<=', firebase.firestore.Timestamp.fromDate(endDate));
+        }
+
+        query.orderBy('timestamp', 'desc').get()
             .then(snapshot => {
                 if (snapshot.empty) {
                     reportHistoryAccordion.innerHTML = `
@@ -110,7 +261,7 @@ function initializeReportHistoryEvents() {
                     reportHistoryAccordion.innerHTML = `
                         <div class="text-center py-8 text-surface-400">
                             <i class="fas fa-search text-2xl mb-2 block text-surface-300"></i>
-                            Nessun report trovato per "${searchTerm}"
+                            Nessun report trovato${searchTerm ? ` per "${searchTerm}"` : ''}
                         </div>
                     `;
                     return;
@@ -377,7 +528,48 @@ function initializeReportHistoryEvents() {
         }
     }
 
-    // Carica lo storico all'avvio
+    // === Quick Filter Bar: Event Listeners ===
+    const rhYearContainer = document.getElementById('rh-year-chips');
+    const rhMonthContainer = document.getElementById('rh-month-chips');
+
+    if (rhYearContainer) {
+        rhYearContainer.addEventListener('click', (e) => {
+            const chip = e.target.closest('.qf-chip');
+            if (!chip) return;
+            const val = chip.dataset.year;
+            if (val === 'all') {
+                rhActiveYear = null;
+                rhActiveMonth = null;
+            } else {
+                rhActiveYear = parseInt(val);
+                rhActiveMonth = null; // reset mese quando cambi anno
+            }
+            updateRhQuickFilterBar();
+            loadReportHistory(searchReportInput.value.trim());
+        });
+    }
+
+    if (rhMonthContainer) {
+        // Delegated: il container è statico, i chip sono dinamici
+        document.getElementById('rh-month-section').addEventListener('click', (e) => {
+            const chip = e.target.closest('.qf-chip');
+            if (!chip) return;
+            const val = chip.dataset.month;
+            if (val === 'all') {
+                rhActiveMonth = null;
+            } else {
+                rhActiveMonth = parseInt(val);
+                if (rhActiveYear === null) {
+                    rhActiveYear = new Date().getFullYear();
+                }
+            }
+            updateRhQuickFilterBar();
+            loadReportHistory(searchReportInput.value.trim());
+        });
+    }
+
+    // Carica lo storico + anni disponibili all'avvio
+    loadRhAvailableYears();
     loadReportHistory();
 
     // Evento refresh
