@@ -1,7 +1,6 @@
 // dashboard.js
 
 let earningsChartViewMode = 'combined';
-const MAX_TOTAL_TIMELOGS = 500;
 
 const dashboardTemplate = `
 <div id="dashboard-section" class="max-w-6xl mx-auto px-4 py-6">
@@ -17,7 +16,7 @@ const dashboardTemplate = `
             <span class="font-semibold flex items-center gap-2"><i class="fas fa-filter"></i> Filtri</span>
         </div>
         <div class="p-5">
-            <form id="dashboard-filter-form" class="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+            <form id="dashboard-filter-form" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                 <div>
                     <label for="dashboard-filter-date-start" class="block text-sm font-semibold text-surface-600 mb-1">Data Inizio</label>
                     <input type="date" id="dashboard-filter-date-start" class="cr-input">
@@ -31,15 +30,6 @@ const dashboardTemplate = `
                     <select id="dashboard-filter-client" class="cr-input">
                         <option value="">Tutti i Clienti</option>
                     </select>
-                </div>
-                <div>
-                    <label for="dashboard-filter-max-timelogs" class="block text-sm font-semibold text-surface-600 mb-1">
-                        Max TimeLogs
-                        <span id="max-timelogs-info" class="text-indigo-400 ml-1" title="Facoltativo. Max timeLogs per cliente.">
-                            <i class="fas fa-info-circle"></i>
-                        </span>
-                    </label>
-                    <input type="number" id="dashboard-filter-max-timelogs" class="cr-input" placeholder="Es. 50" value="150">
                 </div>
                 <div>
                     <button id="dashboard-filter-btn" type="button" class="cr-btn w-full bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white font-semibold shadow-md">
@@ -166,57 +156,20 @@ function initializeDashboardEvents() {
     });
 }
 
-/** Imposta l'intervallo di date iniziali e carica i dati */
-async function setInitialDateRangeAndLoadData() {
+/** Imposta l'intervallo di date iniziali e carica i dati.
+ *  Default: primo giorno del mese corrente → oggi */
+function setInitialDateRangeAndLoadData() {
     const endDateInput = document.getElementById('dashboard-filter-date-end');
     const startDateInput = document.getElementById('dashboard-filter-date-start');
 
-    try {
-        const snapshot = await db.collection('timeLogs')
-            .where('uid', '==', currentUser.uid)
-            .where('isDeleted', '==', false)
-            .orderBy('startTime', 'desc')
-            .limit(MAX_TOTAL_TIMELOGS)
-            .get();
+    const now = new Date();
+    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-        let startDate, endDate;
-        const now = new Date();
-        
-        if (!snapshot.empty) {
-            const allLogs = snapshot.docs.map(d => d.data());
-            endDate = allLogs[0].endTime.toDate();
-            if (endDate > now) endDate = now;
+    startDateInput.value = firstDayOfMonth.toISOString().split('T')[0];
+    endDateInput.value = now.toISOString().split('T')[0];
 
-            const oneMonthBefore = new Date(endDate);
-            oneMonthBefore.setMonth(oneMonthBefore.getMonth() - 1);
-
-            const oldestStart = allLogs[allLogs.length - 1].startTime.toDate();
-            startDate = oldestStart < oneMonthBefore ? oldestStart : oneMonthBefore;
-        } else {
-            // Nessun log, default ultimo 30 giorni
-            endDate = now;
-            startDate = new Date();
-            startDate.setDate(startDate.getDate() - 30);
-        }
-
-        endDateInput.value = endDate.toISOString().split('T')[0];
-        startDateInput.value = startDate.toISOString().split('T')[0];
-
-        const filters = getDashboardFilters();
-        loadDashboardData(filters);
-    } catch (error) {
-        console.error('Errore nel recuperare i timeLogs:', error);
-        // In caso di errore usa ultimi 30 giorni
-        const endDate = new Date();
-        const startDate = new Date();
-        startDate.setDate(startDate.getDate() - 30);
-
-        endDateInput.value = endDate.toISOString().split('T')[0];
-        startDateInput.value = startDate.toISOString().split('T')[0];
-
-        const filters = getDashboardFilters();
-        loadDashboardData(filters);
-    }
+    const filters = getDashboardFilters();
+    loadDashboardData(filters);
 }
 
 /** Carica i clienti per il filtro */
@@ -244,13 +197,11 @@ function getDashboardFilters() {
     const startDateVal = document.getElementById('dashboard-filter-date-start').value;
     const endDateVal = document.getElementById('dashboard-filter-date-end').value;
     const clientName = document.getElementById('dashboard-filter-client').value;
-    const maxLogsVal = document.getElementById('dashboard-filter-max-timelogs').value;
 
     const filters = {};
     if (startDateVal) filters.startDate = new Date(startDateVal + 'T00:00:00');
     if (endDateVal) filters.endDate = new Date(endDateVal + 'T23:59:59');
     if (clientName) filters.clientName = clientName;
-    filters.maxTimeLogsPerClient = maxLogsVal ? parseInt(maxLogsVal) : 30;
 
     return filters;
 }
@@ -265,7 +216,6 @@ async function loadDashboardData(filters) {
         if (filters.clientName) {
             query = query.where('clientName', '==', filters.clientName);
         }
-        // Filtro date
         if (filters.startDate) {
             query = query.where('startTime', '>=', firebase.firestore.Timestamp.fromDate(filters.startDate));
         }
@@ -273,32 +223,10 @@ async function loadDashboardData(filters) {
             query = query.where('startTime', '<=', firebase.firestore.Timestamp.fromDate(filters.endDate));
         }
 
-        query = query.orderBy('startTime', 'desc').limit(MAX_TOTAL_TIMELOGS);
+        query = query.orderBy('startTime', 'desc');
 
         const snapshot = await query.get();
-        let timeLogs = snapshot.docs.map(d => d.data());
-
-        // Filtraggio client-side (per sicurezza)
-        timeLogs = timeLogs.filter(log => {
-            const logStart = log.startTime.toDate();
-            const logEnd = log.endTime.toDate();
-            const startCond = !filters.startDate || logEnd >= filters.startDate;
-            const endCond = !filters.endDate || logStart <= filters.endDate;
-            return startCond && endCond;
-        });
-
-        // Raggruppa per cliente e limita
-        const timeLogsByClient = {};
-        timeLogs.forEach(log => {
-            const cname = log.clientName || 'Sconosciuto';
-            if (!timeLogsByClient[cname]) timeLogsByClient[cname] = [];
-            timeLogsByClient[cname].push(log);
-        });
-        for (const cname in timeLogsByClient) {
-            timeLogsByClient[cname].sort((a, b) => b.startTime.toDate() - a.startTime.toDate());
-            timeLogsByClient[cname] = timeLogsByClient[cname].slice(0, filters.maxTimeLogsPerClient);
-        }
-        timeLogs = Object.values(timeLogsByClient).flat();
+        const timeLogs = snapshot.docs.map(d => d.data());
 
         // Aggiorna grafici
         updateCharts(timeLogs, filters);
