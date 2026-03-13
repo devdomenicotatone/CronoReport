@@ -1,7 +1,7 @@
 // savedTimersData.js
 
 // Quick filter state
-let activeQuickYear = null;  // null = tutti gli anni
+let activeQuickYear = new Date().getFullYear();  // default: anno corrente
 let activeQuickMonth = null; // null = tutti i mesi
 let availableMonthsByYear = {}; // { 2026: [1, 2, 3], 2025: [1, ..., 12] }
 
