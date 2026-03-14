@@ -16,8 +16,9 @@ if (DEV_MODE) {
         if (typeof updateUserDisplay === 'function') {
             updateUserDisplay(currentUser);
         }
-        loadSection('timer');
-        setActiveNav('timer');
+        const savedSection = location.hash.replace('#', '') || 'timer';
+        loadSection(savedSection);
+        setActiveNav(savedSection);
     }, 0);
 
     // Preveni qualsiasi redirect da Firebase auth
@@ -36,8 +37,9 @@ if (DEV_MODE) {
                 updateUserDisplay(user);
             }
 
-            loadSection('timer');
-            setActiveNav('timer');
+            const savedSection = location.hash.replace('#', '') || 'timer';
+            loadSection(savedSection);
+            setActiveNav(savedSection);
 
             await initializeTimerEvents();
 
@@ -55,6 +57,12 @@ if (DEV_MODE) {
  * @param {string} section - Nome della sezione da caricare
  */
 function loadSection(section) {
+    // Save scroll position of previous section before switching
+    const prevSection = location.hash.replace('#', '');
+    if (prevSection) {
+        sessionStorage.setItem(`cr-scroll-${prevSection}`, window.scrollY.toString());
+    }
+
     const contentSection = document.getElementById('content-section');
     contentSection.innerHTML = ''; // Svuota la sezione di contenuto
 
@@ -99,6 +107,19 @@ function loadSection(section) {
     }
 
     // Tooltips handled natively via title attribute (no jQuery needed)
+
+    // Save current section to hash for persistence
+    location.hash = section;
+
+    // Restore scroll position after a small delay
+    requestAnimationFrame(() => {
+        const savedScroll = sessionStorage.getItem(`cr-scroll-${section}`);
+        if (savedScroll) {
+            window.scrollTo(0, parseInt(savedScroll, 10));
+        } else {
+            window.scrollTo(0, 0);
+        }
+    });
 }
 
 /**

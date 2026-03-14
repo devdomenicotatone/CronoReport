@@ -870,12 +870,15 @@ function deleteTimerFromModal() {
 
                     const index = activeTimers.findIndex(t => t.id === timerId);
                     if (index > -1) {
+                        const timer = activeTimers[index];
+                        if (timer.intervalId) clearInterval(timer.intervalId);
                         activeTimers.splice(index, 1);
                     }
                     const oldCard = document.querySelector(`.timer-card[data-timer-id="${timerId}"]`);
                     if (oldCard) {
                         oldCard.parentElement.remove();
                     }
+                    updateActiveTimerCount();
                 })
                 .catch(error => {
                     console.error('Errore durante l\'eliminazione del timer:', error);
