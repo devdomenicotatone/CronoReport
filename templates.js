@@ -9,7 +9,7 @@
 //  GESTIONE DATI
 // ==========================================
 const dataManagementTemplate = `
-<div id="data-management" class="max-w-5xl mx-auto px-4 py-6">
+<div id="data-management" class="max-w-6xl mx-auto px-4 py-6">
     
     <!-- Header -->
     <div class="flex items-center gap-3 mb-6">
@@ -65,7 +65,7 @@ const dataManagementTemplate = `
 //  TIMER DI LAVORO
 // ==========================================
 const timerTemplate = `
-<div id="timer-section" class="max-w-5xl mx-auto px-4 py-6">
+<div id="timer-section" class="max-w-6xl mx-auto px-4 py-6">
 
     <!-- Header sezione -->
     <div class="flex items-center gap-3 mb-6">
