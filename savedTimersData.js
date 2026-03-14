@@ -295,7 +295,7 @@ function displayUnreportedAmounts(unreportedAmounts) {
         const clientColor = getClientColor(clientName);
 
         const row = document.createElement('div');
-        row.className = 'flex items-center gap-3 px-4 py-2.5 bg-white rounded-lg border border-surface-100';
+        row.className = 'flex items-start gap-3 px-3 py-2.5 bg-white rounded-lg border border-surface-100 overflow-hidden';
 
         // Badge cliente
         const badge = document.createElement('span');
@@ -690,7 +690,7 @@ function displayTimers(timers) {
 
                 // RIGA 1: Data + Sito + Durata
                 const mainRow = document.createElement('div');
-                mainRow.className = 'flex items-center gap-3';
+                mainRow.className = 'flex items-center gap-2 flex-wrap';
 
                 const dateSpan = document.createElement('span');
                 dateSpan.className = 'text-xs font-semibold text-surface-500 flex-shrink-0';
@@ -716,7 +716,7 @@ function displayTimers(timers) {
 
                 // RIGA 2: Tipo lavoro · Orari · Stato · Azioni
                 const detailRow = document.createElement('div');
-                detailRow.className = 'flex items-center gap-3 mt-1';
+                detailRow.className = 'flex items-center gap-2 mt-1 flex-wrap';
 
                 const worktypeSpan = document.createElement('span');
                 worktypeSpan.className = 'text-xs text-surface-400';
