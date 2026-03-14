@@ -133,7 +133,11 @@ async function initializeTimerEvents() {
     // === LOAD TODAY SUMMARY ===
     loadTodaySummary();
 
-    // Carica i timer attivi
+    // Carica i timer attivi — clear existing first to prevent duplication
+    activeTimers.forEach(t => { if (t.intervalId) clearInterval(t.intervalId); });
+    activeTimers.length = 0;
+    if (timerCardsContainer) timerCardsContainer.innerHTML = '';
+
     db.collection('timers')
         .where('uid', '==', currentUser.uid)
         .where('isActive', '==', true)
