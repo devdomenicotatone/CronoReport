@@ -145,32 +145,25 @@ const timerTemplate = `
         </div>
     </div>
 
-    <!-- ═══ RIEPILOGO OGGI ═══ -->
-    <div class="timer-today-grid mb-8" id="timer-today-grid">
-        <div class="rw-stat-card stat-hours border-0 shadow-md shadow-surface-200/40">
-            <div class="flex justify-between items-start mb-1">
-                <div class="rw-stat-icon bg-indigo-50 text-indigo-600"><i class="fas fa-clock"></i></div>
-                <span class="text-[10px] font-bold uppercase tracking-wider text-surface-400">Oggi</span>
-            </div>
-            <div class="rw-stat-value text-indigo-950" id="today-stat-hours">0h 00m</div>
-            <div class="rw-stat-label mt-1 text-surface-500">Ore Registrate</div>
-        </div>
-        <div class="rw-stat-card stat-amount border-0 shadow-md shadow-emerald-500/10">
-            <div class="flex justify-between items-start mb-1">
-                <div class="rw-stat-icon bg-emerald-50 text-emerald-600"><i class="fas fa-euro-sign"></i></div>
-                <span class="text-[10px] font-bold uppercase tracking-wider text-surface-400">Oggi</span>
-            </div>
-            <div class="rw-stat-value text-emerald-700" id="today-stat-amount">€ 0.00</div>
-            <div class="rw-stat-label mt-1 text-surface-500">Importo Maturato</div>
-        </div>
-        <div class="rw-stat-card stat-count border-0 shadow-md shadow-amber-500/10">
-            <div class="flex justify-between items-start mb-1">
-                <div class="rw-stat-icon bg-amber-50 text-amber-600"><i class="fas fa-tasks"></i></div>
-                <span class="text-[10px] font-bold uppercase tracking-wider text-surface-400">Oggi</span>
-            </div>
-            <div class="rw-stat-value text-amber-700" id="today-stat-count">0</div>
-            <div class="rw-stat-label mt-1 text-surface-500">Task Completati</div>
-        </div>
+    <!-- ═══ RIEPILOGO OGGI — compact inline bar ═══ -->
+    <div class="flex items-center gap-4 px-4 py-2.5 mb-6 bg-surface-50/80 rounded-xl border border-surface-100/60 text-sm" id="timer-today-grid">
+        <span class="text-[10px] font-bold uppercase tracking-wider text-surface-400">Oggi</span>
+        <span class="text-surface-200">|</span>
+        <span class="flex items-center gap-1.5">
+            <i class="fas fa-clock text-[10px] text-indigo-400"></i>
+            <span class="font-bold text-surface-700" id="today-stat-hours">0h 00m</span>
+        </span>
+        <span class="text-surface-200">·</span>
+        <span class="flex items-center gap-1.5">
+            <i class="fas fa-euro-sign text-[10px] text-emerald-500"></i>
+            <span class="font-bold text-surface-700" id="today-stat-amount">€ 0.00</span>
+        </span>
+        <span class="text-surface-200">·</span>
+        <span class="flex items-center gap-1.5">
+            <i class="fas fa-check-circle text-[10px] text-amber-500"></i>
+            <span class="font-bold text-surface-700" id="today-stat-count">0</span>
+            <span class="text-xs text-surface-400">task</span>
+        </span>
     </div>
 
     <!-- ═══ TIMER ATTIVI ═══ -->

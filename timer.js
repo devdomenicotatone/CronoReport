@@ -196,6 +196,62 @@ async function initializeTimerEvents() {
 }
 
 // === RECENT TASKS ===
+/**
+ * Creates a favicon element with fallback to colored initial.
+ * Shows colored initial immediately, then tries loading the real
+ * favicon from the domain. Only swaps if load succeeds.
+ * No Google S2 API (returns generic globe for unknown domains).
+ */
+function createFaviconEl(siteName, siteUrl, sizePx) {
+    sizePx = sizePx || 16;
+    const name = siteName || '?';
+    const initial = name[0].toUpperCase();
+    const colors = ['#6366f1','#8b5cf6','#ec4899','#f43f5e','#f97316','#eab308','#22c55e','#14b8a6','#06b6d4','#3b82f6'];
+    const hash = name.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+    const color = colors[hash % colors.length];
+
+    // Try to extract domain from siteUrl or siteName
+    let domain = '';
+    if (siteUrl && /^https?:\/\//i.test(siteUrl)) {
+        try { domain = new URL(siteUrl).hostname; } catch(e) {}
+    }
+    if (!domain) {
+        // siteName might be a domain like "www.studiorossi.it"
+        const cleaned = name.replace(/^https?:\/\//i, '').replace(/\/.*/,'').trim();
+        if (/\.[a-z]{2,}$/i.test(cleaned)) domain = cleaned;
+    }
+
+    const wrapper = document.createElement('span');
+    wrapper.className = 'inline-flex items-center justify-center flex-shrink-0';
+    wrapper.style.width = sizePx + 'px';
+    wrapper.style.height = sizePx + 'px';
+
+    // Always start with colored initial
+    const fb = document.createElement('span');
+    fb.className = 'inline-flex items-center justify-center rounded text-white font-bold';
+    fb.style.cssText = `width:${sizePx}px;height:${sizePx}px;font-size:${Math.round(sizePx*0.55)}px;background:${color};border-radius:3px;`;
+    fb.textContent = initial;
+    wrapper.appendChild(fb);
+
+    // Try loading real favicon in background — only swap if successful
+    if (domain) {
+        const img = new Image();
+        img.src = `https://${domain}/favicon.ico`;
+        img.onload = () => {
+            // Real favicon loaded! Swap it in
+            wrapper.innerHTML = '';
+            img.style.width = sizePx + 'px';
+            img.style.height = sizePx + 'px';
+            img.style.borderRadius = '3px';
+            img.style.objectFit = 'contain';
+            wrapper.appendChild(img);
+        };
+        // onerror: DNS fail / 404 → initial stays (already shown)
+    }
+
+    return wrapper;
+}
+
 function loadRecentTasks() {
     db.collection('timeLogs')
         .where('uid', '==', currentUser.uid)
@@ -259,11 +315,13 @@ function loadRecentTasks() {
                 const hash = siteName.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
                 const color = colors[hash % colors.length];
 
-                if (siteUrl) {
-                    chip.innerHTML = `<span class="timer-recent-initial" style="background:${color}">${initial}</span> <span class="truncate max-w-[120px]">${r.worktypeName}</span>`;
-                } else {
-                    chip.innerHTML = `<span class="timer-recent-initial" style="background:${color}">${initial}</span> <span class="truncate max-w-[120px]">${r.worktypeName}</span>`;
-                }
+                const favicon = createFaviconEl(siteName, siteUrl, 16);
+                favicon.classList.add('timer-recent-initial');
+                const labelSpan = document.createElement('span');
+                labelSpan.className = 'truncate max-w-[120px]';
+                labelSpan.textContent = r.worktypeName;
+                chip.appendChild(favicon);
+                chip.appendChild(labelSpan);
 
                 chip.title = `${r.clientName} · ${r.siteName} · ${r.worktypeName}`;
                 chip.addEventListener('click', () => {
@@ -1111,6 +1169,10 @@ function createTimerCard(timer) {
     // === ROW 2: Site + link (sub-header) ===
     const subHeader = document.createElement('div');
     subHeader.className = 'flex items-center gap-1.5 mb-3';
+
+    // Favicon before site name
+    const siteFavicon = createFaviconEl(timer.siteName, '', 14);
+    subHeader.appendChild(siteFavicon);
 
     const siteSpan = document.createElement('span');
     siteSpan.className = 'text-[10px] font-semibold text-surface-400 uppercase tracking-wider truncate';
