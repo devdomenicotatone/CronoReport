@@ -290,13 +290,44 @@ function setupReportSection() {
                         <td style="text-align:right; font-weight:600;">${r.amount}</td>
                     </tr>`;
                 });
+
+                // Righe nascoste (se troncate)
+                if (!showAll) {
+                    const hiddenRows = previewRows.slice(maxShow);
+                    hiddenRows.forEach(r => {
+                        html += `<tr class="rw-hidden-row" style="display:none;">
+                            <td>${r.date}</td>
+                            <td>${r.workType}</td>
+                            <td>${r.hours}</td>
+                            <td style="text-align:right; font-weight:600;">${r.amount}</td>
+                        </tr>`;
+                    });
+                }
+
                 html += '</tbody></table>';
                 if (!showAll) {
                     html += `<div class="text-center mt-2">
-                        <span class="text-xs text-surface-400">e altri ${count - maxShow} timer…</span>
+                        <button id="rw-show-all-btn" class="text-xs text-indigo-500 hover:text-indigo-700 font-medium cursor-pointer bg-transparent border-none transition-colors">
+                            <i class="fas fa-chevron-down mr-1"></i>e altri ${count - maxShow} timer… Mostra tutti
+                        </button>
                     </div>`;
                 }
                 container.innerHTML = html;
+
+                // Event listener per espandere
+                const showAllBtn = document.getElementById('rw-show-all-btn');
+                if (showAllBtn) {
+                    showAllBtn.addEventListener('click', () => {
+                        document.querySelectorAll('.rw-hidden-row').forEach(row => {
+                            row.style.display = '';
+                        });
+                        showAllBtn.innerHTML = '<i class="fas fa-check mr-1"></i>Tutti i timer visualizzati';
+                        showAllBtn.disabled = true;
+                        showAllBtn.classList.remove('text-indigo-500', 'hover:text-indigo-700', 'cursor-pointer');
+                        showAllBtn.classList.add('text-surface-400');
+                    });
+                }
+
                 if (generateBtn) generateBtn.disabled = false;
             }
         }).catch(error => {
