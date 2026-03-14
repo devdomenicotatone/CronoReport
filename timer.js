@@ -1080,103 +1080,106 @@ function saveTimerChanges() {
 
 function createTimerCard(timer) {
     const card = document.createElement('div');
-    card.className = 'cr-card overflow-hidden timer-card relative border-0 shadow-lg shadow-surface-200/50 transition-all duration-300 hover:shadow-2xl hover:shadow-surface-300/60 hover:-translate-y-1';
+    card.className = 'cr-card overflow-hidden timer-card relative border-0 shadow-md shadow-surface-200/40 transition-all duration-200 hover:shadow-lg hover:shadow-surface-300/50';
     if (timer.isPaused) card.classList.add('timer-card-paused');
     card.setAttribute('data-timer-id', timer.id);
 
-    // Accent bar
+    // Accent bar — thin
     const accentBar = document.createElement('div');
-    accentBar.className = 'h-1.5 w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 absolute top-0 left-0';
-    if (timer.isPaused) accentBar.className = 'h-1.5 w-full bg-surface-300 absolute top-0 left-0';
+    accentBar.className = 'h-1 w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 absolute top-0 left-0';
+    if (timer.isPaused) accentBar.className = 'h-1 w-full bg-surface-300 absolute top-0 left-0';
 
-    // Body
+    // Body — compact padding
     const body = document.createElement('div');
-    body.className = 'p-5 flex flex-col h-full bg-white bg-opacity-80 backdrop-blur-sm pt-6';
+    body.className = 'p-3 sm:p-4 pt-4 flex flex-col h-full';
 
-    // Header
+    // === ROW 1: Client name + worktype badge ===
     const header = document.createElement('div');
-    header.className = 'flex justify-between items-start mb-3';
+    header.className = 'flex justify-between items-center gap-2 mb-0.5';
 
-    const titleWrap = document.createElement('div');
     const title = document.createElement('h4');
-    title.className = 'text-lg font-extrabold text-surface-900 leading-tight tracking-tight';
+    title.className = 'text-sm font-extrabold text-surface-900 leading-tight tracking-tight truncate';
     title.textContent = timer.clientName;
-    const subtitle = document.createElement('p');
-    subtitle.className = 'text-[10px] font-bold text-surface-500 mt-1 uppercase tracking-wider';
-    subtitle.textContent = timer.siteName;
-    titleWrap.appendChild(title);
-    titleWrap.appendChild(subtitle);
 
     const badge = document.createElement('span');
-    badge.className = 'inline-flex items-center px-2 py-1 rounded-md text-[9px] font-extrabold uppercase tracking-wider bg-indigo-50 text-indigo-600 border border-indigo-100 shadow-sm whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px]';
+    badge.className = 'inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-indigo-50 text-indigo-600 border border-indigo-100 whitespace-nowrap flex-shrink-0 max-w-[100px] overflow-hidden text-ellipsis';
     badge.textContent = timer.worktypeName;
 
-    header.appendChild(titleWrap);
+    header.appendChild(title);
     header.appendChild(badge);
 
-    // Timer display wrap
-    const timerWrap = document.createElement('div');
-    timerWrap.className = 'timer-display-wrap relative overflow-hidden bg-surface-50/50 border border-surface-100 rounded-xl p-4 my-2 text-center transition-all duration-300 group';
+    // === ROW 2: Site + link (sub-header) ===
+    const subHeader = document.createElement('div');
+    subHeader.className = 'flex items-center gap-1.5 mb-3';
 
-    // Ambient glow behind timer text
-    const glowDiv = document.createElement('div');
-    glowDiv.className = 'absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 bg-indigo-500 opacity-[0.03] blur-xl rounded-full transition-opacity group-hover:opacity-10';
-    timerWrap.appendChild(glowDiv);
+    const siteSpan = document.createElement('span');
+    siteSpan.className = 'text-[10px] font-semibold text-surface-400 uppercase tracking-wider truncate';
+    siteSpan.textContent = timer.siteName;
+    subHeader.appendChild(siteSpan);
 
-    const timerDisplay = document.createElement('div');
-    timerDisplay.className = 'text-3xl sm:text-4xl font-mono font-black text-surface-900 tracking-tight relative z-10';
-    if (!timer.isPaused) timerDisplay.classList.add('timer-display-running');
-    timerDisplay.textContent = formatDuration(timer.accumulatedElapsedTime);
-    timerWrap.appendChild(timerDisplay);
-
-    // Live amount
-    const liveAmount = document.createElement('div');
-    liveAmount.className = 'timer-live-amount mt-1.5 text-xs font-bold text-emerald-600 bg-emerald-50 inline-block px-2 py-0.5 rounded-full border border-emerald-100 relative z-10';
-    const initHours = timer.accumulatedElapsedTime / 3600;
-    liveAmount.textContent = `€ ${(initHours * (timer.hourlyRate || 0)).toFixed(2)}`;
-    timerWrap.appendChild(liveAmount);
-
-    // Link / Note
-    let linkEl = null;
     if (timer.link) {
         const isUrl = /^https?:\/\//i.test(timer.link);
+        const sep = document.createElement('span');
+        sep.className = 'text-surface-200 text-[10px]';
+        sep.textContent = '·';
+        subHeader.appendChild(sep);
+
         if (isUrl) {
-            linkEl = document.createElement('a');
-            linkEl.href = timer.link;
-            linkEl.target = '_blank';
-            linkEl.className = 'inline-flex w-fit items-center gap-1.5 text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors mb-4 px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-100';
-            linkEl.innerHTML = '<i class="fas fa-external-link-alt text-[10px]"></i> Apri Link Task';
+            const linkA = document.createElement('a');
+            linkA.href = timer.link;
+            linkA.target = '_blank';
+            linkA.className = 'text-[10px] font-semibold text-indigo-500 hover:text-indigo-700 transition-colors truncate';
+            linkA.innerHTML = '<i class="fas fa-external-link-alt text-[8px] mr-0.5"></i>link';
+            subHeader.appendChild(linkA);
         } else {
-            linkEl = document.createElement('div');
-            linkEl.className = 'inline-flex w-fit items-center gap-1.5 text-xs font-medium text-surface-600 mb-4 px-2.5 py-1.5 bg-surface-50 rounded-lg border border-surface-100 italic';
-            linkEl.innerHTML = `<i class="fas fa-sticky-note text-[10px] text-surface-400"></i> ${timer.link}`;
+            const noteSpan = document.createElement('span');
+            noteSpan.className = 'text-[10px] text-surface-400 italic truncate';
+            noteSpan.textContent = timer.link;
+            subHeader.appendChild(noteSpan);
         }
     }
 
-    // Actions
+    // === ROW 3: Timer display + live amount (inline) ===
+    const timerRow = document.createElement('div');
+    timerRow.className = 'flex items-baseline justify-between mb-3';
+
+    const timerDisplay = document.createElement('div');
+    timerDisplay.className = 'text-2xl font-mono font-black text-surface-900 tracking-tight tabular-nums';
+    if (!timer.isPaused) timerDisplay.classList.add('timer-display-running');
+    timerDisplay.textContent = formatDuration(timer.accumulatedElapsedTime);
+
+    const liveAmount = document.createElement('div');
+    liveAmount.className = 'timer-live-amount text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100';
+    const initHours = timer.accumulatedElapsedTime / 3600;
+    liveAmount.textContent = `€ ${(initHours * (timer.hourlyRate || 0)).toFixed(2)}`;
+
+    timerRow.appendChild(timerDisplay);
+    timerRow.appendChild(liveAmount);
+
+    // === ROW 4: Action buttons (compact) ===
     const actions = document.createElement('div');
-    actions.className = 'flex gap-2 mt-auto pt-4 border-t border-surface-100/60';
+    actions.className = 'flex gap-1.5 mt-auto pt-2.5 border-t border-surface-100/50';
 
     const pauseBtn = document.createElement('button');
-    pauseBtn.className = 'cr-btn cr-btn-sm flex-1 bg-gradient-to-br from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-white shadow-md shadow-amber-500/20 active:scale-95 transition-all outline-none border-0';
+    pauseBtn.className = 'cr-btn cr-btn-sm flex-1 py-1.5 bg-gradient-to-br from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-white shadow-sm active:scale-95 transition-all outline-none border-0 text-xs';
     pauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
     pauseBtn.title = 'Pausa';
     pauseBtn.style.display = timer.isPaused ? 'none' : '';
 
     const resumeBtn = document.createElement('button');
-    resumeBtn.className = 'cr-btn cr-btn-sm flex-1 bg-gradient-to-br from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white shadow-md shadow-indigo-500/20 active:scale-95 transition-all outline-none border-0';
+    resumeBtn.className = 'cr-btn cr-btn-sm flex-1 py-1.5 bg-gradient-to-br from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white shadow-sm active:scale-95 transition-all outline-none border-0 text-xs';
     resumeBtn.innerHTML = '<i class="fas fa-play"></i>';
     resumeBtn.title = 'Riprendi';
     resumeBtn.style.display = timer.isPaused ? '' : 'none';
 
     const stopBtn = document.createElement('button');
-    stopBtn.className = 'cr-btn cr-btn-sm flex-[1.5] bg-gradient-to-br from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white shadow-md shadow-rose-500/20 active:scale-95 transition-all outline-none border-0 font-bold';
-    stopBtn.innerHTML = '<i class="fas fa-stop mr-1"></i> Stop';
+    stopBtn.className = 'cr-btn cr-btn-sm flex-[1.5] py-1.5 bg-gradient-to-br from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white shadow-sm active:scale-95 transition-all outline-none border-0 font-bold text-xs';
+    stopBtn.innerHTML = '<i class="fas fa-stop mr-1"></i>Stop';
     stopBtn.title = 'Stop e Salva';
 
     const editBtn = document.createElement('button');
-    editBtn.className = 'cr-btn cr-btn-sm flex-1 bg-surface-50 hover:bg-surface-100 text-surface-600 shadow-sm border border-surface-200 active:scale-95 transition-all outline-none';
-    editBtn.innerHTML = '<i class="fas fa-pen"></i>';
+    editBtn.className = 'cr-btn cr-btn-sm py-1.5 bg-surface-50 hover:bg-surface-100 text-surface-500 border border-surface-200 active:scale-95 transition-all outline-none text-xs px-3';
+    editBtn.innerHTML = '<i class="fas fa-pen text-[10px]"></i>';
     editBtn.title = 'Modifica Dati';
 
     // Event listeners
@@ -1186,7 +1189,7 @@ function createTimerCard(timer) {
         resumeBtn.style.display = '';
         timerDisplay.classList.remove('timer-display-running');
         card.classList.add('timer-card-paused');
-        accentBar.className = 'h-1.5 w-full bg-surface-300 absolute top-0 left-0';
+        accentBar.className = 'h-1 w-full bg-surface-300 absolute top-0 left-0';
     });
 
     resumeBtn.addEventListener('click', () => {
@@ -1195,7 +1198,7 @@ function createTimerCard(timer) {
         resumeBtn.style.display = 'none';
         timerDisplay.classList.add('timer-display-running');
         card.classList.remove('timer-card-paused');
-        accentBar.className = 'h-1.5 w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 absolute top-0 left-0';
+        accentBar.className = 'h-1 w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 absolute top-0 left-0';
     });
 
     stopBtn.addEventListener('click', () => {
@@ -1213,8 +1216,8 @@ function createTimerCard(timer) {
 
     // Assemble
     body.appendChild(header);
-    body.appendChild(timerWrap);
-    if (linkEl) body.appendChild(linkEl);
+    body.appendChild(subHeader);
+    body.appendChild(timerRow);
     body.appendChild(actions);
 
     card.appendChild(accentBar);

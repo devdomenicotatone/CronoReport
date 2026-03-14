@@ -181,7 +181,7 @@ const timerTemplate = `
             </div>
             <h3 class="text-xl font-extrabold text-surface-900 tracking-tight">Timer Attivi <span id="active-timer-count" class="ml-2 text-xs font-bold bg-rose-100 text-rose-600 px-2.5 py-0.5 rounded-full shadow-sm" style="display:none;">0</span></h3>
         </div>
-        <div id="timer-cards" class="grid grid-cols-1 xl:grid-cols-2 gap-5">
+        <div id="timer-cards" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
             <!-- Le card dei timer attivi saranno aggiunte dinamicamente -->
         </div>
     </div>
