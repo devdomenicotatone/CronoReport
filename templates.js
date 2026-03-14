@@ -130,79 +130,107 @@ const timerTemplate = `
 <div id="timer-section" class="max-w-5xl mx-auto px-4 py-6">
 
     <!-- Header sezione -->
-    <div class="flex items-center gap-3 mb-8">
+    <div class="flex items-center gap-3 mb-6">
         <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg">
             <i class="fas fa-clock text-white text-lg"></i>
         </div>
         <h2 class="text-2xl font-bold text-surface-800">Timer di Lavoro</h2>
     </div>
 
-    <!-- Grid: Dettagli + Impostazioni -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-
-        <!-- Selezione Dettagli -->
-        <div class="cr-card">
-            <div class="px-5 py-4 bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-t-2xl">
-                <h3 class="text-white font-semibold flex items-center gap-2">
-                    <i class="fas fa-user"></i> Seleziona Dettagli
-                </h3>
-            </div>
-            <div class="p-5 space-y-4">
-                <div>
-                    <label for="client-select" class="block text-sm font-medium text-surface-600 mb-1">Cliente:</label>
-                    <select id="client-select" class="cr-select">
-                        <option value="">--Seleziona Cliente--</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="site-select" class="block text-sm font-medium text-surface-600 mb-1">Sito:</label>
-                    <select id="site-select" class="cr-select">
-                        <option value="">--Seleziona Sito--</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="worktype-select" class="block text-sm font-medium text-surface-600 mb-1">Tipo di Lavoro:</label>
-                    <select id="worktype-select" class="cr-select">
-                        <option value="">--Seleziona Tipo di Lavoro--</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="link-input" class="block text-sm font-medium text-surface-600 mb-1">Link (opzionale):</label>
-                    <input type="url" id="link-input" class="cr-input" placeholder="https://esempio.com">
-                </div>
-            </div>
+    <!-- ═══ START BAR ═══ -->
+    <div class="cr-card mb-4 overflow-hidden">
+        <div class="px-5 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white">
+            <span class="font-semibold flex items-center gap-2"><i class="fas fa-play-circle"></i> Avvia Timer</span>
         </div>
-
-        <!-- Impostazioni Timer -->
-        <div class="cr-card">
-            <div class="px-5 py-4 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-t-2xl">
-                <h3 class="text-white font-semibold flex items-center gap-2">
-                    <i class="fas fa-clock"></i> Impostazioni Timer
-                </h3>
-            </div>
-            <div class="p-5 space-y-4">
-                <div>
-                    <label for="manual-start-time" class="block text-sm font-medium text-surface-600 mb-1">Ora di Inizio (opzionale):</label>
-                    <input type="text" id="manual-start-time" class="cr-input" placeholder="DD/MM/YYYY HH:mm:ss" />
+        <div class="p-4 space-y-3">
+            <!-- Riga inline: selettori + pulsante -->
+            <div class="timer-start-bar">
+                <div class="flex-1 min-w-[120px]">
+                    <label for="client-select" class="block text-xs font-semibold text-surface-500 mb-0.5">Cliente</label>
+                    <select id="client-select" class="cr-select text-sm">
+                        <option value="">-- Cliente --</option>
+                    </select>
                 </div>
-                <div>
-                    <label for="manual-end-time" class="block text-sm font-medium text-surface-600 mb-1">Ora di Fine (opzionale):</label>
-                    <input type="text" id="manual-end-time" class="cr-input" placeholder="DD/MM/YYYY HH:mm:ss" />
+                <div class="flex-1 min-w-[120px]">
+                    <label for="site-select" class="block text-xs font-semibold text-surface-500 mb-0.5">Sito</label>
+                    <select id="site-select" class="cr-select text-sm">
+                        <option value="">-- Sito --</option>
+                    </select>
                 </div>
-                <button id="start-timer-btn" class="cr-btn cr-btn-success w-full mt-2">
-                    <i class="fas fa-play"></i> Avvia Timer
+                <div class="flex-1 min-w-[120px]">
+                    <label for="worktype-select" class="block text-xs font-semibold text-surface-500 mb-0.5">Tipo</label>
+                    <select id="worktype-select" class="cr-select text-sm">
+                        <option value="">-- Tipo --</option>
+                    </select>
+                </div>
+                <div class="flex-1 min-w-[100px]">
+                    <label for="link-input" class="block text-xs font-semibold text-surface-500 mb-0.5">Link</label>
+                    <input type="url" id="link-input" class="cr-input text-sm" placeholder="https://...">
+                </div>
+                <button id="start-timer-btn" class="timer-start-btn">
+                    <i class="fas fa-play"></i> Avvia
                 </button>
+            </div>
+
+            <!-- Toggle manuale -->
+            <div>
+                <div class="timer-manual-toggle" id="timer-manual-toggle">
+                    <i class="fas fa-chevron-down"></i> Orario manuale
+                </div>
+                <div class="timer-manual-section" id="timer-manual-section">
+                    <div class="flex gap-3 mt-2">
+                        <div class="flex-1">
+                            <label for="manual-start-time" class="block text-xs font-medium text-surface-500 mb-0.5">Inizio</label>
+                            <input type="text" id="manual-start-time" class="cr-input text-sm" placeholder="DD/MM/YYYY HH:mm:ss" />
+                        </div>
+                        <div class="flex-1">
+                            <label for="manual-end-time" class="block text-xs font-medium text-surface-500 mb-0.5">Fine</label>
+                            <input type="text" id="manual-end-time" class="cr-input text-sm" placeholder="DD/MM/YYYY HH:mm:ss" />
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Timer Attivi -->
+    <!-- ═══ RECENTI ═══ -->
+    <div id="timer-recents-section" class="mb-4" style="display:none;">
+        <div class="flex items-center gap-2 mb-2">
+            <i class="fas fa-history text-surface-400 text-xs"></i>
+            <span class="text-xs font-semibold text-surface-500 uppercase tracking-wider">Recenti</span>
+        </div>
+        <div class="timer-recents" id="timer-recents-chips">
+            <!-- Populated dynamically -->
+        </div>
+    </div>
+
+    <!-- ═══ RIEPILOGO OGGI ═══ -->
+    <div class="timer-today-grid mb-6" id="timer-today-grid">
+        <div class="rw-stat-card stat-hours">
+            <div class="rw-stat-icon"><i class="fas fa-clock"></i></div>
+            <div class="rw-stat-label">Ore Oggi</div>
+            <div class="rw-stat-value" id="today-stat-hours">0h 00m</div>
+        </div>
+        <div class="rw-stat-card stat-amount">
+            <div class="rw-stat-icon"><i class="fas fa-euro-sign"></i></div>
+            <div class="rw-stat-label">Importo Oggi</div>
+            <div class="rw-stat-value" id="today-stat-amount">€ 0.00</div>
+        </div>
+        <div class="rw-stat-card stat-count">
+            <div class="rw-stat-icon"><i class="fas fa-check-circle"></i></div>
+            <div class="rw-stat-label">Task Oggi</div>
+            <div class="rw-stat-value" id="today-stat-count">0</div>
+        </div>
+    </div>
+
+    <!-- ═══ TIMER ATTIVI ═══ -->
     <div id="active-timers">
-        <div class="flex items-center gap-3 mb-6">
+        <div class="flex items-center gap-3 mb-4">
             <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center">
                 <i class="fas fa-play-circle text-white text-sm"></i>
             </div>
-            <h3 class="text-xl font-bold text-surface-800">Timer Attivi</h3>
+            <h3 class="text-lg font-bold text-surface-800">Timer Attivi</h3>
+            <span id="active-timer-count" class="text-xs font-semibold bg-rose-100 text-rose-600 px-2 py-0.5 rounded-full" style="display:none;">0</span>
         </div>
         <div id="timer-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <!-- Le card dei timer attivi saranno aggiunte dinamicamente -->

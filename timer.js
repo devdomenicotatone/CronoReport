@@ -78,10 +78,20 @@ async function initializeTimerEvents() {
             loadSites(siteSelect, selectedClientId);
             loadWorktypes(worktypeSelect, selectedClientId);
         } else {
-            siteSelect.innerHTML = '<option value="">--Seleziona Sito--</option>';
-            worktypeSelect.innerHTML = '<option value="">--Seleziona Tipo di Lavoro--</option>';
+            siteSelect.innerHTML = '<option value="">-- Sito --</option>';
+            worktypeSelect.innerHTML = '<option value="">-- Tipo --</option>';
         }
     });
+
+    // === MANUAL TOGGLE ===
+    const manualToggle = document.getElementById('timer-manual-toggle');
+    const manualSection = document.getElementById('timer-manual-section');
+    if (manualToggle && manualSection) {
+        manualToggle.addEventListener('click', () => {
+            manualToggle.classList.toggle('open');
+            manualSection.classList.toggle('visible');
+        });
+    }
 
     startTimerBtn.addEventListener('click', () => {
         const clientId = clientSelect.value;
@@ -117,6 +127,12 @@ async function initializeTimerEvents() {
         }
     });
 
+    // === LOAD RECENT TASKS ===
+    loadRecentTasks();
+
+    // === LOAD TODAY SUMMARY ===
+    loadTodaySummary();
+
     // Carica i timer attivi
     db.collection('timers')
         .where('uid', '==', currentUser.uid)
@@ -140,6 +156,7 @@ async function initializeTimerEvents() {
                     isPaused: timerData.isPaused || false,
                     intervalId: null,
                     timerDisplay: null,
+                    liveAmountDisplay: null,
                     hourlyRate: timerData.hourlyRate || 0
                 };
 
@@ -152,8 +169,10 @@ async function initializeTimerEvents() {
                 } else {
                     const totalElapsedTime = timer.accumulatedElapsedTime;
                     timer.timerDisplay.textContent = formatDuration(totalElapsedTime);
+                    updateLiveAmount(timer, totalElapsedTime);
                 }
             });
+            updateActiveTimerCount();
         })
         .catch(error => {
             console.error('Errore nel caricamento dei timer attivi:', error);
@@ -162,7 +181,136 @@ async function initializeTimerEvents() {
     initializeEditModalEvents();
 }
 
-// Funzione per caricare i Clienti nel Dropdown del Timer
+// === RECENT TASKS ===
+function loadRecentTasks() {
+    db.collection('timeLogs')
+        .where('uid', '==', currentUser.uid)
+        .where('isDeleted', '==', false)
+        .orderBy('startTime', 'desc')
+        .limit(20)
+        .get()
+        .then(snapshot => {
+            const seen = new Set();
+            const recents = [];
+            snapshot.forEach(doc => {
+                const d = doc.data();
+                const key = `${d.clientId}|${d.siteId}|${d.worktypeId}`;
+                if (!seen.has(key) && recents.length < 5) {
+                    seen.add(key);
+                    recents.push({
+                        clientId: d.clientId,
+                        siteId: d.siteId,
+                        worktypeId: d.worktypeId,
+                        clientName: d.clientName || '—',
+                        siteName: d.siteName || '—',
+                        worktypeName: d.worktypeName || '—',
+                        link: d.link || ''
+                    });
+                }
+            });
+
+            const section = document.getElementById('timer-recents-section');
+            const container = document.getElementById('timer-recents-chips');
+            if (!container || !section) return;
+
+            if (recents.length === 0) {
+                section.style.display = 'none';
+                return;
+            }
+
+            section.style.display = '';
+            container.innerHTML = '';
+            recents.forEach(r => {
+                const chip = document.createElement('div');
+                chip.className = 'timer-recent-chip';
+                chip.innerHTML = `<i class="fas fa-redo"></i> ${r.clientName} · ${r.siteName} · ${r.worktypeName}`;
+                chip.addEventListener('click', () => {
+                    // Populate dropdowns
+                    const cs = document.getElementById('client-select');
+                    cs.value = r.clientId;
+                    cs.dispatchEvent(new Event('change'));
+                    // Wait for sites/worktypes to load then set values
+                    setTimeout(() => {
+                        const ss = document.getElementById('site-select');
+                        const ws = document.getElementById('worktype-select');
+                        ss.value = r.siteId;
+                        ws.value = r.worktypeId;
+                        document.getElementById('link-input').value = r.link;
+                    }, 500);
+                });
+                container.appendChild(chip);
+            });
+        })
+        .catch(error => {
+            console.error('Errore nel caricamento delle attività recenti:', error);
+        });
+}
+
+// === TODAY SUMMARY ===
+function loadTodaySummary() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    db.collection('timeLogs')
+        .where('uid', '==', currentUser.uid)
+        .where('isDeleted', '==', false)
+        .where('startTime', '>=', firebase.firestore.Timestamp.fromDate(today))
+        .where('startTime', '<', firebase.firestore.Timestamp.fromDate(tomorrow))
+        .get()
+        .then(snapshot => {
+            let totalHours = 0;
+            let totalAmount = 0;
+            let count = 0;
+
+            snapshot.forEach(doc => {
+                const d = doc.data();
+                const durationH = (d.duration || 0) / 3600;
+                const rate = d.hourlyRate || 0;
+                totalHours += durationH;
+                totalAmount += durationH * rate;
+                count++;
+            });
+
+            const totalSec = Math.floor(totalHours * 3600);
+            const hh = Math.floor(totalSec / 3600);
+            const mm = Math.floor((totalSec % 3600) / 60);
+
+            const hoursEl = document.getElementById('today-stat-hours');
+            const amountEl = document.getElementById('today-stat-amount');
+            const countEl = document.getElementById('today-stat-count');
+
+            if (hoursEl) hoursEl.textContent = `${hh}h ${mm.toString().padStart(2, '0')}m`;
+            if (amountEl) amountEl.textContent = `€ ${totalAmount.toFixed(2)}`;
+            if (countEl) countEl.textContent = count;
+        })
+        .catch(error => {
+            console.error('Errore nel caricamento del riepilogo odierno:', error);
+        });
+}
+
+// === ACTIVE TIMER COUNT ===
+function updateActiveTimerCount() {
+    const badge = document.getElementById('active-timer-count');
+    if (!badge) return;
+    const count = activeTimers.length;
+    if (count > 0) {
+        badge.textContent = count;
+        badge.style.display = '';
+    } else {
+        badge.style.display = 'none';
+    }
+}
+
+// === LIVE AMOUNT ===
+function updateLiveAmount(timer, totalElapsedSeconds) {
+    if (!timer.liveAmountDisplay) return;
+    const hours = totalElapsedSeconds / 3600;
+    const amount = hours * (timer.hourlyRate || 0);
+    timer.liveAmountDisplay.textContent = `€ ${amount.toFixed(2)}`;
+}
+
 function loadTimerClientDropdown(selectElement) {
     selectElement.innerHTML = '<option value="">--Seleziona Cliente--</option>';
     db.collection('clients')
@@ -368,6 +516,7 @@ async function createNewTimer(clientId, siteId, worktypeId, link, manualStartTim
             isPaused: false,
             intervalId: null,
             timerDisplay: null,
+            liveAmountDisplay: null,
             hourlyRate: hourlyRate
         };
 
@@ -391,6 +540,7 @@ async function createNewTimer(clientId, siteId, worktypeId, link, manualStartTim
             const timerCard = createTimerCard(timer);
             timerCardsContainer.appendChild(timerCard);
             startTimer(timer);
+            updateActiveTimerCount();
         }).catch(error => {
             console.error('Errore nel salvataggio del timer:', error);
             Swal.fire({
@@ -415,6 +565,7 @@ async function createNewTimer(clientId, siteId, worktypeId, link, manualStartTim
             isPaused: false,
             intervalId: null,
             timerDisplay: null,
+            liveAmountDisplay: null,
             hourlyRate: await getHourlyRate()
         };
 
@@ -444,6 +595,7 @@ async function createNewTimer(clientId, siteId, worktypeId, link, manualStartTim
             const timerCard = createTimerCard(timer);
             timerCardsContainer.appendChild(timerCard);
             startTimer(timer);
+            updateActiveTimerCount();
         }).catch(error => {
             console.error('Errore nel salvataggio del timer:', error);
             Swal.fire({
@@ -875,12 +1027,12 @@ function saveTimerChanges() {
 }
 
 function createTimerCard(timer) {
-    // Container card (il parent #timer-cards è un grid, non serve col wrapper)
     const card = document.createElement('div');
     card.className = 'cr-card overflow-hidden timer-card transition-all duration-300 hover:shadow-xl';
+    if (timer.isPaused) card.classList.add('timer-card-paused');
     card.setAttribute('data-timer-id', timer.id);
 
-    // Accent bar colorato in alto
+    // Accent bar
     const accentBar = document.createElement('div');
     accentBar.className = 'h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500';
 
@@ -888,9 +1040,9 @@ function createTimerCard(timer) {
     const body = document.createElement('div');
     body.className = 'p-5 flex flex-col h-full';
 
-    // Header: cliente + sito
+    // Header
     const header = document.createElement('div');
-    header.className = 'flex justify-between items-start mb-3';
+    header.className = 'flex justify-between items-start mb-2';
 
     const titleWrap = document.createElement('div');
     const title = document.createElement('h4');
@@ -902,7 +1054,6 @@ function createTimerCard(timer) {
     titleWrap.appendChild(title);
     titleWrap.appendChild(subtitle);
 
-    // Badge tipo lavoro
     const badge = document.createElement('span');
     badge.className = 'inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700';
     badge.textContent = timer.worktypeName;
@@ -910,15 +1061,23 @@ function createTimerCard(timer) {
     header.appendChild(titleWrap);
     header.appendChild(badge);
 
-    // Timer display (grande, monospace)
+    // Timer display wrap
     const timerWrap = document.createElement('div');
-    timerWrap.className = 'text-center py-4 my-3 rounded-xl bg-surface-50';
+    timerWrap.className = 'timer-display-wrap';
     const timerDisplay = document.createElement('div');
     timerDisplay.className = 'text-3xl font-mono font-bold text-surface-800 tracking-wider';
+    if (!timer.isPaused) timerDisplay.classList.add('timer-display-running');
     timerDisplay.textContent = formatDuration(timer.accumulatedElapsedTime);
     timerWrap.appendChild(timerDisplay);
 
-    // Link (se presente)
+    // Live amount
+    const liveAmount = document.createElement('div');
+    liveAmount.className = 'timer-live-amount';
+    const initHours = timer.accumulatedElapsedTime / 3600;
+    liveAmount.textContent = `€ ${(initHours * (timer.hourlyRate || 0)).toFixed(2)}`;
+    timerWrap.appendChild(liveAmount);
+
+    // Link
     let linkEl = null;
     if (timer.link) {
         linkEl = document.createElement('a');
@@ -928,7 +1087,7 @@ function createTimerCard(timer) {
         linkEl.innerHTML = '<i class="fas fa-external-link-alt text-xs"></i> Apri Link';
     }
 
-    // Azioni
+    // Actions
     const actions = document.createElement('div');
     actions.className = 'flex gap-2 mt-auto pt-3 border-t border-surface-100';
 
@@ -959,12 +1118,16 @@ function createTimerCard(timer) {
         pauseTimer(timer);
         pauseBtn.style.display = 'none';
         resumeBtn.style.display = '';
+        timerDisplay.classList.remove('timer-display-running');
+        card.classList.add('timer-card-paused');
     });
 
     resumeBtn.addEventListener('click', () => {
         resumeTimer(timer);
         pauseBtn.style.display = '';
         resumeBtn.style.display = 'none';
+        timerDisplay.classList.add('timer-display-running');
+        card.classList.remove('timer-card-paused');
     });
 
     stopBtn.addEventListener('click', () => {
@@ -980,7 +1143,7 @@ function createTimerCard(timer) {
     actions.appendChild(stopBtn);
     actions.appendChild(editBtn);
 
-    // Assembla
+    // Assemble
     body.appendChild(header);
     body.appendChild(timerWrap);
     if (linkEl) body.appendChild(linkEl);
@@ -990,6 +1153,7 @@ function createTimerCard(timer) {
     card.appendChild(body);
 
     timer.timerDisplay = timerDisplay;
+    timer.liveAmountDisplay = liveAmount;
 
     return card;
 }
@@ -1001,6 +1165,7 @@ function startTimer(timer) {
             const now = new Date();
             const totalElapsedTime = (now - timer.lastStartTime) / 1000 + timer.accumulatedElapsedTime;
             timer.timerDisplay.textContent = formatDuration(totalElapsedTime);
+            updateLiveAmount(timer, totalElapsedTime);
         }
     }, 1000);
 }
@@ -1103,6 +1268,8 @@ function stopTimer(timer, card) {
 
                 // Rimuovi la scheda dal DOM
                 card.remove();
+                updateActiveTimerCount();
+                loadTodaySummary();
 
                 Swal.fire({
                     icon: 'success',
