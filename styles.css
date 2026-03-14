@@ -1989,6 +1989,14 @@ table tr:hover td {
     min-width: 60px;
 }
 
+.dm-url-input {
+    flex: 1;
+    font-size: 0.7rem;
+    color: #6366f1;
+    min-width: 100px;
+    max-width: 200px;
+}
+
 .dm-editable:hover {
     border-color: #e2e8f0;
 }

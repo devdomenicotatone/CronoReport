@@ -189,7 +189,7 @@ function loadRecentTasks() {
         .orderBy('startTime', 'desc')
         .limit(20)
         .get()
-        .then(snapshot => {
+        .then(async snapshot => {
             const seen = new Set();
             const recents = [];
             snapshot.forEach(doc => {
@@ -204,10 +204,23 @@ function loadRecentTasks() {
                         clientName: d.clientName || '—',
                         siteName: d.siteName || '—',
                         worktypeName: d.worktypeName || '—',
-                        link: d.link || ''
+                        link: d.link || '',
+                        siteUrl: d.siteUrl || ''
                     });
                 }
             });
+
+            // Fetch site URLs for favicon lookup
+            const siteIds = [...new Set(recents.map(r => r.siteId).filter(Boolean))];
+            const siteUrlMap = {};
+            for (const siteId of siteIds) {
+                try {
+                    const siteDoc = await db.collection('sites').doc(siteId).get();
+                    if (siteDoc.exists) {
+                        siteUrlMap[siteId] = siteDoc.data().url || '';
+                    }
+                } catch (e) { /* ignore */ }
+            }
 
             const section = document.getElementById('timer-recents-section');
             const container = document.getElementById('timer-recents-chips');
@@ -223,14 +236,42 @@ function loadRecentTasks() {
             recents.forEach(r => {
                 const chip = document.createElement('div');
                 chip.className = 'timer-recent-chip';
-                // Google Favicon API (same as OmniWriter)
-                const domain = r.siteName.replace(/^(https?:\/\/)?(www\.)?/, '').split('/')[0];
-                const initial = domain[0].toUpperCase();
+
+                // Get URL from site lookup or from timeLog
+                const siteUrl = siteUrlMap[r.siteId] || r.siteUrl || '';
+                const siteName = r.siteName || '—';
+                const initial = (siteName[0] || '?').toUpperCase();
                 const colors = ['#6366f1','#8b5cf6','#ec4899','#f43f5e','#f97316','#eab308','#22c55e','#14b8a6','#06b6d4','#3b82f6'];
-                const hash = domain.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+                const hash = siteName.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
                 const color = colors[hash % colors.length];
-                const faviconUrl = `https://www.google.com/s2/favicons?sz=32&domain=${encodeURIComponent(domain)}`;
-                chip.innerHTML = `<img src="${faviconUrl}" alt="" class="timer-recent-favicon" onerror="this.outerHTML='<span class=\\'timer-recent-initial\\' style=\\'background:${color}\\'>${initial}</span>'"> ${r.worktypeName}`;
+
+                if (siteUrl) {
+                    // Extract hostname from URL for favicon
+                    try {
+                        const hostname = new URL(siteUrl).hostname;
+                        const faviconUrl = `https://www.google.com/s2/favicons?sz=32&domain=${hostname}`;
+                        // Silent load: show initial, replace with favicon on success
+                        chip.innerHTML = `<span class="timer-recent-initial" style="background:${color}" id="init-${r.siteId}">${initial}</span> ${r.worktypeName}`;
+                        const img = new Image();
+                        img.onload = () => {
+                            const initEl = chip.querySelector(`#init-${r.siteId}`);
+                            if (initEl) {
+                                const favicon = document.createElement('img');
+                                favicon.src = faviconUrl;
+                                favicon.className = 'timer-recent-favicon';
+                                favicon.alt = '';
+                                initEl.replaceWith(favicon);
+                            }
+                        };
+                        img.onerror = () => { /* keep initial */ };
+                        img.src = faviconUrl;
+                    } catch (e) {
+                        chip.innerHTML = `<span class="timer-recent-initial" style="background:${color}">${initial}</span> ${r.worktypeName}`;
+                    }
+                } else {
+                    chip.innerHTML = `<span class="timer-recent-initial" style="background:${color}">${initial}</span> ${r.worktypeName}`;
+                }
+
                 chip.title = `${r.clientName} · ${r.siteName} · ${r.worktypeName}`;
                 chip.addEventListener('click', () => {
                     // Populate dropdowns

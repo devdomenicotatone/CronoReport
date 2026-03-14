@@ -257,15 +257,23 @@ async function renderUnifiedClientAccordion() {
                     const row = document.createElement('div');
                     row.className = 'dm-sub-item';
                     row.innerHTML = `
-                        <input class="dm-editable" value="${siteData.name}" data-id="${siteDoc.id}" data-collection="sites" data-field="name" />
+                        <input class="dm-editable flex-1" value="${siteData.name}" data-id="${siteDoc.id}" data-collection="sites" data-field="name" placeholder="Nome sito" />
+                        <input class="dm-editable dm-url-input" value="${siteData.url || ''}" data-id="${siteDoc.id}" data-collection="sites" data-field="url" placeholder="🔗 URL sito..." />
                         <button class="delete-btn" title="Elimina sito"><i class="fas fa-times"></i></button>
                     `;
                     row.querySelector('.delete-btn').addEventListener('click', () => {
                         db.collection('sites').doc(siteDoc.id).delete().then(() => renderUnifiedClientAccordion());
                     });
-                    row.querySelector('.dm-editable').addEventListener('blur', (e) => {
-                        const v = e.target.value.trim();
-                        if (v && v !== siteData.name) db.collection('sites').doc(siteDoc.id).update({ name: v });
+                    // Inline edit for both name and url
+                    row.querySelectorAll('.dm-editable').forEach(inp => {
+                        inp.addEventListener('blur', (e) => {
+                            const field = e.target.dataset.field;
+                            const v = e.target.value.trim();
+                            const oldVal = field === 'url' ? (siteData.url || '') : siteData.name;
+                            if (v !== oldVal) {
+                                db.collection('sites').doc(siteDoc.id).update({ [field]: v });
+                            }
+                        });
                     });
                     sitesSection.appendChild(row);
                 });
@@ -274,13 +282,14 @@ async function renderUnifiedClientAccordion() {
             // Add site inline
             const addSiteRow = document.createElement('div');
             addSiteRow.className = 'dm-add-row';
-            addSiteRow.innerHTML = `<input type="text" class="flex-1" placeholder="Nuovo sito..." /><button class="dm-add-btn"><i class="fas fa-plus"></i></button>`;
+            addSiteRow.innerHTML = `<input type="text" class="flex-1" placeholder="Nuovo sito..." /><input type="text" class="dm-url-input" placeholder="🔗 URL..." /><button class="dm-add-btn"><i class="fas fa-plus"></i></button>`;
             addSiteRow.querySelector('.dm-add-btn').addEventListener('click', () => {
-                const input = addSiteRow.querySelector('input');
-                const name = input.value.trim();
+                const inputs = addSiteRow.querySelectorAll('input');
+                const name = inputs[0].value.trim();
+                const url = inputs[1].value.trim();
                 if (!name) return;
                 db.collection('sites').add({
-                    name, uid: currentUser.uid, clientId, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    name, url, uid: currentUser.uid, clientId, createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 }).then(() => renderUnifiedClientAccordion());
             });
             sitesSection.appendChild(addSiteRow);

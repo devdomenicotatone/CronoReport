@@ -86,11 +86,11 @@
     ];
 
     const mockSites = [
-        { id: 'site-001', data: { uid: MOCK_UID, clientId: 'client-001', name: 'www.studiorossi.it' } },
-        { id: 'site-002', data: { uid: MOCK_UID, clientId: 'client-001', name: 'blog.studiorossi.it' } },
-        { id: 'site-003', data: { uid: MOCK_UID, clientId: 'client-002', name: 'app.techvision.com' } },
-        { id: 'site-004', data: { uid: MOCK_UID, clientId: 'client-002', name: 'dashboard.techvision.com' } },
-        { id: 'site-005', data: { uid: MOCK_UID, clientId: 'client-003', name: 'farmaciacentrale.it' } },
+        { id: 'site-001', data: { uid: MOCK_UID, clientId: 'client-001', name: 'www.studiorossi.it', url: 'https://www.studiorossi.it' } },
+        { id: 'site-002', data: { uid: MOCK_UID, clientId: 'client-001', name: 'blog.studiorossi.it', url: 'https://blog.studiorossi.it' } },
+        { id: 'site-003', data: { uid: MOCK_UID, clientId: 'client-002', name: 'app.techvision.com', url: 'https://app.techvision.com' } },
+        { id: 'site-004', data: { uid: MOCK_UID, clientId: 'client-002', name: 'dashboard.techvision.com', url: 'https://dashboard.techvision.com' } },
+        { id: 'site-005', data: { uid: MOCK_UID, clientId: 'client-003', name: 'farmaciacentrale.it', url: 'https://farmaciacentrale.it' } },
     ];
 
     const mockWorktypes = [
