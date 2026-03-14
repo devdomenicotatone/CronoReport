@@ -223,11 +223,14 @@ function loadRecentTasks() {
             recents.forEach(r => {
                 const chip = document.createElement('div');
                 chip.className = 'timer-recent-chip';
-                // Favicon via DuckDuckGo (reliable, no console errors)
+                // Colored initial (no external favicon - CORS issues)
                 const domain = r.siteName.replace(/^(https?:\/\/)?(www\.)?/, '').split('/')[0];
-                const faviconUrl = `https://icons.duckduckgo.com/ip3/${encodeURIComponent(domain)}.ico`;
-                const initial = (r.siteName || '?')[0].toUpperCase();
-                chip.innerHTML = `<img src="${faviconUrl}" alt="" class="timer-recent-favicon" onerror="this.outerHTML='<span class=\\'timer-recent-initial\\'>${initial}</span>'"> ${r.worktypeName}`;
+                const initial = domain[0].toUpperCase();
+                // Consistent color per site via simple hash
+                const colors = ['#6366f1','#8b5cf6','#ec4899','#f43f5e','#f97316','#eab308','#22c55e','#14b8a6','#06b6d4','#3b82f6'];
+                const hash = domain.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+                const color = colors[hash % colors.length];
+                chip.innerHTML = `<span class="timer-recent-initial" style="background:${color}">${initial}</span> ${r.worktypeName}`;
                 chip.title = `${r.clientName} · ${r.siteName} · ${r.worktypeName}`;
                 chip.addEventListener('click', () => {
                     // Populate dropdowns
