@@ -918,6 +918,8 @@ function deleteTimerFromModal() {
                         oldCard.parentElement.remove();
                     }
                     updateActiveTimerCount();
+                    loadRecentTasks();
+                    loadTodaySummary();
                 })
                 .catch(error => {
                     console.error('Errore durante l\'eliminazione del timer:', error);
