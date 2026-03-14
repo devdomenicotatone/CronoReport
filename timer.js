@@ -255,7 +255,6 @@ function createFaviconEl(siteName, siteUrl, sizePx) {
 function loadRecentTasks() {
     db.collection('timeLogs')
         .where('uid', '==', currentUser.uid)
-        .where('isDeleted', '==', false)
         .orderBy('startTime', 'desc')
         .limit(20)
         .get()
