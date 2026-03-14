@@ -223,7 +223,10 @@ function loadRecentTasks() {
             recents.forEach(r => {
                 const chip = document.createElement('div');
                 chip.className = 'timer-recent-chip';
-                chip.innerHTML = `<i class="fas fa-redo"></i> ${r.clientName} · ${r.siteName} · ${r.worktypeName}`;
+                // Short label: only site + worktype (client is redundant)
+                const label = r.siteName !== '—' ? `${r.siteName} · ${r.worktypeName}` : r.worktypeName;
+                chip.innerHTML = `<i class="fas fa-redo"></i> ${label}`;
+                chip.title = `${r.clientName} · ${r.siteName} · ${r.worktypeName}`;
                 chip.addEventListener('click', () => {
                     // Populate dropdowns
                     const cs = document.getElementById('client-select');
