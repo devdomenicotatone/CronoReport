@@ -736,6 +736,22 @@ function generateReportValuesArray(reportHeader, reportData, totalAmount, includ
 
     return values;
 }
-
 // === VITE MODULE: Registra globals ===
+window.applySavedConfig = applySavedConfig;
+window.clearLogoPreview = clearLogoPreview;
+window.createGoogleDoc = createGoogleDoc;
+window.createGoogleSheet = createGoogleSheet;
+window.displayLogoPreview = displayLogoPreview;
+window.exportReportToGoogleSheet = exportReportToGoogleSheet;
+window.extractDomainName = extractDomainName;
+window.generatePDF = generatePDF;
+window.generateReportContentString = generateReportContentString;
+window.generateReportValuesArray = generateReportValuesArray;
+window.insertContentIntoDoc = insertContentIntoDoc;
+window.insertDataIntoSheet = insertDataIntoSheet;
+window.loadClients = loadClients;
+window.loadSavedConfigs = loadSavedConfigs;
+window.loadSites = loadSites;
+window.loadWorktypes = loadWorktypes;
 window.reportTemplate = reportTemplate;
+window.saveReportConfig = saveReportConfig;

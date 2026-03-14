@@ -827,6 +827,24 @@ function formatDateTime(timestamp) {
     });
 }
 // === VITE MODULE: Registra globals ===
-window.savedTimersTemplate = savedTimersTemplate;
-window.deleteTimerById = deleteTimerById;
+window.attachSavedTimersListeners = attachSavedTimersListeners;
+window.createRecycleBinRow = createRecycleBinRow;
 window.createTimerRow = createTimerRow;
+window.deleteTimerById = deleteTimerById;
+window.formatDate = formatDate;
+window.formatDateTime = formatDateTime;
+window.formatDuration = formatDuration;
+window.formatTime = formatTime;
+window.formatTimeShort = formatTimeShort;
+window.formatTimeWithSeconds = formatTimeWithSeconds;
+window.getMonthName = getMonthName;
+window.initializeSavedTimersSection = initializeSavedTimersSection;
+window.loadAllClientsForEditSelect = loadAllClientsForEditSelect;
+window.loadAllSitesForEditSelect = loadAllSitesForEditSelect;
+window.loadAllSitesForSavedTimerSelect = loadAllSitesForSavedTimerSelect;
+window.loadAllWorktypesForEditSelect = loadAllWorktypesForEditSelect;
+window.loadAllWorktypesForSavedTimerSelect = loadAllWorktypesForSavedTimerSelect;
+window.openEditSavedTimerModal = openEditSavedTimerModal;
+window.padZero = padZero;
+window.savedTimersTemplate = savedTimersTemplate;
+window.saveEditedSavedTimer = saveEditedSavedTimer;

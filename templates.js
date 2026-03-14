@@ -235,7 +235,6 @@ const timerTemplate = `
   </div>
 </div>
 `;
-
 // === VITE MODULE: Registra globals ===
 window.dataManagementTemplate = dataManagementTemplate;
 window.timerTemplate = timerTemplate;

@@ -833,6 +833,28 @@ firebase.auth().onAuthStateChanged(function (user) {
         window.location.href = 'login.html';
     }
 });
-
 // === VITE MODULE: Registra globals ===
+window.createGoogleDoc = createGoogleDoc;
+window.createGoogleSheet = createGoogleSheet;
+window.deleteMonthTimers = deleteMonthTimers;
+window.exportTimersToGoogleDoc = exportTimersToGoogleDoc;
+window.exportTimersToGoogleSheet = exportTimersToGoogleSheet;
+window.filterDisplayedTimers = filterDisplayedTimers;
+window.filterTimers = filterTimers;
+window.generateTimersReportContent = generateTimersReportContent;
+window.generateTimersReportValues = generateTimersReportValues;
 window.initializeSavedTimersEvents = initializeSavedTimersEvents;
+window.insertContentIntoDoc = insertContentIntoDoc;
+window.insertDataIntoSheet = insertDataIntoSheet;
+window.loadWorktypeRates = loadWorktypeRates;
+window.proceedWithExportToGoogleDoc = proceedWithExportToGoogleDoc;
+window.proceedWithExportToGoogleSheet = proceedWithExportToGoogleSheet;
+window.undoDeleteMonth = undoDeleteMonth;
+window.undoDeleteTimer = undoDeleteTimer;
+window.undoDeleteYear = undoDeleteYear;
+window.undoUnmarkTimers = undoUnmarkTimers;
+window.unmarkAllTimers = unmarkAllTimers;
+window.unmarkFilteredTimers = unmarkFilteredTimers;
+window.unmarkSelectedTimers = unmarkSelectedTimers;
+window.unmarkTimers = unmarkTimers;
+window.worktypeRates = worktypeRates;

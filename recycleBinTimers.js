@@ -399,4 +399,12 @@ function permanentlyDeleteClientTimers(clientName, sectionElement) {
         });
 }
 // === VITE MODULE: Registra globals ===
+window.deleteTimer = deleteTimer;
+window.getRbtColor = getRbtColor;
 window.initializeRecycleBinTimersEvents = initializeRecycleBinTimersEvents;
+window.loadRecycleBinTimers = loadRecycleBinTimers;
+window.permanentlyDeleteClientTimers = permanentlyDeleteClientTimers;
+window.permanentlyDeleteTimer = permanentlyDeleteTimer;
+window.restoreClientTimers = restoreClientTimers;
+window.restoreTimer = restoreTimer;
+window.undoDeleteTimer = undoDeleteTimer;

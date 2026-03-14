@@ -506,7 +506,19 @@ function prepareClientWorkedTimeChart(timeLogs) {
         }
     });
 }
-
 // === VITE MODULE: Registra globals ===
 window.dashboardTemplate = dashboardTemplate;
+window.earningsTooltipCallback = earningsTooltipCallback;
+window.formatHoursToHMS = formatHoursToHMS;
+window.getDashboardFilters = getDashboardFilters;
+window.hoursTooltipCallback = hoursTooltipCallback;
+window.hoursTooltipPieCallback = hoursTooltipPieCallback;
 window.initializeDashboardEvents = initializeDashboardEvents;
+window.loadClientsForDashboardFilter = loadClientsForDashboardFilter;
+window.loadDashboardData = loadDashboardData;
+window.prepareClientWorkedTimeChart = prepareClientWorkedTimeChart;
+window.prepareEarningsChart = prepareEarningsChart;
+window.prepareWorkedTimeChart = prepareWorkedTimeChart;
+window.prepareWorktypeDistributionChart = prepareWorktypeDistributionChart;
+window.setInitialDateRangeAndLoadData = setInitialDateRangeAndLoadData;
+window.updateCharts = updateCharts;

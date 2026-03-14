@@ -422,9 +422,10 @@ function loadClientsForSelect(selectElement) {
 /**
  * Inserimento dei template nel DOM
  */
-
 // === VITE MODULE: Registra globals ===
-window.loadSection = loadSection;
-window.showAlert = showAlert;
-window.renderUnifiedClientAccordion = renderUnifiedClientAccordion;
+window.dmUpdateStats = dmUpdateStats;
 window.initializeDataManagementEvents = initializeDataManagementEvents;
+window.loadClientsForSelect = loadClientsForSelect;
+window.loadSection = loadSection;
+window.renderUnifiedClientAccordion = renderUnifiedClientAccordion;
+window.showAlert = showAlert;
