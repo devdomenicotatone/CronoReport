@@ -64,26 +64,26 @@ const savedTimersTemplate = `
     <!-- Toolbar Compatta: Cerca + Cliente + Azioni -->
     <div class="cr-card mb-5 overflow-hidden">
         <div class="p-3 sm:p-4">
-            <div class="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center">
+            <div class="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center flex-wrap">
                 <!-- Cerca -->
                 <div class="flex-1 min-w-0">
                     <input type="text" id="search-timers-input" class="cr-input" placeholder="🔍 Cerca timer...">
                 </div>
                 <!-- Cliente -->
-                <div class="w-full sm:w-44">
+                <div class="w-full sm:w-40">
                     <select id="filter-client" class="cr-select">
                         <option value="">Tutti i Clienti</option>
                     </select>
                 </div>
                 <!-- Azioni -->
-                <div class="flex gap-2 flex-shrink-0">
-                    <select id="unmark-action-select" class="cr-select text-sm flex-1 sm:flex-none" style="min-width: 0;">
+                <div class="flex gap-2 flex-shrink-0 min-w-0">
+                    <select id="unmark-action-select" class="cr-select text-sm min-w-0 max-w-[180px]">
                         <option value="">⚙ Azione...</option>
                         <option value="unmark-all">Segna Tutti Non Reportati</option>
                         <option value="unmark-selected">Segna Selezionati Non Reportati</option>
                         <option value="unmark-filtered">Segna Filtrati Non Reportati</option>
                     </select>
-                    <button id="apply-action-btn" class="cr-btn cr-btn-sm bg-surface-700 hover:bg-surface-800 text-white" title="Applica azione">
+                    <button id="apply-action-btn" class="cr-btn cr-btn-sm bg-surface-700 hover:bg-surface-800 text-white flex-shrink-0" title="Applica azione">
                         <i class="fas fa-check"></i>
                     </button>
                 </div>
