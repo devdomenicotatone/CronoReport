@@ -184,3 +184,11 @@ function updateActiveMenuItem(section) {
 document.addEventListener('DOMContentLoaded', () => {
     initializeMenu();
 });
+
+// === VITE MODULE: Registra globals ===
+window.initializeMenu = initializeMenu;
+window.setActiveNav = setActiveNav;
+window.updateUserDisplay = updateUserDisplay;
+window.loadMenu = loadMenu;
+window.closeMoreMenu = closeMoreMenu;
+window.updateActiveMenuItem = updateActiveMenuItem;

@@ -1429,3 +1429,22 @@ function stopTimer(timer, card) {
             });
         });
 }
+// === VITE MODULE: Registra globals ===
+window.initializeTimerEvents = initializeTimerEvents;
+window.createFaviconEl = createFaviconEl;
+window.loadRecentTasks = loadRecentTasks;
+window.loadTodaySummary = loadTodaySummary;
+window.updateActiveTimerCount = updateActiveTimerCount;
+window.updateLiveAmount = updateLiveAmount;
+window.formatDuration = formatDuration;
+window.secondsToHHMMSS = secondsToHHMMSS;
+window.hhmmssToSeconds = hhmmssToSeconds;
+window.createTimerCard = createTimerCard;
+window.startTimer = startTimer;
+window.pauseTimer = pauseTimer;
+window.resumeTimer = resumeTimer;
+window.stopTimer = stopTimer;
+window.openEditTimerModal = openEditTimerModal;
+window.parseLocalDateTime = parseLocalDateTime;
+window.formatLocalDateTime = formatLocalDateTime;
+window.activeTimers = activeTimers;

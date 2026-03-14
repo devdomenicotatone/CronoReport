@@ -833,3 +833,6 @@ firebase.auth().onAuthStateChanged(function (user) {
         window.location.href = 'login.html';
     }
 });
+
+// === VITE MODULE: Registra globals ===
+window.initializeSavedTimersEvents = initializeSavedTimersEvents;

@@ -393,3 +393,7 @@ function permanentlyDeleteClientReports(clientName, sectionElement) {
         console.error('Errore eliminazione report cliente:', error);
     });
 }
+
+// === VITE MODULE: Registra globals ===
+window.recycleBinTemplate = recycleBinTemplate;
+window.initializeRecycleBinReportsEvents = initializeRecycleBinReportsEvents;

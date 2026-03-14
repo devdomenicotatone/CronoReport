@@ -398,3 +398,5 @@ function permanentlyDeleteClientTimers(clientName, sectionElement) {
             console.error('Errore eliminazione cliente:', error);
         });
 }
+// === VITE MODULE: Registra globals ===
+window.initializeRecycleBinTimersEvents = initializeRecycleBinTimersEvents;

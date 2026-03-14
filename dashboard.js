@@ -506,3 +506,7 @@ function prepareClientWorkedTimeChart(timeLogs) {
         }
     });
 }
+
+// === VITE MODULE: Registra globals ===
+window.dashboardTemplate = dashboardTemplate;
+window.initializeDashboardEvents = initializeDashboardEvents;

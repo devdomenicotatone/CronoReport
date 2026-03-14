@@ -736,3 +736,6 @@ function generateReportValuesArray(reportHeader, reportData, totalAmount, includ
 
     return values;
 }
+
+// === VITE MODULE: Registra globals ===
+window.reportTemplate = reportTemplate;

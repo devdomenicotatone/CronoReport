@@ -236,12 +236,9 @@
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 
-    <!-- Firebase Config -->
-    <script src="firebaseConfig.js"></script>
-
-    <!-- Google API -->
-    <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
-    <script src="https://accounts.google.com/gsi/client" async defer onload="gisLoaded()"></script>
+    <!-- Google API (onload chiama window.gapiLoaded / window.gisLoaded registrate dal modulo) -->
+    <script src="https://apis.google.com/js/api.js" onload="window.gapiLoaded && window.gapiLoaded()"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer onload="window.gisLoaded && window.gisLoaded()"></script>
 
     <!-- Libraries (versioni pinnate) -->
     <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
@@ -251,13 +248,21 @@
     <script src="https://cdn.jsdelivr.net/npm/jspdf@4.2.0/dist/jspdf.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@5.0.7/dist/jspdf.plugin.autotable.min.js"></script>
 
-    <!-- Vanilla JS UI Components (Modal, Collapse, Tabs) -->
-    <script src="uiComponents.js"></script>
-
-    <!-- DEV MODE + Global Firebase refs (must be before all app scripts) -->
+    <!-- DEV MODE + Firebase init + Global refs (non-module: visibili a tutti i moduli) -->
     <script>
         const DEV_MODE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
         if (DEV_MODE) console.log('%c🚀 DEV MODE ATTIVO', 'color: #10b981; font-weight: bold; font-size: 14px;');
+
+        // Firebase Config + Init
+        const firebaseConfig = {
+            apiKey: "AIzaSyCHpbKDsyc6R5Yx3jcsgzjtPeswwC1Si8E",
+            authDomain: "lavorieseguiti-384d4.firebaseapp.com",
+            projectId: "lavorieseguiti-384d4",
+            storageBucket: "lavorieseguiti-384d4.appspot.com",
+            messagingSenderId: "1032884571304",
+            appId: "1:1032884571304:web:26de738990ca782767869d"
+        };
+        firebase.initializeApp(firebaseConfig);
 
         // Dichiarazioni globali Firebase (modificabili da devData.js)
         var auth = firebase.auth();
@@ -265,26 +270,9 @@
         var currentUser = null;
     </script>
 
-    <!-- Mock Firestore (solo in DEV MODE) -->
-    <script src="devData.js"></script>
-
-    <!-- Theme Configuration (SweetAlert2, Chart.js, Flatpickr) -->
-    <script src="themeConfig.js"></script>
-
-    <!-- App Scripts -->
-    <script src="dashboard.js"></script>
-    <script src="reportConfig.js"></script>
-    <script src="reportEvents.js"></script>
-    <script src="reportHistory.js"></script>
-    <script src="savedTimersUI.js"></script>
-    <script src="savedTimersData.js"></script>
-    <script src="savedTimersEvents.js"></script>
-    <script src="recycleBinTimers.js"></script>
-    <script src="recycleBinReports.js"></script>
-    <script src="timer.js"></script>
-    <script src="menu.js"></script>
-    <script src="templates.js"></script>
-    <script src="main.js"></script>
+    <!-- ═══ VITE MODULE ENTRY POINT ═══ -->
+    <script type="module" src="/src/app.js"></script>
 </body>
 
 </html>
+

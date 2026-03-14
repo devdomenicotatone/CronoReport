@@ -147,3 +147,8 @@ document.addEventListener('click', function (e) {
         if (target) CrCollapse.toggle(target);
     }
 });
+
+// === VITE MODULE: Registra globals ===
+window.CrModal = CrModal;
+window.CrCollapse = CrCollapse;
+window.CrTabs = CrTabs;

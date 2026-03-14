@@ -809,13 +809,9 @@ function formatTimeShort(timestamp) {
     return date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
 }
 
-function formatDate(date) {
-    return date.toLocaleDateString('it-IT');
-}
-
-function formatDate(dateStr) {
+function formatDate(dateInput) {
     const options = { day: '2-digit', month: '2-digit', year: 'numeric' };
-    const dateObj = new Date(dateStr);
+    const dateObj = dateInput instanceof Date ? dateInput : new Date(dateInput);
     return dateObj.toLocaleDateString('it-IT', options);
 }
 
@@ -830,3 +826,7 @@ function formatDateTime(timestamp) {
         minute: '2-digit'
     });
 }
+// === VITE MODULE: Registra globals ===
+window.savedTimersTemplate = savedTimersTemplate;
+window.deleteTimerById = deleteTimerById;
+window.createTimerRow = createTimerRow;

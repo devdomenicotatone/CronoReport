@@ -1,15 +1,7 @@
-// firebaseConfig.js
+// firebaseConfig.js — GAPI + GIS initialization
+// Firebase config e initializeApp sono nell'inline script di index.html
 
-const firebaseConfig = {
-    apiKey: "AIzaSyCHpbKDsyc6R5Yx3jcsgzjtPeswwC1Si8E",
-    authDomain: "lavorieseguiti-384d4.firebaseapp.com",
-    projectId: "lavorieseguiti-384d4",
-    storageBucket: "lavorieseguiti-384d4.appspot.com",
-    messagingSenderId: "1032884571304",
-    appId: "1:1032884571304:web:26de738990ca782767869d"
-};
-
-// Inserisci il tuo Client ID
+// Google API Config
 const CLIENT_ID = '1032884571304-7t9shq2pb29o92qhthovhsj65l99l9t4.apps.googleusercontent.com';
 const API_KEY = 'AIzaSyA1yoFNujcHvWFib5_J1dFiMSDzBMv-b4s';
 
@@ -20,8 +12,7 @@ const DISCOVERY_DOCS = [
   
   const SCOPES = 'https://www.googleapis.com/auth/documents https://www.googleapis.com/auth/spreadsheets';
   
-  // Inizializza Firebase
-  firebase.initializeApp(firebaseConfig);
+  // firebase.initializeApp — già eseguito nell'inline script di index.html
   
   let tokenClient;
   let gapiInited = false;
@@ -129,3 +120,10 @@ const DISCOVERY_DOCS = [
         if (sheetBtn) sheetBtn.disabled = false;
     }
   }
+// === VITE MODULE: Registra globals ===
+window.gapiLoaded = gapiLoaded;
+window.gisLoaded = gisLoaded;
+window.handleAuthClick = handleAuthClick;
+window.handleSignOutClick = handleSignOutClick;
+window.initializeGoogleApiClient = initializeGoogleApiClient;
+window.maybeEnableButtons = maybeEnableButtons;

@@ -880,3 +880,5 @@ function getCurrentFilters() {
         client: filterClient
     };
 }
+// === VITE MODULE: Registra globals ===
+window.renderTimerRow = renderTimerRow;

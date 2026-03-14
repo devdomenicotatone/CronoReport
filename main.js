@@ -422,3 +422,9 @@ function loadClientsForSelect(selectElement) {
 /**
  * Inserimento dei template nel DOM
  */
+
+// === VITE MODULE: Registra globals ===
+window.loadSection = loadSection;
+window.setActiveNav = setActiveNav;
+window.updateUserDisplay = updateUserDisplay;
+window.showAlert = showAlert;

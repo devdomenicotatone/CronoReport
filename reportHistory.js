@@ -582,3 +582,7 @@ function initializeReportHistoryEvents() {
         loadReportHistory(searchReportInput.value.trim());
     });
 }
+
+// === VITE MODULE: Registra globals ===
+window.initializeReportHistoryEvents = initializeReportHistoryEvents;
+window.reportHistoryTemplate = reportHistoryTemplate;
