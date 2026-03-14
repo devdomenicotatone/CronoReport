@@ -16,8 +16,8 @@ if (DEV_MODE) {
         if (typeof updateUserDisplay === 'function') {
             updateUserDisplay(currentUser);
         }
-        loadSection('data-management');
-        setActiveNav('data-management');
+        loadSection('timer');
+        setActiveNav('timer');
     }, 0);
 
     // Preveni qualsiasi redirect da Firebase auth
@@ -36,8 +36,8 @@ if (DEV_MODE) {
                 updateUserDisplay(user);
             }
 
-            loadSection('data-management');
-            setActiveNav('data-management');
+            loadSection('timer');
+            setActiveNav('timer');
 
             await initializeTimerEvents();
 
