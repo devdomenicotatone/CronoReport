@@ -27,7 +27,7 @@ if (DEV_MODE) {
     });
 } else {
     // Listener per lo stato di autenticazione (PRODUCTION)
-    auth.onAuthStateChanged(async (user) => {
+    auth.onAuthStateChanged((user) => {
         if (user) {
             currentUser = user;
             console.log("Utente autenticato:", currentUser.uid);
@@ -40,8 +40,6 @@ if (DEV_MODE) {
             const savedSection = location.hash.replace('#', '') || 'timer';
             loadSection(savedSection);
             setActiveNav(savedSection);
-
-            await initializeTimerEvents();
 
         } else {
             currentUser = null;
