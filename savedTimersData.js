@@ -181,7 +181,7 @@ function loadSavedTimers(filters = {}) {
 
     query.orderBy('startTime', 'desc').get()
         .then(snapshot => {
-            displayedTimers = [];
+            window.displayedTimers = [];
             const unreportedAmounts = {};
 
             if (snapshot.empty) {
@@ -208,7 +208,7 @@ function loadSavedTimers(filters = {}) {
                         const clientName = logData.clientName || 'Cliente Sconosciuto';
                         const worktypeId = logData.worktypeId;
 
-                        displayedTimers.push({
+                        window.displayedTimers.push({
                             id: doc.id,
                             data: logData
                         });
@@ -225,7 +225,7 @@ function loadSavedTimers(filters = {}) {
                         }
                     });
 
-                    displayTimers(displayedTimers);
+                    displayTimers(window.displayedTimers);
                     displayUnreportedAmounts(unreportedAmounts);
                     updateQuickFilterBar();
                 })

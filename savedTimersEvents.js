@@ -1,7 +1,7 @@
 // savedTimersEvents.js
 
 // Variabili globali
-let displayedTimers = []; // Array per memorizzare i timer visualizzati
+window.displayedTimers = []; // Array per memorizzare i timer visualizzati (shared state)
 let lastOperation = null;
 let worktypeRates = {}; // Definiamo la variabile worktypeRates
 
@@ -834,6 +834,7 @@ firebase.auth().onAuthStateChanged(function (user) {
     }
 });
 // === VITE MODULE: Registra globals ===
+window.displayedTimers = displayedTimers;
 window.createGoogleDoc = createGoogleDoc;
 window.createGoogleSheet = createGoogleSheet;
 window.deleteMonthTimers = deleteMonthTimers;
