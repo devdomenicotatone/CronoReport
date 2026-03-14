@@ -724,16 +724,21 @@ function createRecycleBinRow(timerId, logData) {
     `;
     row.appendChild(timeCell);
 
-    // Colonna per il Link con icona
+    // Colonna per il Link/Note con icona
     const linkCell = document.createElement('td');
     if (logData.link) {
-        const linkAnchor = document.createElement('a');
-        linkAnchor.href = logData.link;
-        linkAnchor.target = '_blank';
-        linkAnchor.innerHTML = '<i class="fas fa-external-link-alt mr-1"></i>Apri Link';
-        linkCell.appendChild(linkAnchor);
+        const isUrl = /^https?:\/\//i.test(logData.link);
+        if (isUrl) {
+            const linkAnchor = document.createElement('a');
+            linkAnchor.href = logData.link;
+            linkAnchor.target = '_blank';
+            linkAnchor.innerHTML = '<i class="fas fa-external-link-alt mr-1"></i>Apri Link';
+            linkCell.appendChild(linkAnchor);
+        } else {
+            linkCell.innerHTML = `<span class="text-xs text-surface-400"><i class="fas fa-sticky-note mr-1"></i>${logData.link}</span>`;
+        }
     } else {
-        linkCell.textContent = 'N/A';
+        linkCell.textContent = '—';
     }
     row.appendChild(linkCell);
 

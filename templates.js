@@ -102,8 +102,8 @@ const timerTemplate = `
                     </select>
                 </div>
                 <div class="flex-1 min-w-0">
-                    <label for="link-input" class="block text-xs font-semibold text-surface-500 mb-0.5">Link</label>
-                    <input type="url" id="link-input" class="cr-input text-sm" placeholder="https://...">
+                    <label for="link-input" class="block text-xs font-semibold text-surface-500 mb-0.5">Link / Note</label>
+                    <input type="text" id="link-input" class="cr-input text-sm" placeholder="URL o nota...">
                 </div>
                 <button id="start-timer-btn" class="timer-start-btn">
                     <i class="fas fa-play"></i> Avvia
@@ -202,8 +202,8 @@ const timerTemplate = `
             <select id="edit-worktype-select" class="cr-select"></select>
           </div>
           <div class="mb-3">
-            <label for="edit-link-input" class="block text-sm font-medium text-surface-600 mb-1">Link (opzionale):</label>
-            <input type="url" id="edit-link-input" class="cr-input" placeholder="https://esempio.com">
+            <label for="edit-link-input" class="block text-sm font-medium text-surface-600 mb-1">Link / Note (opzionale):</label>
+            <input type="text" id="edit-link-input" class="cr-input" placeholder="URL o nota...">
           </div>
           <div class="mb-3">
             <label for="edit-accumulated-time" class="block text-sm font-medium text-surface-600 mb-1">Tempo accumulato (hh:mm:ss):</label>

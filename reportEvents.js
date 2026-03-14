@@ -533,7 +533,7 @@ function setupReportSection() {
                         <th>Data</th>
                         <th>Tipo di Lavoro</th>
                         ${includeHourlyRate ? '<th>Tariffa Oraria (€)</th>' : ''}
-                        <th>Link</th>
+                        <th>Link / Note</th>
                         <th>Tempo Lavorato</th>
                         <th>Importo (€)</th>
                     </tr>

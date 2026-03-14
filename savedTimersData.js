@@ -752,13 +752,22 @@ function displayTimers(timers) {
                 detailRow.appendChild(statusBadge);
 
                 if (logData.link) {
-                    const a = document.createElement('a');
-                    a.href = logData.link;
-                    a.target = '_blank';
-                    a.className = 'text-xs text-indigo-400 hover:text-indigo-600 transition-colors ml-2';
-                    a.innerHTML = '<i class="fas fa-external-link-alt"></i>';
-                    a.title = 'Apri link';
-                    detailRow.appendChild(a);
+                    const isUrl = /^https?:\/\//i.test(logData.link);
+                    if (isUrl) {
+                        const a = document.createElement('a');
+                        a.href = logData.link;
+                        a.target = '_blank';
+                        a.className = 'text-xs text-indigo-400 hover:text-indigo-600 transition-colors ml-2';
+                        a.innerHTML = '<i class="fas fa-external-link-alt"></i>';
+                        a.title = 'Apri link';
+                        detailRow.appendChild(a);
+                    } else {
+                        const note = document.createElement('span');
+                        note.className = 'text-xs text-surface-400 ml-2';
+                        note.innerHTML = `<i class="fas fa-sticky-note"></i> ${logData.link}`;
+                        note.title = logData.link;
+                        detailRow.appendChild(note);
+                    }
                 }
 
                 const editBtn = document.createElement('button');

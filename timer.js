@@ -1126,14 +1126,21 @@ function createTimerCard(timer) {
     liveAmount.textContent = `€ ${(initHours * (timer.hourlyRate || 0)).toFixed(2)}`;
     timerWrap.appendChild(liveAmount);
 
-    // Link
+    // Link / Note
     let linkEl = null;
     if (timer.link) {
-        linkEl = document.createElement('a');
-        linkEl.href = timer.link;
-        linkEl.target = '_blank';
-        linkEl.className = 'inline-flex items-center gap-1.5 text-sm text-indigo-500 hover:text-indigo-700 transition-colors mb-3';
-        linkEl.innerHTML = '<i class="fas fa-external-link-alt text-xs"></i> Apri Link';
+        const isUrl = /^https?:\/\//i.test(timer.link);
+        if (isUrl) {
+            linkEl = document.createElement('a');
+            linkEl.href = timer.link;
+            linkEl.target = '_blank';
+            linkEl.className = 'inline-flex items-center gap-1.5 text-sm text-indigo-500 hover:text-indigo-700 transition-colors mb-3';
+            linkEl.innerHTML = '<i class="fas fa-external-link-alt text-xs"></i> Apri Link';
+        } else {
+            linkEl = document.createElement('div');
+            linkEl.className = 'inline-flex items-center gap-1.5 text-xs text-surface-400 mb-3';
+            linkEl.innerHTML = `<i class="fas fa-sticky-note text-xs"></i> ${timer.link}`;
+        }
     }
 
     // Actions
