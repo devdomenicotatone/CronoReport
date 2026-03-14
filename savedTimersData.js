@@ -676,7 +676,7 @@ function displayTimers(timers) {
             function renderTimerRow(timerObj) {
                 const logData = timerObj.data;
                 const row = document.createElement('div');
-                row.className = 'tl-timer-row group';
+                row.className = 'tl-timer-row';
 
                 // Checkbox
                 const checkbox = document.createElement('input');
@@ -714,9 +714,9 @@ function displayTimers(timers) {
                 mainRow.appendChild(spacer);
                 mainRow.appendChild(durationSpan);
 
-                // RIGA 2: Tipo lavoro · Orari · (status dot) · (edit on hover)
+                // RIGA 2: Tipo lavoro · Orari · Stato · Azioni
                 const detailRow = document.createElement('div');
-                detailRow.className = 'flex items-center gap-2 mt-1';
+                detailRow.className = 'flex items-center gap-2 mt-1 flex-wrap';
 
                 const worktypeSpan = document.createElement('span');
                 worktypeSpan.className = 'text-xs text-surface-400';
@@ -731,14 +731,13 @@ function displayTimers(timers) {
                 const spacer2 = document.createElement('span');
                 spacer2.className = 'flex-1';
 
-                // Status: solo un pallino colorato (verde = reportato, ambra = pending)
-                const statusDot = document.createElement('span');
+                const statusBadge = document.createElement('span');
                 if (logData.isReported) {
-                    statusDot.className = 'w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0';
-                    statusDot.title = 'Reportato';
+                    statusBadge.className = 'text-xs text-emerald-500 flex items-center gap-1';
+                    statusBadge.innerHTML = '<i class="fas fa-check-circle"></i> Reportato';
                 } else {
-                    statusDot.className = 'w-2 h-2 rounded-full bg-amber-400 flex-shrink-0';
-                    statusDot.title = 'Pending';
+                    statusBadge.className = 'text-xs text-amber-500 flex items-center gap-1';
+                    statusBadge.innerHTML = '<i class="fas fa-clock"></i> Pending';
                 }
 
                 detailRow.appendChild(worktypeSpan);
@@ -750,25 +749,29 @@ function displayTimers(timers) {
                 }
                 detailRow.appendChild(timesSpan);
                 detailRow.appendChild(spacer2);
-                detailRow.appendChild(statusDot);
+                detailRow.appendChild(statusBadge);
 
-                // Link icon (subtle, solo se esiste)
                 if (logData.link) {
                     const isUrl = /^https?:\/\//i.test(logData.link);
                     if (isUrl) {
                         const a = document.createElement('a');
                         a.href = logData.link;
                         a.target = '_blank';
-                        a.className = 'text-xs text-surface-300 hover:text-indigo-500 transition-colors ml-1 opacity-0 group-hover:opacity-100';
+                        a.className = 'text-xs text-indigo-400 hover:text-indigo-600 transition-colors ml-2';
                         a.innerHTML = '<i class="fas fa-external-link-alt"></i>';
-                        a.title = logData.link;
+                        a.title = 'Apri link';
                         detailRow.appendChild(a);
+                    } else {
+                        const note = document.createElement('span');
+                        note.className = 'text-xs text-surface-400 ml-2';
+                        note.innerHTML = `<i class="fas fa-sticky-note"></i> ${logData.link}`;
+                        note.title = logData.link;
+                        detailRow.appendChild(note);
                     }
                 }
 
-                // Edit button (visibile solo al hover)
                 const editBtn = document.createElement('button');
-                editBtn.className = 'tl-edit-btn ml-1 opacity-0 group-hover:opacity-100 transition-opacity';
+                editBtn.className = 'tl-edit-btn ml-1';
                 editBtn.title = 'Modifica';
                 editBtn.innerHTML = '<i class="fas fa-pen text-xs"></i>';
                 editBtn.addEventListener('click', () => {
