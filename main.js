@@ -102,202 +102,281 @@ function loadSection(section) {
 }
 
 /**
- * Funzione per inizializzare gli eventi della Gestione Dati
+ * Funzione per inizializzare gli eventi della Gestione Dati (Ultra Pro)
  */
 function initializeDataManagementEvents() {
-    // Elementi DOM esistenti
     const addClientBtn = document.getElementById('add-client-btn');
     const newClientName = document.getElementById('new-client-name');
+    const searchInput = document.getElementById('dm-search-input');
 
-    const addSiteBtn = document.getElementById('add-site-btn');
-    const newSiteName = document.getElementById('new-site-name');
-    const selectClientForSite = document.getElementById('select-client-for-site');
-
-    const addWorktypeBtn = document.getElementById('add-worktype-btn');
-    const newWorktypeName = document.getElementById('new-worktype-name');
-    const selectClientForWorktype = document.getElementById('select-client-for-worktype');
-
-    // Pulsanti di toggle
-    const toggleClientListBtn = document.getElementById('toggle-client-list-btn');
-    const toggleSiteListBtn = document.getElementById('toggle-site-list-btn');
-    const toggleWorktypeListBtn = document.getElementById('toggle-worktype-list-btn');
-
-    // Event listener per il pulsante di toggle dei Clienti
-    toggleClientListBtn.addEventListener('click', function () {
-        const clientList = document.getElementById('client-list');
-        if (clientList.style.display === 'none' || clientList.style.display === '') {
-            clientList.style.display = 'block';
-        } else {
-            clientList.style.display = 'none';
-        }
-    });
-
-    // **Event listener per il pulsante di toggle dei Siti**
-    toggleSiteListBtn.addEventListener('click', function () {
-        const siteListDiv = document.getElementById('site-list');
-        if (siteListDiv.style.display === 'none' || siteListDiv.style.display === '') {
-            siteListDiv.style.display = 'block';
-        } else {
-            siteListDiv.style.display = 'none';
-        }
-    });
-
-    // **Event listener per il pulsante di toggle dei Tipi di Lavoro**
-    toggleWorktypeListBtn.addEventListener('click', function () {
-        const worktypeListDiv = document.getElementById('worktype-list');
-        if (worktypeListDiv.style.display === 'none' || worktypeListDiv.style.display === '') {
-            worktypeListDiv.style.display = 'block';
-        } else {
-            worktypeListDiv.style.display = 'none';
-        }
-    });
-
-    // Carica le liste esistenti
-    loadDataManagementClientList(); // Per la lista dei Clienti
-    loadClientsForSelect(selectClientForSite); // Per il select dei Clienti nei Siti
-    loadClientsForSelect(selectClientForWorktype); // Per il select dei Clienti nei Tipi di Lavoro
-    loadSites(); // Per la lista dei Siti
-    loadWorktypes(); // Per la lista dei Tipi di Lavoro
-
-    // Aggiungi Cliente
+    // Add Client
     addClientBtn.addEventListener('click', () => {
-        const clientName = newClientName.value.trim();
-        if (clientName) {
-            addClient(clientName);
-        } else {
-            showAlert('warning', 'Attenzione', 'Inserisci un nome valido per il cliente.');
-        }
-    });
-
-    // Aggiungi Sito
-    addSiteBtn.addEventListener('click', () => {
-        const siteName = newSiteName.value.trim();
-        const clientId = selectClientForSite.value;
-
-        if (!clientId) {
-            showAlert('warning', 'Attenzione', 'Seleziona un Cliente prima di aggiungere un Sito.');
+        const name = newClientName.value.trim();
+        if (!name) {
+            showAlert('warning', 'Attenzione', 'Inserisci un nome per il cliente.');
             return;
         }
-
-        if (siteName) {
-            addSite(clientId, siteName);
-        } else {
-            showAlert('warning', 'Attenzione', 'Inserisci un nome valido per il sito.');
-        }
+        db.collection('clients').add({
+            name: name,
+            uid: currentUser.uid,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        }).then(() => {
+            newClientName.value = '';
+            renderUnifiedClientAccordion();
+            showAlert('success', 'Cliente aggiunto!', `Il cliente "${name}" è stato aggiunto.`);
+        }).catch(error => {
+            console.error('Errore:', error);
+            showAlert('error', 'Errore', 'Si è verificato un errore.');
+        });
     });
 
-    // Aggiungi Tipo di Lavoro
-    addWorktypeBtn.addEventListener('click', () => {
-        const worktypeName = newWorktypeName.value.trim();
-        const clientId = selectClientForWorktype.value;
-        const hourlyRate = parseFloat(document.getElementById('new-worktype-hourly-rate').value);
+    // Search filter
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            const q = searchInput.value.toLowerCase();
+            document.querySelectorAll('#dm-client-accordion .dm-client-card').forEach(card => {
+                const text = card.textContent.toLowerCase();
+                card.style.display = text.includes(q) ? '' : 'none';
+            });
+        });
+    }
 
-        if (!clientId) {
-            showAlert('warning', 'Attenzione', 'Seleziona un Cliente prima di aggiungere un Tipo di Lavoro.');
-            return;
-        }
-
-        if (worktypeName && !isNaN(hourlyRate)) {
-            addWorktype(clientId, worktypeName, hourlyRate);
-        } else {
-            showAlert('warning', 'Attenzione', 'Inserisci un nome valido e una tariffa oraria valida per il tipo di lavoro.');
-        }
-    });
+    // Initial render
+    renderUnifiedClientAccordion();
 }
 
 /**
- * Funzione per mostrare notifiche con SweetAlert2
- * @param {string} icon - Tipo di icona ('success', 'error', 'warning', etc.)
- * @param {string} title - Titolo della notifica
- * @param {string} text - Testo della notifica
+ * Notifiche SweetAlert2
  */
 function showAlert(icon, title, text) {
-    Swal.fire({
-        icon: icon,
-        title: title,
-        text: text,
-        confirmButtonColor: '#3085d6'
-    });
+    Swal.fire({ icon, title, text, confirmButtonColor: '#3085d6' });
 }
 
 /**
- * Funzione per aggiungere un nuovo cliente
- * @param {string} name - Nome del cliente
+ * Render the unified client accordion with sites and worktypes nested
  */
-async function addClient(name) {
+async function renderUnifiedClientAccordion() {
+    const container = document.getElementById('dm-client-accordion');
+    if (!container) return;
+    container.innerHTML = '';
+
+    let totalClients = 0, totalSites = 0, totalWorktypes = 0;
+
     try {
-        await db.collection('clients').add({
-            name: name,
-            uid: currentUser.uid,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        showAlert('success', 'Cliente aggiunto!', `Il cliente "${name}" è stato aggiunto con successo.`);
-        document.getElementById('new-client-name').value = '';
-        loadDataManagementClientList();
-        loadClientsForSelect(document.getElementById('select-client-for-site'));
-        loadClientsForSelect(document.getElementById('select-client-for-worktype'));
+        const clientSnap = await db.collection('clients')
+            .where('uid', '==', currentUser.uid)
+            .orderBy('name')
+            .get();
+
+        totalClients = clientSnap.size;
+
+        for (const clientDoc of clientSnap.docs) {
+            const clientData = clientDoc.data();
+            const clientId = clientDoc.id;
+
+            // Fetch sites + worktypes in parallel
+            const [sitesSnap, worktypesSnap] = await Promise.all([
+                db.collection('sites').where('uid', '==', currentUser.uid).where('clientId', '==', clientId).orderBy('name').get(),
+                db.collection('worktypes').where('uid', '==', currentUser.uid).where('clientId', '==', clientId).orderBy('name').get()
+            ]);
+
+            totalSites += sitesSnap.size;
+            totalWorktypes += worktypesSnap.size;
+
+            // === BUILD CARD ===
+            const card = document.createElement('div');
+            card.className = 'dm-client-card';
+
+            // Header
+            const header = document.createElement('div');
+            header.className = 'dm-client-header';
+            header.innerHTML = `
+                <div class="flex items-center gap-2">
+                    <i class="fas fa-user-circle text-indigo-400"></i>
+                    <input class="dm-editable font-semibold" value="${clientData.name}" data-id="${clientId}" data-collection="clients" data-field="name" />
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="dm-badge dm-badge-teal">${sitesSnap.size} siti</span>
+                    <span class="dm-badge dm-badge-amber">${worktypesSnap.size} tipi</span>
+                    <button class="p-1 text-rose-400 hover:text-rose-600 transition" title="Elimina cliente"><i class="fas fa-trash-alt text-xs"></i></button>
+                    <i class="fas fa-chevron-down chevron"></i>
+                </div>
+            `;
+
+            // Delete client
+            const delBtn = header.querySelector('button[title="Elimina cliente"]');
+            delBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                Swal.fire({
+                    title: 'Sei sicuro?',
+                    text: `Vuoi eliminare il cliente "${clientData.name}"?`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#ef4444',
+                    cancelButtonColor: '#6b7280',
+                    confirmButtonText: 'Sì, elimina!',
+                    cancelButtonText: 'Annulla'
+                }).then(result => {
+                    if (result.isConfirmed) {
+                        db.collection('clients').doc(clientId).delete().then(() => {
+                            renderUnifiedClientAccordion();
+                            Swal.fire('Eliminato!', 'Il cliente è stato eliminato.', 'success');
+                        });
+                    }
+                });
+            });
+
+            // Inline edit client name
+            const nameInput = header.querySelector('.dm-editable');
+            nameInput.addEventListener('click', (e) => e.stopPropagation());
+            nameInput.addEventListener('blur', () => {
+                const newName = nameInput.value.trim();
+                if (newName && newName !== clientData.name) {
+                    db.collection('clients').doc(clientId).update({ name: newName });
+                }
+            });
+
+            // Toggle body
+            const body = document.createElement('div');
+            body.className = 'dm-client-body';
+            header.addEventListener('click', () => {
+                header.classList.toggle('open');
+                body.classList.toggle('expanded');
+            });
+
+            // === SITES SECTION ===
+            const sitesSection = document.createElement('div');
+            sitesSection.className = 'dm-sub-section';
+            sitesSection.innerHTML = `<div class="dm-sub-section-title"><i class="fas fa-map-marker-alt"></i> Siti</div>`;
+
+            if (sitesSnap.empty) {
+                sitesSection.innerHTML += `<div class="dm-empty">Nessun sito</div>`;
+            } else {
+                sitesSnap.forEach(siteDoc => {
+                    const siteData = siteDoc.data();
+                    const row = document.createElement('div');
+                    row.className = 'dm-sub-item';
+                    row.innerHTML = `
+                        <input class="dm-editable" value="${siteData.name}" data-id="${siteDoc.id}" data-collection="sites" data-field="name" />
+                        <button class="delete-btn" title="Elimina sito"><i class="fas fa-times"></i></button>
+                    `;
+                    row.querySelector('.delete-btn').addEventListener('click', () => {
+                        db.collection('sites').doc(siteDoc.id).delete().then(() => renderUnifiedClientAccordion());
+                    });
+                    row.querySelector('.dm-editable').addEventListener('blur', (e) => {
+                        const v = e.target.value.trim();
+                        if (v && v !== siteData.name) db.collection('sites').doc(siteDoc.id).update({ name: v });
+                    });
+                    sitesSection.appendChild(row);
+                });
+            }
+
+            // Add site inline
+            const addSiteRow = document.createElement('div');
+            addSiteRow.className = 'dm-add-row';
+            addSiteRow.innerHTML = `<input type="text" class="flex-1" placeholder="Nuovo sito..." /><button class="dm-add-btn"><i class="fas fa-plus"></i></button>`;
+            addSiteRow.querySelector('.dm-add-btn').addEventListener('click', () => {
+                const input = addSiteRow.querySelector('input');
+                const name = input.value.trim();
+                if (!name) return;
+                db.collection('sites').add({
+                    name, uid: currentUser.uid, clientId, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                }).then(() => renderUnifiedClientAccordion());
+            });
+            sitesSection.appendChild(addSiteRow);
+
+            // === WORKTYPES SECTION ===
+            const wtSection = document.createElement('div');
+            wtSection.className = 'dm-sub-section';
+            wtSection.innerHTML = `<div class="dm-sub-section-title"><i class="fas fa-tools"></i> Tipi di Lavoro</div>`;
+
+            if (worktypesSnap.empty) {
+                wtSection.innerHTML += `<div class="dm-empty">Nessun tipo di lavoro</div>`;
+            } else {
+                worktypesSnap.forEach(wtDoc => {
+                    const wtData = wtDoc.data();
+                    const row = document.createElement('div');
+                    row.className = 'dm-sub-item';
+                    row.innerHTML = `
+                        <input class="dm-editable flex-1" value="${wtData.name}" data-id="${wtDoc.id}" data-collection="worktypes" data-field="name" />
+                        <input class="dm-editable" type="number" value="${wtData.hourlyRate || 0}" style="width:60px;text-align:right;" data-id="${wtDoc.id}" data-collection="worktypes" data-field="hourlyRate" />
+                        <span class="text-xs text-surface-400 mr-1">€/h</span>
+                        <button class="delete-btn" title="Elimina tipo"><i class="fas fa-times"></i></button>
+                    `;
+                    row.querySelector('.delete-btn').addEventListener('click', () => {
+                        db.collection('worktypes').doc(wtDoc.id).delete().then(() => renderUnifiedClientAccordion());
+                    });
+                    // Inline edit name
+                    row.querySelectorAll('.dm-editable').forEach(inp => {
+                        inp.addEventListener('blur', () => {
+                            const field = inp.dataset.field;
+                            let val = inp.value.trim();
+                            if (field === 'hourlyRate') val = parseFloat(val) || 0;
+                            if (val !== '' && val !== (field === 'hourlyRate' ? wtData.hourlyRate : wtData.name)) {
+                                db.collection('worktypes').doc(wtDoc.id).update({ [field]: val });
+                            }
+                        });
+                    });
+                    wtSection.appendChild(row);
+                });
+            }
+
+            // Add worktype inline
+            const addWtRow = document.createElement('div');
+            addWtRow.className = 'dm-add-row';
+            addWtRow.innerHTML = `
+                <input type="text" class="flex-1" placeholder="Tipo lavoro..." />
+                <input type="number" style="width:60px" placeholder="€/h" />
+                <button class="dm-add-btn"><i class="fas fa-plus"></i></button>
+            `;
+            addWtRow.querySelector('.dm-add-btn').addEventListener('click', () => {
+                const inputs = addWtRow.querySelectorAll('input');
+                const name = inputs[0].value.trim();
+                const rate = parseFloat(inputs[1].value) || 0;
+                if (!name) return;
+                db.collection('worktypes').add({
+                    name, hourlyRate: rate, uid: currentUser.uid, clientId,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                }).then(() => renderUnifiedClientAccordion());
+            });
+            wtSection.appendChild(addWtRow);
+
+            // Assemble
+            body.appendChild(sitesSection);
+            body.appendChild(wtSection);
+            card.appendChild(header);
+            card.appendChild(body);
+            container.appendChild(card);
+        }
+
+        // Update stats
+        dmUpdateStats(totalClients, totalSites, totalWorktypes);
+
     } catch (error) {
-        console.error('Errore nell\'aggiunta del cliente:', error);
-        showAlert('error', 'Errore', 'Si è verificato un errore durante l\'aggiunta del cliente.');
+        console.error('Errore nel rendering accordion:', error);
     }
 }
 
 /**
- * Funzione per aggiungere un nuovo sito
- * @param {string} clientId - ID del cliente associato
- * @param {string} name - Nome del sito
+ * Update stat cards for data management
  */
-async function addSite(clientId, name) {
-    try {
-        await db.collection('sites').add({
-            name: name,
-            uid: currentUser.uid,
-            clientId: clientId,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        showAlert('success', 'Sito aggiunto!', `Il sito "${name}" è stato aggiunto con successo.`);
-        document.getElementById('new-site-name').value = '';
-        loadSites();
-    } catch (error) {
-        console.error('Errore nell\'aggiunta del sito:', error);
-        showAlert('error', 'Errore', 'Si è verificato un errore durante l\'aggiunta del sito.');
-    }
+function dmUpdateStats(clients, sites, worktypes) {
+    const c = document.getElementById('dm-stat-clients');
+    const s = document.getElementById('dm-stat-sites');
+    const w = document.getElementById('dm-stat-worktypes');
+    if (c) c.textContent = clients;
+    if (s) s.textContent = sites;
+    if (w) w.textContent = worktypes;
 }
 
 /**
- * Funzione per aggiungere un nuovo tipo di lavoro
- * @param {string} clientId - ID del cliente associato
- * @param {string} name - Nome del tipo di lavoro
- * @param {number} hourlyRate - Tariffa oraria per il tipo di lavoro
- */
-async function addWorktype(clientId, name, hourlyRate) {
-    try {
-        await db.collection('worktypes').add({
-            name: name,
-            uid: currentUser.uid,
-            clientId: clientId,
-            hourlyRate: hourlyRate,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        showAlert('success', 'Tipo di Lavoro aggiunto!', `Il tipo di lavoro "${name}" è stato aggiunto con successo.`);
-        document.getElementById('new-worktype-name').value = '';
-        document.getElementById('new-worktype-hourly-rate').value = ''; // Resetta il campo hourlyRate
-        loadWorktypes();
-    } catch (error) {
-        console.error('Errore nell\'aggiunta del tipo di lavoro:', error);
-        showAlert('error', 'Errore', 'Si è verificato un errore durante l\'aggiunta del tipo di lavoro.');
-    }
-}
-
-/**
- * Funzione per caricare i Clienti nelle liste o nei menu a tendina
- * @param {HTMLElement} selectElement - Elemento select da popolare
+ * Load clients for select element (used by timer and report pages)
  */
 function loadClientsForSelect(selectElement) {
     selectElement.innerHTML = '<option value="">--Seleziona Cliente--</option>';
     db.collection('clients')
         .where('uid', '==', currentUser.uid)
-        .orderBy('createdAt', 'desc')
+        .orderBy('name')
         .get()
         .then(snapshot => {
             snapshot.forEach(doc => {
@@ -309,403 +388,7 @@ function loadClientsForSelect(selectElement) {
         })
         .catch(error => {
             console.error('Errore nel caricamento dei clienti per selezione:', error);
-            showAlert('error', 'Errore', 'Si è verificato un errore durante il caricamento dei clienti.');
         });
-}
-
-/**
- * Funzione per caricare i Clienti nella lista principale
- * @param {HTMLElement|null} selectElement - Elemento select opzionale
- */
-function loadDataManagementClientList(selectElement = null) {
-    if (selectElement) {
-        // Popola il menu a tendina
-        selectElement.innerHTML = '<option value="">--Seleziona Cliente--</option>';
-        db.collection('clients')
-            .where('uid', '==', currentUser.uid)
-            .orderBy('createdAt', 'desc')
-            .get()
-            .then(snapshot => {
-                snapshot.forEach(doc => {
-                    const option = document.createElement('option');
-                    option.value = doc.id;
-                    option.textContent = doc.data().name;
-                    selectElement.appendChild(option);
-                });
-            })
-            .catch(error => {
-                console.error('Errore nel caricamento dei clienti:', error);
-                showAlert('error', 'Errore', 'Si è verificato un errore durante il caricamento dei clienti.');
-            });
-    } else {
-        // Popola la lista nella Gestione Dati
-        const clientList = document.getElementById('client-list');
-        clientList.innerHTML = '';
-        db.collection('clients')
-            .where('uid', '==', currentUser.uid)
-            .orderBy('createdAt', 'desc')
-            .get()
-            .then(snapshot => {
-                snapshot.forEach(doc => {
-                    const li = document.createElement('li');
-                    li.className = 'flex items-center justify-between px-4 py-3 bg-surface-50 rounded-lg mb-2 group hover:bg-surface-100 transition-colors';
-
-                    const nameSpan = document.createElement('span');
-                    nameSpan.textContent = doc.data().name;
-                    nameSpan.className = 'flex-1 text-sm font-medium text-surface-700';
-
-                    const deleteBtn = document.createElement('button');
-                    deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
-                    deleteBtn.className = 'p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all opacity-0 group-hover:opacity-100';
-                    deleteBtn.title = 'Elimina';
-
-                    deleteBtn.addEventListener('click', () => {
-                        Swal.fire({
-                            title: 'Sei sicuro?',
-                            text: `Vuoi eliminare il cliente "${doc.data().name}"?`,
-                            icon: 'warning',
-                            showCancelButton: true,
-                            confirmButtonColor: '#ef4444',
-                            cancelButtonColor: '#6b7280',
-                            confirmButtonText: 'Sì, elimina!',
-                            cancelButtonText: 'Annulla'
-                        }).then((result) => {
-                            if (result.isConfirmed) {
-                                db.collection('clients').doc(doc.id).delete()
-                                    .then(() => {
-                                        Swal.fire(
-                                            'Eliminato!',
-                                            'Il cliente è stato eliminato.',
-                                            'success'
-                                        );
-                                        loadDataManagementClientList();
-                                        loadClientsForSelect(document.getElementById('select-client-for-site'));
-                                        loadClientsForSelect(document.getElementById('select-client-for-worktype'));
-                                    })
-                                    .catch(error => {
-                                        console.error('Errore nell\'eliminazione del cliente:', error);
-                                        showAlert('error', 'Errore', 'Si è verificato un errore durante l\'eliminazione del cliente.');
-                                    });
-                            }
-                        });
-                    });
-
-                    li.appendChild(nameSpan);
-                    li.appendChild(deleteBtn);
-                    clientList.appendChild(li);
-                });
-            })
-            .catch(error => {
-                console.error('Errore nel caricamento dei clienti:', error);
-                showAlert('error', 'Errore', 'Si è verificato un errore durante il caricamento dei clienti.');
-            });
-    }
-}
-
-/**
- * Funzione per caricare i Siti nelle liste o nei menu a tendina
- * @param {HTMLElement|null} selectElement - Elemento select da popolare
- * @param {string|null} clientId - ID del cliente per filtrare i siti
- */
-function loadSites(selectElement = null, clientId = null) {
-    if (selectElement && clientId) {
-        // Popola il menu a tendina basato su clientId
-        selectElement.innerHTML = '<option value="">--Seleziona Sito--</option>';
-        db.collection('sites')
-            .where('uid', '==', currentUser.uid)
-            .where('clientId', '==', clientId)
-            .orderBy('name')
-            .get()
-            .then(snapshot => {
-                snapshot.forEach(doc => {
-                    const option = document.createElement('option');
-                    option.value = doc.id;
-                    option.textContent = doc.data().name;
-                    selectElement.appendChild(option);
-                });
-            })
-            .catch(error => {
-                console.error('Errore nel caricamento dei siti:', error);
-                showAlert('error', 'Errore', 'Si è verificato un errore durante il caricamento dei siti.');
-            });
-    } else {
-        // Popola la lista nella Gestione Dati
-        const siteListDiv = document.getElementById('site-list');
-        siteListDiv.innerHTML = '';
-        db.collection('clients')
-            .where('uid', '==', currentUser.uid)
-            .orderBy('name')
-            .get()
-            .then(clientSnapshot => {
-                clientSnapshot.forEach(clientDoc => {
-                    const clientData = clientDoc.data();
-                    const clientId = clientDoc.id;
-        
-                    // Crea un div per la sezione del cliente
-                    const clientSectionDiv = document.createElement('div');
-                    clientSectionDiv.className = 'mb-4';
-        
-                    // Crea l'header per il Cliente con un pulsante di toggle
-                    const clientHeaderDiv = document.createElement('div');
-                    clientHeaderDiv.className = 'flex justify-between items-center';
-        
-                    const clientHeader = document.createElement('h5');
-                    clientHeader.textContent = clientData.name;
-                    clientHeader.className = 'text-sm font-semibold text-surface-800 mt-3';
-        
-                    const toggleSitesBtn = document.createElement('button');
-                    toggleSitesBtn.className = 'text-xs text-indigo-500 hover:text-indigo-700 font-medium flex items-center gap-1 transition-colors';
-                    toggleSitesBtn.innerHTML = '<i class="fas fa-eye text-xs"></i> Mostra/Nascondi';
-        
-                    clientHeaderDiv.appendChild(clientHeader);
-                    clientHeaderDiv.appendChild(toggleSitesBtn);
-        
-                    // Crea la lista dei Siti per questo Cliente
-                    const siteUl = document.createElement('ul');
-                    siteUl.className = 'mt-2 space-y-1';
-                    siteUl.style.display = 'none'; // Nasconde i siti inizialmente
-        
-                    db.collection('sites')
-                        .where('uid', '==', currentUser.uid)
-                        .where('clientId', '==', clientId)
-                        .orderBy('name')
-                        .get()
-                        .then(siteSnapshot => {
-                            if (siteSnapshot.empty) {
-                                const noSitesLi = document.createElement('li');
-                                noSitesLi.textContent = 'Nessun sito associato.';
-                                noSitesLi.className = 'text-sm text-surface-400 italic px-4 py-2';
-                                siteUl.appendChild(noSitesLi);
-                            } else {
-                                siteSnapshot.forEach(siteDoc => {
-                                    const siteData = siteDoc.data();
-                                    const li = document.createElement('li');
-                                    li.className = 'flex items-center justify-between px-4 py-2.5 bg-surface-50 rounded-lg group hover:bg-surface-100 transition-colors';
-        
-                                    const nameSpan = document.createElement('span');
-                                    nameSpan.textContent = siteData.name;
-                                    nameSpan.className = 'flex-1 text-sm text-surface-700';
-        
-                                    const deleteBtn = document.createElement('button');
-                                    deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
-                                    deleteBtn.className = 'p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all opacity-0 group-hover:opacity-100';
-                                    deleteBtn.title = 'Elimina';
-        
-                                    deleteBtn.addEventListener('click', () => {
-                                        Swal.fire({
-                                            title: 'Sei sicuro?',
-                                            text: `Vuoi eliminare il sito "${siteData.name}"?`,
-                                            icon: 'warning',
-                                            showCancelButton: true,
-                                            confirmButtonColor: '#ef4444',
-                                            cancelButtonColor: '#6b7280',
-                                            confirmButtonText: 'Sì, elimina!',
-                                            cancelButtonText: 'Annulla'
-                                        }).then((result) => {
-                                            if (result.isConfirmed) {
-                                                db.collection('sites').doc(siteDoc.id).delete()
-                                                    .then(() => {
-                                                        Swal.fire(
-                                                            'Eliminato!',
-                                                            'Il sito è stato eliminato.',
-                                                            'success'
-                                                        );
-                                                        loadSites();
-                                                    })
-                                                    .catch(error => {
-                                                        console.error('Errore nell\'eliminazione del sito:', error);
-                                                        showAlert('error', 'Errore', 'Si è verificato un errore durante l\'eliminazione del sito.');
-                                                    });
-                                            }
-                                        });
-                                    });
-        
-                                    li.appendChild(nameSpan);
-                                    li.appendChild(deleteBtn);
-                                    siteUl.appendChild(li);
-                                });
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Errore nel caricamento dei siti:', error);
-                            showAlert('error', 'Errore', 'Si è verificato un errore durante il caricamento dei siti.');
-                        });
-        
-                    // Aggiungi l'event listener per il pulsante di toggle
-                    toggleSitesBtn.addEventListener('click', () => {
-                        if (siteUl.style.display === 'none' || siteUl.style.display === '') {
-                            siteUl.style.display = 'block';
-                        } else {
-                            siteUl.style.display = 'none';
-                        }
-                    });
-        
-                    // Aggiungi l'header del cliente e la lista dei siti al div della sezione
-                    clientSectionDiv.appendChild(clientHeaderDiv);
-                    clientSectionDiv.appendChild(siteUl);
-        
-                    // Aggiungi il div della sezione cliente al div principale
-                    siteListDiv.appendChild(clientSectionDiv);
-                });
-            })
-            .catch(error => {
-                console.error('Errore nel caricamento dei clienti per i siti:', error);
-                showAlert('error', 'Errore', 'Si è verificato un errore durante il caricamento dei clienti.');
-            });
-    }
-}
-
-/**
- * Funzione per caricare i Tipi di Lavoro nelle liste o nei menu a tendina
- * @param {HTMLElement|null} selectElement - Elemento select da popolare
- * @param {string|null} clientId - ID del cliente per filtrare i tipi di lavoro
- */
-function loadWorktypes(selectElement = null, clientId = null) {
-    if (selectElement && clientId) {
-        // Popola il menu a tendina basato su clientId
-        selectElement.innerHTML = '<option value="">--Seleziona Tipo di Lavoro--</option>';
-        db.collection('worktypes')
-            .where('uid', '==', currentUser.uid)
-            .where('clientId', '==', clientId)
-            .orderBy('name')
-            .get()
-            .then(snapshot => {
-                snapshot.forEach(doc => {
-                    const option = document.createElement('option');
-                    option.value = doc.id;
-                    option.textContent = doc.data().name;
-                    selectElement.appendChild(option);
-                });
-            })
-            .catch(error => {
-                console.error('Errore nel caricamento dei tipi di lavoro:', error);
-                showAlert('error', 'Errore', 'Si è verificato un errore durante il caricamento dei tipi di lavoro.');
-            });
-    } else {
-        // Popola la lista nella Gestione Dati
-        const worktypeListDiv = document.getElementById('worktype-list');
-        worktypeListDiv.innerHTML = '';
-        db.collection('clients')
-            .where('uid', '==', currentUser.uid)
-            .orderBy('name')
-            .get()
-            .then(clientSnapshot => {
-                clientSnapshot.forEach(clientDoc => {
-                    const clientData = clientDoc.data();
-                    const clientId = clientDoc.id;
-        
-                    // Crea un div per la sezione del cliente
-                    const clientSectionDiv = document.createElement('div');
-                    clientSectionDiv.className = 'mb-4';
-        
-                    // Crea l'header per il Cliente con un pulsante di toggle
-                    const clientHeaderDiv = document.createElement('div');
-                    clientHeaderDiv.className = 'flex justify-between items-center';
-        
-                    const clientHeader = document.createElement('h5');
-                    clientHeader.textContent = clientData.name;
-                    clientHeader.className = 'text-sm font-semibold text-surface-800 mt-3';
-        
-                    const toggleWorktypesBtn = document.createElement('button');
-                    toggleWorktypesBtn.className = 'text-xs text-indigo-500 hover:text-indigo-700 font-medium flex items-center gap-1 transition-colors';
-                    toggleWorktypesBtn.innerHTML = '<i class="fas fa-eye text-xs"></i> Mostra/Nascondi';
-        
-                    clientHeaderDiv.appendChild(clientHeader);
-                    clientHeaderDiv.appendChild(toggleWorktypesBtn);
-        
-                    // Crea la lista dei Tipi di Lavoro per questo Cliente
-                    const worktypeUl = document.createElement('ul');
-                    worktypeUl.className = 'mt-2 space-y-1';
-                    worktypeUl.style.display = 'none'; // Nasconde i tipi di lavoro inizialmente
-        
-                    db.collection('worktypes')
-                        .where('uid', '==', currentUser.uid)
-                        .where('clientId', '==', clientId)
-                        .orderBy('name')
-                        .get()
-                        .then(worktypeSnapshot => {
-                            if (worktypeSnapshot.empty) {
-                                const noWorktypesLi = document.createElement('li');
-                                noWorktypesLi.textContent = 'Nessun tipo di lavoro associato.';
-                                noWorktypesLi.className = 'text-sm text-surface-400 italic px-4 py-2';
-                                worktypeUl.appendChild(noWorktypesLi);
-                            } else {
-                                worktypeSnapshot.forEach(worktypeDoc => {
-                                    const worktypeData = worktypeDoc.data();
-                                    const li = document.createElement('li');
-                                    li.className = 'flex items-center justify-between px-4 py-2.5 bg-surface-50 rounded-lg group hover:bg-surface-100 transition-colors';
-        
-                                    const nameSpan = document.createElement('span');
-                                    nameSpan.className = 'flex-1 text-sm text-surface-700';
-                                    nameSpan.innerHTML = `${worktypeData.name} <span class="text-xs text-surface-400 ml-2">${worktypeData.hourlyRate || 0} €/h</span>`;
-        
-                                    const deleteBtn = document.createElement('button');
-                                    deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
-                                    deleteBtn.className = 'p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all opacity-0 group-hover:opacity-100';
-                                    deleteBtn.title = 'Elimina';
-        
-                                    deleteBtn.addEventListener('click', () => {
-                                        Swal.fire({
-                                            title: 'Sei sicuro?',
-                                            text: `Vuoi eliminare il tipo di lavoro "${worktypeData.name}"?`,
-                                            icon: 'warning',
-                                            showCancelButton: true,
-                                            confirmButtonColor: '#ef4444',
-                                            cancelButtonColor: '#6b7280',
-                                            confirmButtonText: 'Sì, elimina!',
-                                            cancelButtonText: 'Annulla'
-                                        }).then((result) => {
-                                            if (result.isConfirmed) {
-                                                db.collection('worktypes').doc(worktypeDoc.id).delete()
-                                                    .then(() => {
-                                                        Swal.fire(
-                                                            'Eliminato!',
-                                                            'Il tipo di lavoro è stato eliminato.',
-                                                            'success'
-                                                        );
-                                                        loadWorktypes();
-                                                    })
-                                                    .catch(error => {
-                                                        console.error('Errore nell\'eliminazione del tipo di lavoro:', error);
-                                                        showAlert('error', 'Errore', 'Si è verificato un errore durante l\'eliminazione del tipo di lavoro.');
-                                                    });
-                                            }
-                                        });
-                                    });
-        
-                                    li.appendChild(nameSpan);
-                                    li.appendChild(deleteBtn);
-                                    worktypeUl.appendChild(li);
-                                });
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Errore nel caricamento dei tipi di lavoro:', error);
-                            showAlert('error', 'Errore', 'Si è verificato un errore durante il caricamento dei tipi di lavoro.');
-                        });
-        
-                    // Aggiungi l'event listener per il pulsante di toggle
-                    toggleWorktypesBtn.addEventListener('click', () => {
-                        if (worktypeUl.style.display === 'none' || worktypeUl.style.display === '') {
-                            worktypeUl.style.display = 'block';
-                        } else {
-                            worktypeUl.style.display = 'none';
-                        }
-                    });
-        
-                    // Aggiungi l'header del cliente e la lista dei tipi di lavoro al div della sezione
-                    clientSectionDiv.appendChild(clientHeaderDiv);
-                    clientSectionDiv.appendChild(worktypeUl);
-        
-                    // Aggiungi il div della sezione cliente al div principale
-                    worktypeListDiv.appendChild(clientSectionDiv);
-                });
-            })
-            .catch(error => {
-                console.error('Errore nel caricamento dei clienti per i tipi di lavoro:', error);
-                showAlert('error', 'Errore', 'Si è verificato un errore durante il caricamento dei clienti.');
-            });
-    }
 }
 
 /**
