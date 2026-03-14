@@ -260,30 +260,9 @@ function loadRecentTasks() {
                 const color = colors[hash % colors.length];
 
                 if (siteUrl) {
-                    // Extract hostname from URL for favicon
-                    try {
-                        const hostname = new URL(siteUrl).hostname;
-                        const faviconUrl = `https://www.google.com/s2/favicons?sz=32&domain=${hostname}`;
-                        // Silent load: show initial, replace with favicon on success
-                        chip.innerHTML = `<span class="timer-recent-initial" style="background:${color}" id="init-${r.siteId}">${initial}</span> ${r.worktypeName}`;
-                        const img = new Image();
-                        img.onload = () => {
-                            const initEl = chip.querySelector(`#init-${r.siteId}`);
-                            if (initEl) {
-                                const favicon = document.createElement('img');
-                                favicon.src = faviconUrl;
-                                favicon.className = 'timer-recent-favicon';
-                                favicon.alt = '';
-                                initEl.replaceWith(favicon);
-                            }
-                        };
-                        img.onerror = () => { /* keep initial */ };
-                        img.src = faviconUrl;
-                    } catch (e) {
-                        chip.innerHTML = `<span class="timer-recent-initial" style="background:${color}">${initial}</span> ${r.worktypeName}`;
-                    }
+                    chip.innerHTML = `<span class="timer-recent-initial" style="background:${color}">${initial}</span> <span class="truncate max-w-[120px]">${r.worktypeName}</span>`;
                 } else {
-                    chip.innerHTML = `<span class="timer-recent-initial" style="background:${color}">${initial}</span> ${r.worktypeName}`;
+                    chip.innerHTML = `<span class="timer-recent-initial" style="background:${color}">${initial}</span> <span class="truncate max-w-[120px]">${r.worktypeName}</span>`;
                 }
 
                 chip.title = `${r.clientName} · ${r.siteName} · ${r.worktypeName}`;
@@ -1101,34 +1080,35 @@ function saveTimerChanges() {
 
 function createTimerCard(timer) {
     const card = document.createElement('div');
-    card.className = 'cr-card overflow-hidden timer-card transition-all duration-300 hover:shadow-xl';
+    card.className = 'cr-card overflow-hidden timer-card relative border-0 shadow-lg shadow-surface-200/50 transition-all duration-300 hover:shadow-2xl hover:shadow-surface-300/60 hover:-translate-y-1';
     if (timer.isPaused) card.classList.add('timer-card-paused');
     card.setAttribute('data-timer-id', timer.id);
 
     // Accent bar
     const accentBar = document.createElement('div');
-    accentBar.className = 'h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500';
+    accentBar.className = 'h-1.5 w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 absolute top-0 left-0';
+    if (timer.isPaused) accentBar.className = 'h-1.5 w-full bg-surface-300 absolute top-0 left-0';
 
     // Body
     const body = document.createElement('div');
-    body.className = 'p-5 flex flex-col h-full';
+    body.className = 'p-5 flex flex-col h-full bg-white bg-opacity-80 backdrop-blur-sm pt-6';
 
     // Header
     const header = document.createElement('div');
-    header.className = 'flex justify-between items-start mb-2';
+    header.className = 'flex justify-between items-start mb-3';
 
     const titleWrap = document.createElement('div');
     const title = document.createElement('h4');
-    title.className = 'text-base font-bold text-surface-800 leading-tight';
+    title.className = 'text-lg font-extrabold text-surface-900 leading-tight tracking-tight';
     title.textContent = timer.clientName;
     const subtitle = document.createElement('p');
-    subtitle.className = 'text-xs text-surface-400 mt-0.5';
+    subtitle.className = 'text-[10px] font-bold text-surface-500 mt-1 uppercase tracking-wider';
     subtitle.textContent = timer.siteName;
     titleWrap.appendChild(title);
     titleWrap.appendChild(subtitle);
 
     const badge = document.createElement('span');
-    badge.className = 'inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700';
+    badge.className = 'inline-flex items-center px-2 py-1 rounded-md text-[9px] font-extrabold uppercase tracking-wider bg-indigo-50 text-indigo-600 border border-indigo-100 shadow-sm whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px]';
     badge.textContent = timer.worktypeName;
 
     header.appendChild(titleWrap);
@@ -1136,16 +1116,22 @@ function createTimerCard(timer) {
 
     // Timer display wrap
     const timerWrap = document.createElement('div');
-    timerWrap.className = 'timer-display-wrap';
+    timerWrap.className = 'timer-display-wrap relative overflow-hidden bg-surface-50/50 border border-surface-100 rounded-xl p-4 my-2 text-center transition-all duration-300 group';
+
+    // Ambient glow behind timer text
+    const glowDiv = document.createElement('div');
+    glowDiv.className = 'absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 bg-indigo-500 opacity-[0.03] blur-xl rounded-full transition-opacity group-hover:opacity-10';
+    timerWrap.appendChild(glowDiv);
+
     const timerDisplay = document.createElement('div');
-    timerDisplay.className = 'text-3xl font-mono font-bold text-surface-800 tracking-wider';
+    timerDisplay.className = 'text-3xl sm:text-4xl font-mono font-black text-surface-900 tracking-tight relative z-10';
     if (!timer.isPaused) timerDisplay.classList.add('timer-display-running');
     timerDisplay.textContent = formatDuration(timer.accumulatedElapsedTime);
     timerWrap.appendChild(timerDisplay);
 
     // Live amount
     const liveAmount = document.createElement('div');
-    liveAmount.className = 'timer-live-amount';
+    liveAmount.className = 'timer-live-amount mt-1.5 text-xs font-bold text-emerald-600 bg-emerald-50 inline-block px-2 py-0.5 rounded-full border border-emerald-100 relative z-10';
     const initHours = timer.accumulatedElapsedTime / 3600;
     liveAmount.textContent = `€ ${(initHours * (timer.hourlyRate || 0)).toFixed(2)}`;
     timerWrap.appendChild(liveAmount);
@@ -1158,40 +1144,40 @@ function createTimerCard(timer) {
             linkEl = document.createElement('a');
             linkEl.href = timer.link;
             linkEl.target = '_blank';
-            linkEl.className = 'inline-flex items-center gap-1.5 text-sm text-indigo-500 hover:text-indigo-700 transition-colors mb-3';
-            linkEl.innerHTML = '<i class="fas fa-external-link-alt text-xs"></i> Apri Link';
+            linkEl.className = 'inline-flex w-fit items-center gap-1.5 text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors mb-4 px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-100';
+            linkEl.innerHTML = '<i class="fas fa-external-link-alt text-[10px]"></i> Apri Link Task';
         } else {
             linkEl = document.createElement('div');
-            linkEl.className = 'inline-flex items-center gap-1.5 text-xs text-surface-400 mb-3';
-            linkEl.innerHTML = `<i class="fas fa-sticky-note text-xs"></i> ${timer.link}`;
+            linkEl.className = 'inline-flex w-fit items-center gap-1.5 text-xs font-medium text-surface-600 mb-4 px-2.5 py-1.5 bg-surface-50 rounded-lg border border-surface-100 italic';
+            linkEl.innerHTML = `<i class="fas fa-sticky-note text-[10px] text-surface-400"></i> ${timer.link}`;
         }
     }
 
     // Actions
     const actions = document.createElement('div');
-    actions.className = 'flex gap-2 mt-auto pt-3 border-t border-surface-100';
+    actions.className = 'flex gap-2 mt-auto pt-4 border-t border-surface-100/60';
 
     const pauseBtn = document.createElement('button');
-    pauseBtn.className = 'cr-btn cr-btn-sm flex-1 bg-amber-500 hover:bg-amber-600 text-white';
+    pauseBtn.className = 'cr-btn cr-btn-sm flex-1 bg-gradient-to-br from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-white shadow-md shadow-amber-500/20 active:scale-95 transition-all outline-none border-0';
     pauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
     pauseBtn.title = 'Pausa';
     pauseBtn.style.display = timer.isPaused ? 'none' : '';
 
     const resumeBtn = document.createElement('button');
-    resumeBtn.className = 'cr-btn cr-btn-sm flex-1 bg-emerald-500 hover:bg-emerald-600 text-white';
+    resumeBtn.className = 'cr-btn cr-btn-sm flex-1 bg-gradient-to-br from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white shadow-md shadow-indigo-500/20 active:scale-95 transition-all outline-none border-0';
     resumeBtn.innerHTML = '<i class="fas fa-play"></i>';
     resumeBtn.title = 'Riprendi';
     resumeBtn.style.display = timer.isPaused ? '' : 'none';
 
     const stopBtn = document.createElement('button');
-    stopBtn.className = 'cr-btn cr-btn-sm flex-1 bg-rose-500 hover:bg-rose-600 text-white';
-    stopBtn.innerHTML = '<i class="fas fa-stop"></i>';
-    stopBtn.title = 'Stop';
+    stopBtn.className = 'cr-btn cr-btn-sm flex-[1.5] bg-gradient-to-br from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white shadow-md shadow-rose-500/20 active:scale-95 transition-all outline-none border-0 font-bold';
+    stopBtn.innerHTML = '<i class="fas fa-stop mr-1"></i> Stop';
+    stopBtn.title = 'Stop e Salva';
 
     const editBtn = document.createElement('button');
-    editBtn.className = 'cr-btn cr-btn-sm flex-1 bg-surface-100 hover:bg-surface-200 text-surface-600';
+    editBtn.className = 'cr-btn cr-btn-sm flex-1 bg-surface-50 hover:bg-surface-100 text-surface-600 shadow-sm border border-surface-200 active:scale-95 transition-all outline-none';
     editBtn.innerHTML = '<i class="fas fa-pen"></i>';
-    editBtn.title = 'Modifica';
+    editBtn.title = 'Modifica Dati';
 
     // Event listeners
     pauseBtn.addEventListener('click', () => {
@@ -1200,6 +1186,7 @@ function createTimerCard(timer) {
         resumeBtn.style.display = '';
         timerDisplay.classList.remove('timer-display-running');
         card.classList.add('timer-card-paused');
+        accentBar.className = 'h-1.5 w-full bg-surface-300 absolute top-0 left-0';
     });
 
     resumeBtn.addEventListener('click', () => {
@@ -1208,6 +1195,7 @@ function createTimerCard(timer) {
         resumeBtn.style.display = 'none';
         timerDisplay.classList.add('timer-display-running');
         card.classList.remove('timer-card-paused');
+        accentBar.className = 'h-1.5 w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 absolute top-0 left-0';
     });
 
     stopBtn.addEventListener('click', () => {

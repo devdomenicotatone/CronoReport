@@ -2211,6 +2211,19 @@ table tr:hover td {
     animation: sectionEnter 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/*
+ * FIX: Sections containing position:fixed elements (quick-filter-bar)
+ * must NOT retain a residual transform after animation, because any
+ * ancestor with transform creates a new containing block and breaks
+ * position:fixed (the element becomes relative to the ancestor instead
+ * of the viewport). Using animation-fill-mode: none lets the transform
+ * be removed once the animation completes.
+ */
+#saved-timers-section,
+#report-history-section {
+    animation: sectionEnter 0.5s cubic-bezier(0.22, 1, 0.36, 1) none !important;
+}
+
 /* --- Staggered Children — each child enters with delay --- */
 @keyframes staggerIn {
     from {
@@ -2228,6 +2241,15 @@ table tr:hover td {
 #content-section .section-header,
 #content-section > div > div {
     animation: staggerIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Exclude fixed-position containers from staggerIn to avoid transform containment */
+#saved-timers-section,
+#saved-timers-section > .quick-filter-bar,
+#report-history-section,
+#report-history-section > .quick-filter-bar {
+    animation: none !important;
+    transform: none !important;
 }
 
 #content-section > *:nth-child(1) { animation-delay: 0s; }
@@ -2481,19 +2503,7 @@ table tbody tr:hover {
     transform: scale(1.002);
 }
 
-/* --- "Avvia Timer" header bar: polished gradient --- */
-.timer-start-bar {
-    background: linear-gradient(135deg, 
-        rgba(16, 185, 129, 0.95) 0%, 
-        rgba(5, 150, 105, 0.95) 50%,
-        rgba(4, 120, 87, 0.95) 100%
-    ) !important;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    box-shadow: 
-        0 4px 15px rgba(16, 185, 129, 0.25),
-        inset 0 1px 0 rgba(255, 255, 255, 0.15);
-}
+
 
 /* --- Active timer count badge: pulse --- */
 @keyframes countPulse {
