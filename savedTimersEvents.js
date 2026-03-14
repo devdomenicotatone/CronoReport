@@ -492,6 +492,15 @@ function filterDisplayedTimers(searchTerm) {
 
 // Funzione per esportare i timer in Google Docs
 function exportTimersToGoogleDoc() {
+    if (!gapiInited || !gisInited) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Google API non pronta',
+            text: 'Le API di Google non sono ancora caricate. Ricarica la pagina e riprova.',
+            confirmButtonText: 'OK'
+        });
+        return;
+    }
     if (displayedTimers.length === 0) {
         Swal.fire({
             icon: 'info',
@@ -519,6 +528,15 @@ function proceedWithExportToGoogleDoc() {
 
 // Funzione per esportare i timer in Google Sheets
 function exportTimersToGoogleSheet() {
+    if (!gapiInited || !gisInited) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Google API non pronta',
+            text: 'Le API di Google non sono ancora caricate. Ricarica la pagina e riprova.',
+            confirmButtonText: 'OK'
+        });
+        return;
+    }
     if (displayedTimers.length === 0) {
         Swal.fire({
             icon: 'info',

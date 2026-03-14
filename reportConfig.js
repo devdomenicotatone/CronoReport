@@ -190,10 +190,10 @@ const reportTemplate = `
                 <button id="download-pdf-btn" class="cr-btn bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold shadow-md mr-2">
                     <i class="fas fa-file-pdf mr-2"></i>Scarica PDF
                 </button>
-                <button id="export-google-doc-btn" class="cr-btn bg-gradient-to-r from-indigo-500 to-indigo-600 text-white font-semibold shadow-md mr-2 opacity-50 cursor-not-allowed" disabled>
+                <button id="export-google-doc-btn" class="cr-btn bg-gradient-to-r from-indigo-500 to-indigo-600 text-white font-semibold shadow-md mr-2">
                     <i class="fab fa-google-drive mr-2"></i>Google Docs
                 </button>
-                <button id="export-google-sheet-btn" class="cr-btn bg-gradient-to-r from-indigo-500 to-indigo-600 text-white font-semibold shadow-md opacity-50 cursor-not-allowed" disabled>
+                <button id="export-google-sheet-btn" class="cr-btn bg-gradient-to-r from-indigo-500 to-indigo-600 text-white font-semibold shadow-md">
                     <i class="fab fa-google-drive mr-2"></i>Google Sheets
                 </button>
             </div>

@@ -15,10 +15,10 @@ const savedTimersTemplate = `
             <button id="undo-action-btn" class="cr-btn cr-btn-sm bg-surface-100 hover:bg-surface-200 text-surface-600" title="Annulla ultima operazione">
                 <i class="fas fa-undo"></i>
             </button>
-            <button id="export-google-doc-btn" class="cr-btn cr-btn-sm bg-indigo-500 hover:bg-indigo-600 text-white" disabled title="Esporta in Google Docs">
+            <button id="export-google-doc-btn" class="cr-btn cr-btn-sm bg-indigo-500 hover:bg-indigo-600 text-white" title="Esporta in Google Docs">
                 <i class="fab fa-google-drive"></i><span class="hidden sm:inline ml-1">Docs</span>
             </button>
-            <button id="export-google-sheet-btn" class="cr-btn cr-btn-sm bg-emerald-500 hover:bg-emerald-600 text-white" disabled title="Esporta in Google Sheets">
+            <button id="export-google-sheet-btn" class="cr-btn cr-btn-sm bg-emerald-500 hover:bg-emerald-600 text-white" title="Esporta in Google Sheets">
                 <i class="fas fa-table"></i><span class="hidden sm:inline ml-1">Sheets</span>
             </button>
         </div>
