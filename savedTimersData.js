@@ -881,4 +881,9 @@ function getCurrentFilters() {
     };
 }
 // === VITE MODULE: Registra globals ===
-window.renderTimerRow = renderTimerRow;
+window.loadSavedTimers = loadSavedTimers;
+window.displayTimers = displayTimers;
+window.getClientColor = getClientColor;
+window.loadAvailableYears = loadAvailableYears;
+window.getCurrentFilters = getCurrentFilters;
+window.loadClientsForFilter = loadClientsForFilter;
