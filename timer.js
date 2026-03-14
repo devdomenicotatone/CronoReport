@@ -565,7 +565,12 @@ async function createNewTimer(clientId, siteId, worktypeId, link, manualStartTim
         }
 
         const accumulatedElapsedTime = 0;
-        let hourlyRate = await getHourlyRate();
+        let hourlyRate = 0;
+        try {
+            const wtDoc = await db.collection('worktypes').doc(worktypeId).get();
+            if (wtDoc.exists) hourlyRate = parseFloat(wtDoc.data().hourlyRate) || 0;
+        } catch(e) { /* fallback 0 */ }
+        console.log(`[Timer] hourlyRate per ${worktypeName}: ${hourlyRate} €/h`);
 
         const timer = {
             clientId: clientId,
@@ -616,6 +621,13 @@ async function createNewTimer(clientId, siteId, worktypeId, link, manualStartTim
         });
 
     } else {
+        let hourlyRate = 0;
+        try {
+            const wtDoc = await db.collection('worktypes').doc(worktypeId).get();
+            if (wtDoc.exists) hourlyRate = parseFloat(wtDoc.data().hourlyRate) || 0;
+        } catch(e) { /* fallback 0 */ }
+        console.log(`[Timer] hourlyRate per ${worktypeName}: ${hourlyRate} €/h`);
+
         const timer = {
             clientId: clientId,
             siteId: siteId,
@@ -630,14 +642,8 @@ async function createNewTimer(clientId, siteId, worktypeId, link, manualStartTim
             intervalId: null,
             timerDisplay: null,
             liveAmountDisplay: null,
-            hourlyRate: await getHourlyRate()
+            hourlyRate: hourlyRate
         };
-
-        let hourlyRate = timer.hourlyRate;
-        if (typeof hourlyRate !== 'number') {
-            hourlyRate = 0;
-            timer.hourlyRate = 0;
-        }
 
         db.collection('timers').add({
             uid: currentUser.uid,
