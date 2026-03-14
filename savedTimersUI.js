@@ -247,12 +247,8 @@ const savedTimersTemplate = `
 </div>
 `;
 
-// Inserisci il template nel DOM
-const savedTimersDiv = document.createElement('div');
-savedTimersDiv.id = 'saved-timers-template';
-savedTimersDiv.style.display = 'none'; // Nascondi il template
-savedTimersDiv.innerHTML = savedTimersTemplate;
-document.body.appendChild(savedTimersDiv);
+// Il template viene inserito nel DOM da loadSection() in main.js
+// NON creiamo una copia nascosta qui per evitare ID duplicati nel DOM.
 
 function deleteTimerById(timerId) {
     const timerRef = db.collection('timeLogs').doc(timerId);
