@@ -1765,9 +1765,18 @@ table tr:hover td {
     flex-shrink: 0;
 }
 
-.timer-recent-fallback {
-    font-size: 0.7rem;
-    opacity: 0.5;
+.timer-recent-initial {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    background: #6366f1;
+    color: white;
+    font-size: 0.5rem;
+    font-weight: 700;
+    flex-shrink: 0;
 }
 
 .timer-recent-chip:hover {
