@@ -77,7 +77,7 @@ const savedTimersTemplate = `
                 </div>
                 <!-- Azioni -->
                 <div class="flex gap-2 flex-shrink-0">
-                    <select id="unmark-action-select" class="cr-select text-sm" style="min-width: 140px;">
+                    <select id="unmark-action-select" class="cr-select text-sm flex-1 sm:flex-none" style="min-width: 0;">
                         <option value="">⚙ Azione...</option>
                         <option value="unmark-all">Segna Tutti Non Reportati</option>
                         <option value="unmark-selected">Segna Selezionati Non Reportati</option>

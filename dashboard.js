@@ -16,7 +16,7 @@ const dashboardTemplate = `
             <span class="font-semibold flex items-center gap-2"><i class="fas fa-filter"></i> Filtri</span>
         </div>
         <div class="p-5">
-            <form id="dashboard-filter-form" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+            <form id="dashboard-filter-form" class="grid grid-cols-2 md:grid-cols-4 gap-3 items-end">
                 <div>
                     <label for="dashboard-filter-date-start" class="block text-sm font-semibold text-surface-600 mb-1">Data Inizio</label>
                     <input type="date" id="dashboard-filter-date-start" class="cr-input">
@@ -40,7 +40,7 @@ const dashboardTemplate = `
         </div>
     </div>
     <!-- Grafici -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <!-- Tempo Lavorato -->
         <div class="cr-card overflow-hidden">
             <div class="px-5 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white">
@@ -71,7 +71,7 @@ const dashboardTemplate = `
             <div class="px-5 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-white">
                 <span class="font-semibold flex items-center gap-2"><i class="fas fa-chart-pie"></i> Distribuzione Tipi di Lavoro</span>
             </div>
-            <div class="p-5" style="position:relative; min-height:400px;">
+            <div class="p-5" style="position:relative; min-height:300px;">
                 <div style="position: relative; height:100%; width:100%;">
                     <canvas id="worktypeDistributionChart"></canvas>
                 </div>

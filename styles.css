@@ -2048,3 +2048,106 @@ table tr:hover td {
     font-style: italic;
     padding: 0.375rem 0.5rem;
 }
+
+/* ============================
+   MOBILE-FIRST RESPONSIVE
+   ============================ */
+
+@media (max-width: 639px) {
+
+    /* --- Modals: full-screen on mobile --- */
+    .modal .fixed {
+        padding: 0 !important;
+        align-items: flex-start !important;
+        padding-top: 0 !important;
+    }
+    .modal .fixed > div,
+    .modal .fixed > .bg-white {
+        max-width: 100% !important;
+        max-height: 100vh !important;
+        border-radius: 0 !important;
+        min-height: 100vh;
+    }
+
+    /* --- Report table: horizontal scroll --- */
+    #report-content table,
+    .rw-preview-table {
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    #report-content table thead,
+    #report-content table tbody {
+        display: table;
+        width: 100%;
+        min-width: 600px;
+    }
+
+    /* --- Quick filter bar: compact --- */
+    .qf-inner {
+        padding: 0.5rem 0.75rem;
+    }
+    .qf-chip {
+        font-size: 0.65rem;
+        padding: 0.2rem 0.5rem;
+        min-width: 2rem;
+    }
+    .qf-label {
+        font-size: 0.6rem;
+        min-width: auto;
+    }
+    .qf-row {
+        gap: 0.375rem;
+    }
+
+    /* --- DM accordion: compact on mobile --- */
+    .dm-client-header {
+        padding: 0.5rem 0.75rem;
+    }
+    .dm-sub-section {
+        padding: 0.5rem 0.75rem;
+    }
+    .dm-add-row {
+        flex-wrap: wrap;
+    }
+    .dm-add-row input {
+        min-width: 0;
+        flex: 1 1 100px;
+    }
+    .dm-badge {
+        font-size: 0.55rem;
+        padding: 0.1rem 0.35rem;
+    }
+
+    /* --- Report period chips: wrap --- */
+    .rw-period-chips {
+        flex-wrap: wrap;
+    }
+
+    /* --- Chart container: reduce height --- */
+    #worktypeDistributionChart {
+        min-height: 250px !important;
+    }
+
+    /* --- Content section: tighter padding --- */
+    #content-section {
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+    }
+
+    /* --- Timer card grid: single column --- */
+    #timer-cards {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* --- Header titles: slightly smaller --- */
+    #data-management h2,
+    #timer-section h2,
+    #saved-timers-section h2,
+    #report-section h2,
+    #report-history-section h2,
+    #dashboard-section h2,
+    #recycle-bin-section h2 {
+        font-size: 1.35rem;
+    }
+}

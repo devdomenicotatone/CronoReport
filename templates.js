@@ -83,25 +83,25 @@ const timerTemplate = `
         <div class="p-4 space-y-3">
             <!-- Riga inline: selettori + pulsante -->
             <div class="timer-start-bar">
-                <div class="flex-1 min-w-[120px]">
+                <div class="flex-1 min-w-0">
                     <label for="client-select" class="block text-xs font-semibold text-surface-500 mb-0.5">Cliente</label>
                     <select id="client-select" class="cr-select text-sm">
                         <option value="">-- Cliente --</option>
                     </select>
                 </div>
-                <div class="flex-1 min-w-[120px]">
+                <div class="flex-1 min-w-0">
                     <label for="site-select" class="block text-xs font-semibold text-surface-500 mb-0.5">Sito</label>
                     <select id="site-select" class="cr-select text-sm">
                         <option value="">-- Sito --</option>
                     </select>
                 </div>
-                <div class="flex-1 min-w-[120px]">
+                <div class="flex-1 min-w-0">
                     <label for="worktype-select" class="block text-xs font-semibold text-surface-500 mb-0.5">Tipo</label>
                     <select id="worktype-select" class="cr-select text-sm">
                         <option value="">-- Tipo --</option>
                     </select>
                 </div>
-                <div class="flex-1 min-w-[100px]">
+                <div class="flex-1 min-w-0">
                     <label for="link-input" class="block text-xs font-semibold text-surface-500 mb-0.5">Link</label>
                     <input type="url" id="link-input" class="cr-input text-sm" placeholder="https://...">
                 </div>

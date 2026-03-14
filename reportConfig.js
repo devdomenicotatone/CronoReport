@@ -154,8 +154,8 @@ const reportTemplate = `
 
 <!-- Modal per visualizzare il report -->
 <div class="modal fade" id="reportModal" tabindex="-1" role="dialog" aria-labelledby="reportModalLabel" aria-hidden="true" style="display:none;">
-  <div class="fixed inset-0 bg-black/50 flex items-start justify-center pt-10 px-4 z-50">
-    <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[85vh] overflow-y-auto">
+  <div class="fixed inset-0 bg-black/50 flex items-start justify-center pt-4 sm:pt-10 px-0 sm:px-4 z-50">
+    <div class="bg-white sm:rounded-xl shadow-2xl w-full sm:max-w-5xl max-h-[100vh] sm:max-h-[85vh] overflow-y-auto">
       <div class="px-5 py-3 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white flex justify-between items-center rounded-t-xl sticky top-0 z-10">
         <span class="font-semibold flex items-center gap-2" id="reportModalLabel"><i class="fas fa-file-alt"></i> Report Generato</span>
         <button type="button" class="text-white/80 hover:text-white text-xl" data-cr-dismiss="modal" aria-label="Chiudi">
