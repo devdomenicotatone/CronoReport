@@ -579,6 +579,8 @@ async function createNewTimer(clientId, siteId, worktypeId, link, manualStartTim
                 text: 'Il timer è stato registrato con successo.',
                 confirmButtonText: 'OK'
             });
+            loadRecentTasks();
+            loadTodaySummary();
         }).catch(error => {
             console.error('Errore nel salvataggio del timer:', error);
             Swal.fire({
@@ -1045,6 +1047,8 @@ function saveTimerChanges() {
                             confirmButtonText: 'OK'
                         });
                         CrModal.hide('edit-timer-modal');
+                        loadRecentTasks();
+                        loadTodaySummary();
 
                         const timer = activeTimers.find(t => t.id === timerId);
                         if (timer) {
@@ -1403,6 +1407,7 @@ function stopTimer(timer, card) {
                 card.remove();
                 updateActiveTimerCount();
                 loadTodaySummary();
+                loadRecentTasks();
 
                 Swal.fire({
                     icon: 'success',
