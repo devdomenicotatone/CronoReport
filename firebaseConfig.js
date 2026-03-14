@@ -122,9 +122,10 @@ const DISCOVERY_DOCS = [
   // Modifica maybeEnableButtons per essere accessibile globalmente e verificare se i pulsanti esistono
   function maybeEnableButtons() {
     if (gapiInited && gisInited) {
-        const exportGoogleDocBtns = document.querySelectorAll('.export-google-doc-btn');
-        const exportGoogleSheetBtns = document.querySelectorAll('.export-google-sheet-btn');
-        exportGoogleDocBtns.forEach(btn => btn.disabled = false);
-        exportGoogleSheetBtns.forEach(btn => btn.disabled = false);
+        // Buttons use id="export-google-doc-btn" (not class)
+        const docBtn = document.getElementById('export-google-doc-btn');
+        const sheetBtn = document.getElementById('export-google-sheet-btn');
+        if (docBtn) docBtn.disabled = false;
+        if (sheetBtn) sheetBtn.disabled = false;
     }
   }

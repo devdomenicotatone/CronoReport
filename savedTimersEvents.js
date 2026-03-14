@@ -27,18 +27,8 @@ async function initializeSavedTimersEvents() {
     const exportGoogleDocBtn = document.getElementById('export-google-doc-btn');
     const exportGoogleSheetBtn = document.getElementById('export-google-sheet-btn');
 
-    if (exportGoogleDocBtn) exportGoogleDocBtn.disabled = true;
-    if (exportGoogleSheetBtn) exportGoogleSheetBtn.disabled = true;
-
-    if (typeof gapiInited !== 'undefined' && typeof gisInited !== 'undefined' && gapiInited && gisInited) {
-        if (exportGoogleDocBtn) exportGoogleDocBtn.disabled = false;
-        if (exportGoogleSheetBtn) exportGoogleSheetBtn.disabled = false;
-    } else {
-        document.addEventListener('google-api-initialized', () => {
-            if (exportGoogleDocBtn) exportGoogleDocBtn.disabled = false;
-            if (exportGoogleSheetBtn) exportGoogleSheetBtn.disabled = false;
-        });
-    }
+    // Abilita bottoni export se GAPI è pronto (i bottoni ora esistono nel DOM)
+    maybeEnableButtons();
 
     console.log("Carico i clienti per il filtro...");
     await loadClientsForFilter();
