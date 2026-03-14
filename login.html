@@ -175,8 +175,18 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <!-- Config & Login -->
-    <script src="firebaseConfig.js"></script>
+    <!-- Config -->
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyCHpbKDsyc6R5Yx3jcsgzjtPeswwC1Si8E",
+            authDomain: "lavorieseguiti-384d4.firebaseapp.com",
+            projectId: "lavorieseguiti-384d4",
+            storageBucket: "lavorieseguiti-384d4.appspot.com",
+            messagingSenderId: "1032884571304",
+            appId: "1:1032884571304:web:26de738990ca782767869d"
+        };
+        firebase.initializeApp(firebaseConfig);
+    </script>
     <script src="login.js"></script>
 </body>
 

@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite';
+import { resolve } from 'path';
 
 export default defineConfig(({ command }) => ({
     // Base path: '/' in dev, '/CronoReport/' in build (GitHub Pages)
@@ -9,10 +10,14 @@ export default defineConfig(({ command }) => ({
     build: {
         outDir: 'dist',
         emptyOutDir: true,
-        // Mantieni i moduli separati per evitare collisioni di nomi
         rollupOptions: {
+            input: {
+                main: resolve(__dirname, 'index.html'),
+                login: resolve(__dirname, 'login.html'),
+                menu: resolve(__dirname, 'menu.html'),
+            },
             output: {
-                // Forza ogni modulo in un chunk separato
+                // Mantieni i moduli separati per evitare collisioni di nomi
                 preserveModules: true,
                 preserveModulesRoot: '.',
             }
