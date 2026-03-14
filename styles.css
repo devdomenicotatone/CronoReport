@@ -1758,6 +1758,18 @@ table tr:hover td {
     white-space: nowrap;
 }
 
+.timer-recent-favicon {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+
+.timer-recent-fallback {
+    font-size: 0.7rem;
+    opacity: 0.5;
+}
+
 .timer-recent-chip:hover {
     background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
     color: white;

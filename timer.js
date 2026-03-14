@@ -223,9 +223,10 @@ function loadRecentTasks() {
             recents.forEach(r => {
                 const chip = document.createElement('div');
                 chip.className = 'timer-recent-chip';
-                // Short label: only site + worktype (client is redundant)
-                const label = r.siteName !== '—' ? `${r.siteName} · ${r.worktypeName}` : r.worktypeName;
-                chip.innerHTML = `<i class="fas fa-redo"></i> ${label}`;
+                // Favicon from Google's service (best practice)
+                const domain = r.siteName.replace(/^(https?:\/\/)?(www\.)?/, '').split('/')[0];
+                const faviconUrl = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=16`;
+                chip.innerHTML = `<img src="${faviconUrl}" alt="" class="timer-recent-favicon" onerror="this.style.display='none';this.nextElementSibling.style.display='inline'"><i class="fas fa-globe timer-recent-fallback" style="display:none"></i> ${r.worktypeName}`;
                 chip.title = `${r.clientName} · ${r.siteName} · ${r.worktypeName}`;
                 chip.addEventListener('click', () => {
                     // Populate dropdowns
