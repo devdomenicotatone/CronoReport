@@ -74,7 +74,7 @@ function loadSection(section) {
             initializeTimerEvents();
             break;
         case 'saved-timers':
-            contentSection.innerHTML = savedTimersTemplate;
+            contentSection.innerHTML = window.savedTimersTemplate;
             if (currentUser) {
                 initializeSavedTimersEvents();
             } else {
