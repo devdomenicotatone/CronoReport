@@ -2,7 +2,7 @@
 import { createFaviconEl, loadRecentTasks, loadTodaySummary, updateActiveTimerCount } from './timerWidgets.js';
 import { formatDuration, updateLiveAmount } from './timerHelpers.js';
 import { activeTimers } from './timerInit.js';
-import { openEditTimerModal } from './timerCrud.js';
+// NOTE: openEditTimerModal (timerCrud.js) usato via dynamic import() a riga 140
 
 export function createTimerCard(timer) {
     const card = document.createElement('div');

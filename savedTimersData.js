@@ -1,8 +1,8 @@
 // savedTimersData.js
 import { CrModal } from './uiComponents.js';
-import { createTimerRow, formatDuration, getMonthName, formatDate, formatTimeShort, openEditSavedTimerModal } from './savedTimersUI.js';
+import { createTimerRow, formatDuration, getMonthName, formatDate, formatTimeShort } from './savedTimersUI.js';
 import { displayedTimers } from './savedTimersEvents.js';
-import { showAlert } from './main.js';
+// NOTE: showAlert (main.js), openEditSavedTimerModal (savedTimersUI.js) usati via dynamic import()
 
 // Quick filter state
 export let activeQuickYear = new Date().getFullYear();  // default: anno corrente
@@ -349,12 +349,12 @@ export function saveReminderSettings(clientName, reminderAmount, reminderDate) {
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 }).then(() => {
                     CrModal.hide('setReminderModal');
-                    showAlert('success', 'Promemoria Salvato', 'Le impostazioni di promemoria sono state aggiornate.');
+                    import('./main.js').then(m => m.showAlert('success', 'Promemoria Salvato', 'Le impostazioni di promemoria sono state aggiornate.'));
                     // Ricarica la sezione degli importi non riscossi
                     loadSavedTimers(getCurrentFilters());
                 }).catch(error => {
                     console.error('Errore nell\'aggiornamento del promemoria:', error);
-                    showAlert('error', 'Errore', 'Si è verificato un errore durante il salvataggio del promemoria.');
+                    import('./main.js').then(m => m.showAlert('error', 'Errore', 'Si è verificato un errore durante il salvataggio del promemoria.'));
                 });
             } else {
                 // Crea un nuovo documento
@@ -366,12 +366,12 @@ export function saveReminderSettings(clientName, reminderAmount, reminderDate) {
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 }).then(() => {
                     CrModal.hide('setReminderModal');
-                    showAlert('success', 'Promemoria Salvato', 'Le impostazioni di promemoria sono state salvate.');
+                    import('./main.js').then(m => m.showAlert('success', 'Promemoria Salvato', 'Le impostazioni di promemoria sono state salvate.'));
                     // Ricarica la sezione degli importi non riscossi
                     loadSavedTimers(getCurrentFilters());
                 }).catch(error => {
                     console.error('Errore nel salvataggio del promemoria:', error);
-                    showAlert('error', 'Errore', 'Si è verificato un errore durante il salvataggio del promemoria.');
+                    import('./main.js').then(m => m.showAlert('error', 'Errore', 'Si è verificato un errore durante il salvataggio del promemoria.'));
                 });
             }
         })
@@ -490,7 +490,7 @@ export function showSetReminderModal(clientName, currentAmount) {
         const reminderDate = document.getElementById('reminder-date').value;
 
         if (isNaN(reminderAmount) && !reminderDate) {
-            showAlert('warning', 'Attenzione', 'Inserisci almeno un valore per il promemoria.');
+            import('./main.js').then(m => m.showAlert('warning', 'Attenzione', 'Inserisci almeno un valore per il promemoria.'));
             return;
         }
 
@@ -767,7 +767,7 @@ export function displayTimers(timers) {
                 editBtn.title = 'Modifica';
                 editBtn.innerHTML = '<i class="fas fa-pen text-xs"></i>';
                 editBtn.addEventListener('click', () => {
-                    openEditSavedTimerModal(timerObj.id);
+                    import('./savedTimersUI.js').then(m => m.openEditSavedTimerModal(timerObj.id));
                 });
                 detailRow.appendChild(editBtn);
 

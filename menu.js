@@ -1,5 +1,4 @@
 // menu.js — Vanilla JS (no jQuery)
-import { loadSection } from './main.js';
 
 /**
  * Initialize all menu functionality: sidebar nav, bottom nav, more menu, logout

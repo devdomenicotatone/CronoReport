@@ -1,10 +1,12 @@
 // savedTimersUI.js
 import { CrModal } from './uiComponents.js';
 import { secondsToHHMMSS, hhmmssToSeconds, parseLocalDateTime, formatLocalDateTime } from './timerHelpers.js';
-import { getCurrentFilters, loadSavedTimers } from './savedTimersData.js';
-import { loadSection, showAlert } from './main.js';
-import { restoreTimer, permanentlyDeleteTimer } from './recycleBinTimers.js';
-import { initializeSavedTimersEvents } from './savedTimersEvents.js';
+
+// NOTE: le seguenti dipendenze circolari sono risolte con import() dinamico nei punti di utilizzo:
+// - getCurrentFilters, loadSavedTimers da savedTimersData.js
+// - loadSection, showAlert da main.js
+// - restoreTimer, permanentlyDeleteTimer da recycleBinTimers.js
+// - initializeSavedTimersEvents da savedTimersEvents.js
 
 // Template per la sezione Timer Salvati — Timeline View
 export const savedTimersTemplate = `
@@ -271,8 +273,7 @@ export function deleteTimerById(timerId) {
         // Chiudi la modale
         CrModal.hide('edit-saved-timer-modal');
         // Ricarica la lista dei timer salvati per riflettere il cambiamento
-        const filters = getCurrentFilters();
-        loadSavedTimers(filters);
+        import('./savedTimersData.js').then(m => m.loadSavedTimers(m.getCurrentFilters()));
     }).catch(error => {
         console.error('Errore durante l\'eliminazione del timer:', error);
         Swal.fire({
@@ -358,7 +359,7 @@ export function createTimerRow(timerId, logData, isRecycleBin = false) {
         restoreBtn.className = 'cr-btn cr-btn-sm bg-emerald-500 hover:bg-emerald-600 text-white';
         restoreBtn.innerHTML = '<i class="fas fa-undo mr-1"></i> Ripristina';
         restoreBtn.addEventListener('click', () => {
-            restoreTimer(timerId, row);
+            import('./recycleBinTimers.js').then(m => m.restoreTimer(timerId, row));
         });
         actionCell.appendChild(restoreBtn);
     } else {
@@ -431,7 +432,7 @@ export function attachSavedTimersListeners() {
 }
 
 export function initializeSavedTimersSection() {
-    initializeSavedTimersEvents();
+    import('./savedTimersEvents.js').then(m => m.initializeSavedTimersEvents());
     attachSavedTimersListeners();
 }
 
@@ -686,7 +687,7 @@ export function saveEditedSavedTimer() {
       });
       CrModal.hide('edit-saved-timer-modal');
       // Ricarica la lista dei timer per mostrare le modifiche
-      loadSavedTimers(getCurrentFilters());
+      import('./savedTimersData.js').then(m => m.loadSavedTimers(m.getCurrentFilters()));
       console.log("Fine saveEditedSavedTimer");
     }).catch(error => {
       console.error('Errore nel salvataggio delle modifiche del timer:', error);
@@ -754,7 +755,7 @@ export function createRecycleBinRow(timerId, logData) {
     restoreBtn.title = 'Ripristina Timer';
     restoreBtn.innerHTML = '<i class="fas fa-undo"></i>';
     restoreBtn.addEventListener('click', () => {
-        restoreTimer(timerId, row);
+        import('./recycleBinTimers.js').then(m => m.restoreTimer(timerId, row));
     });
 
     const deleteBtn = document.createElement('button');
@@ -762,7 +763,7 @@ export function createRecycleBinRow(timerId, logData) {
     deleteBtn.title = 'Elimina Definitivamente';
     deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
     deleteBtn.addEventListener('click', () => {
-        permanentlyDeleteTimer(timerId, row);
+        import('./recycleBinTimers.js').then(m => m.permanentlyDeleteTimer(timerId, row));
     });
 
     actionCell.appendChild(restoreBtn);
