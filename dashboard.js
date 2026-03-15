@@ -104,8 +104,8 @@ export const dashboardTemplate = `
             <div class="dash-chart-header" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
                 <span class="dash-chart-title"><i class="fas fa-chart-pie"></i> Distribuzione Lavoro</span>
             </div>
-            <div class="dash-chart-body dash-chart-body-doughnut">
-                <canvas id="dashWorktypeChart"></canvas>
+            <div class="dash-chart-body dash-chart-body-doughnut" style="display:flex;flex-direction:column;overflow:hidden;">
+                <div style="flex:1;min-height:200px;position:relative;"><canvas id="dashWorktypeChart"></canvas></div>
             </div>
         </div>
     </div>
@@ -237,19 +237,33 @@ export async function loadDashboardData() {
         const timeLogs = snapshot.docs.map(d => d.data());
 
         // Also fetch previous period for trend comparison
-        const periodMs = end.getTime() - start.getTime();
-        const prevStart = new Date(start.getTime() - periodMs);
-        const prevEnd = new Date(start.getTime() - 1);
-
-        let prevQuery = db.collection('timeLogs')
-            .where('uid', '==', currentUser.uid)
-            .where('isDeleted', '==', false)
-            .where('startTime', '>=', firebase.firestore.Timestamp.fromDate(prevStart))
-            .where('startTime', '<=', firebase.firestore.Timestamp.fromDate(prevEnd))
-            .orderBy('startTime', 'desc');
-
-        const prevSnapshot = await prevQuery.get();
-        const prevTimeLogs = prevSnapshot.docs.map(d => d.data());
+        // Per 'all', confronta ultimo anno vs anno precedente
+        let prevTimeLogs = [];
+        if (dashActivePeriod === 'all') {
+            const now = new Date();
+            const lastYearStart = new Date(now.getFullYear() - 1, 0, 1);
+            const lastYearEnd = new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59, 999);
+            const prevQuery = db.collection('timeLogs')
+                .where('uid', '==', currentUser.uid)
+                .where('isDeleted', '==', false)
+                .where('startTime', '>=', firebase.firestore.Timestamp.fromDate(lastYearStart))
+                .where('startTime', '<=', firebase.firestore.Timestamp.fromDate(lastYearEnd))
+                .orderBy('startTime', 'desc');
+            const prevSnapshot = await prevQuery.get();
+            prevTimeLogs = prevSnapshot.docs.map(d => d.data());
+        } else {
+            const periodMs = end.getTime() - start.getTime();
+            const prevStart = new Date(start.getTime() - periodMs);
+            const prevEnd = new Date(start.getTime() - 1);
+            const prevQuery = db.collection('timeLogs')
+                .where('uid', '==', currentUser.uid)
+                .where('isDeleted', '==', false)
+                .where('startTime', '>=', firebase.firestore.Timestamp.fromDate(prevStart))
+                .where('startTime', '<=', firebase.firestore.Timestamp.fromDate(prevEnd))
+                .orderBy('startTime', 'desc');
+            const prevSnapshot = await prevQuery.get();
+            prevTimeLogs = prevSnapshot.docs.map(d => d.data());
+        }
 
         // Reset color map
         dashClientColorMap = {};
@@ -490,10 +504,29 @@ function renderWorktypeChart(timeLogs) {
         wtHours[wt] = (wtHours[wt] || 0) + l.duration / 3600;
     });
 
-    const labels = Object.keys(wtHours);
-    const data = labels.map(l => wtHours[l]);
+    // Raggruppa worktypes piccoli (<2%) in "Altro" se sono più di 10
+    const totalHoursRaw = Object.values(wtHours).reduce((s, v) => s + v, 0);
+    let labels, data;
+    const MAX_SLICES = 10;
+    const entries = Object.entries(wtHours).sort((a, b) => b[1] - a[1]);
+
+    if (entries.length > MAX_SLICES) {
+        const top = entries.slice(0, MAX_SLICES);
+        const rest = entries.slice(MAX_SLICES);
+        const otherHours = rest.reduce((s, [, v]) => s + v, 0);
+        labels = top.map(([k]) => k);
+        data = top.map(([, v]) => v);
+        if (otherHours > 0) {
+            labels.push(`Altro (${rest.length} tipi)`);
+            data.push(otherHours);
+        }
+    } else {
+        labels = entries.map(([k]) => k);
+        data = entries.map(([, v]) => v);
+    }
+
     const totalHours = data.reduce((s, v) => s + v, 0);
-    const colors = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#3b82f6'];
+    const colors = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#3b82f6', '#94a3b8'];
 
     dashChartInstances.worktype = new Chart(canvas.getContext('2d'), {
         type: 'doughnut',
@@ -512,7 +545,11 @@ function renderWorktypeChart(timeLogs) {
             maintainAspectRatio: true,
             cutout: '60%',
             plugins: {
-                legend: { position: 'bottom', labels: { boxWidth: 14, padding: 12, font: { size: 12 } } },
+                legend: {
+                    position: 'bottom',
+                    labels: { boxWidth: 12, padding: 10, font: { size: 11 } },
+                    maxHeight: 120,
+                },
                 tooltip: {
                     callbacks: {
                         label: (ctx) => {
@@ -632,13 +669,23 @@ function renderHeatmap(timeLogs, start, end) {
     // Build weeks between start and end
     const gridEl = document.createElement('div');
     gridEl.className = 'dash-hm-grid';
+    // Per 'all' con griglia grande, abilita scroll orizzontale
+    if (dashActivePeriod === 'all') {
+        container.style.overflowX = 'auto';
+        gridEl.style.minWidth = '700px';
+    }
 
-    // Cap heatmap to max 12 weeks for readability
-    const MAX_WEEKS = 12;
+    // Adaptive cap: 12 weeks normalmente, 52 per 'all'
+    const isAllPeriod = dashActivePeriod === 'all';
+    const MAX_WEEKS = isAllPeriod ? 52 : 12;
     const maxMs = MAX_WEEKS * 7 * 86400000;
     let hmStart = new Date(start);
     let hmEnd = new Date(end);
-    if (hmEnd.getTime() - hmStart.getTime() > maxMs) {
+    // Per 'all', heatmap mostra l'ultimo anno
+    if (isAllPeriod) {
+        hmEnd = new Date();
+        hmStart = new Date(hmEnd.getTime() - maxMs);
+    } else if (hmEnd.getTime() - hmStart.getTime() > maxMs) {
         hmStart = new Date(hmEnd.getTime() - maxMs);
     }
 
