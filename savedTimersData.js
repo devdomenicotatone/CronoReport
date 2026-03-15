@@ -1,8 +1,11 @@
 // savedTimersData.js
 import { CrModal } from './uiComponents.js';
 import { createTimerRow, formatDuration, getMonthName, formatDate, formatTimeShort } from './savedTimersUI.js';
-import { displayedTimers } from './savedTimersEvents.js';
 // NOTE: showAlert (main.js), openEditSavedTimerModal (savedTimersUI.js) usati via dynamic import()
+
+// Shared state: displayedTimers ora vive qui per evitare dipendenza circolare con savedTimersEvents.js
+export let displayedTimers = [];
+export function setDisplayedTimers(arr) { displayedTimers = arr; }
 
 // Quick filter state
 export let activeQuickYear = new Date().getFullYear();  // default: anno corrente

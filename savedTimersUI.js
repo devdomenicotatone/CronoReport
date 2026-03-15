@@ -497,8 +497,9 @@ export function loadAllWorktypesForEditSelect(selectElement, clientId, selectedW
 }
 
 // Funzione per aprire la modale di modifica di un timer salvato
-export function openEditSavedTimerModal(timerId) {
+export async function openEditSavedTimerModal(timerId) {
     console.log("openEditSavedTimerModal chiamata con timerId:", timerId);
+    const { displayedTimers } = await import('./savedTimersData.js');
     const timerObj = displayedTimers.find(t => t.id === timerId);
     if (!timerObj) {
         console.error("Nessun timer trovato con ID:", timerId);
@@ -563,7 +564,7 @@ export function openEditSavedTimerModal(timerId) {
     CrModal.show('edit-saved-timer-modal');
 }
 
-export function saveEditedSavedTimer() {
+export async function saveEditedSavedTimer() {
     console.log("Inizio saveEditedSavedTimer");
     const timerId = document.getElementById('edit-saved-timer-id').value.trim();
     const clientId = document.getElementById('edit-saved-client-select').value.trim();
@@ -620,6 +621,7 @@ export function saveEditedSavedTimer() {
     }
 
     console.log("Cerco il timerObj in displayedTimers con id:", timerId);
+    const { displayedTimers } = await import('./savedTimersData.js');
     const timerObj = displayedTimers.find(t => t.id === timerId);
     if (!timerObj) {
         console.error("Nessun timer trovato con ID:", timerId);
