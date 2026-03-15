@@ -226,6 +226,15 @@ async function loadDashboardData() {
     try {
         const { start, end } = getDashDateRange(dashActivePeriod);
 
+        // Fetch current worktype rates (source of truth for hourly rates)
+        const worktypeSnapshot = await db.collection('worktypes')
+            .where('uid', '==', currentUser.uid)
+            .get();
+        const worktypeRates = {};
+        worktypeSnapshot.forEach(doc => {
+            worktypeRates[doc.id] = doc.data().hourlyRate || 0;
+        });
+
         let query = db.collection('timeLogs')
             .where('uid', '==', currentUser.uid)
             .where('isDeleted', '==', false)
@@ -254,14 +263,14 @@ async function loadDashboardData() {
         // Reset color map
         dashClientColorMap = {};
 
-        // Render everything
-        renderKPIs(timeLogs, prevTimeLogs, start, end);
+        // Render everything (pass worktypeRates for accurate earnings)
+        renderKPIs(timeLogs, prevTimeLogs, start, end, worktypeRates);
         renderWorkedTimeChart(timeLogs, start, end);
-        renderEarningsChart(timeLogs, start, end);
+        renderEarningsChart(timeLogs, start, end, worktypeRates);
         renderWorktypeChart(timeLogs);
-        renderClientRanking(timeLogs);
+        renderClientRanking(timeLogs, worktypeRates);
         renderHeatmap(timeLogs, start, end);
-        renderInsights(timeLogs, prevTimeLogs);
+        renderInsights(timeLogs, prevTimeLogs, worktypeRates);
 
     } catch (error) {
         console.error('Errore dashboard:', error);
@@ -288,14 +297,14 @@ function fmtDateShort(date) {
 // ═══════════════════════════════════════════════
 //  KPI RENDERING
 // ═══════════════════════════════════════════════
-function renderKPIs(timeLogs, prevTimeLogs, start, end) {
+function renderKPIs(timeLogs, prevTimeLogs, start, end, worktypeRates = {}) {
     // Total hours
     const totalSec = timeLogs.reduce((s, l) => s + (l.duration || 0), 0);
     document.getElementById('dash-kpi-hours').textContent = fmtHM(totalSec);
 
-    // Total earnings
+    // Total earnings — use worktypeRates (current rates) as primary, fallback to saved rate
     const totalEarnings = timeLogs.reduce((s, l) => {
-        const rate = l.hourlyRate || 0;
+        const rate = worktypeRates[l.worktypeId] || l.hourlyRate || 0;
         return s + (l.duration / 3600) * rate;
     }, 0);
     document.getElementById('dash-kpi-earnings').textContent = fmtEuro(totalEarnings);
@@ -395,7 +404,7 @@ function renderWorkedTimeChart(timeLogs, start, end) {
 // ═══════════════════════════════════════════════
 //  EARNINGS CHART (AREA)
 // ═══════════════════════════════════════════════
-function renderEarningsChart(timeLogs, start, end) {
+function renderEarningsChart(timeLogs, start, end, worktypeRates = {}) {
     const canvas = document.getElementById('dashEarningsChart');
     if (!canvas) return;
     if (dashChartInstances.earnings) dashChartInstances.earnings.destroy();
@@ -404,7 +413,7 @@ function renderEarningsChart(timeLogs, start, end) {
     timeLogs.forEach(l => {
         const dateKey = l.startTime.toDate().toISOString().split('T')[0];
         const dateLabel = l.startTime.toDate().toLocaleDateString('it-IT', { day: '2-digit', month: 'short' });
-        const rate = l.hourlyRate || 0;
+        const rate = worktypeRates[l.worktypeId] || l.hourlyRate || 0;
         const amount = (l.duration / 3600) * rate;
         if (!earningsPerDay[dateKey]) earningsPerDay[dateKey] = { label: dateLabel, amount: 0 };
         earningsPerDay[dateKey].amount += amount;
@@ -549,7 +558,7 @@ function renderWorktypeChart(timeLogs) {
 // ═══════════════════════════════════════════════
 //  CLIENT RANKING
 // ═══════════════════════════════════════════════
-function renderClientRanking(timeLogs) {
+function renderClientRanking(timeLogs, worktypeRates = {}) {
     const container = document.getElementById('dash-client-ranking');
     if (!container) return;
     container.innerHTML = '';
@@ -559,7 +568,7 @@ function renderClientRanking(timeLogs) {
         const cn = l.clientName || 'Sconosciuto';
         if (!clientData[cn]) clientData[cn] = { hours: 0, earnings: 0 };
         clientData[cn].hours += l.duration / 3600;
-        clientData[cn].earnings += (l.duration / 3600) * (l.hourlyRate || 0);
+        clientData[cn].earnings += (l.duration / 3600) * (worktypeRates[l.worktypeId] || l.hourlyRate || 0);
     });
 
     const sorted = Object.entries(clientData).sort((a, b) => b[1].hours - a[1].hours);
@@ -696,7 +705,7 @@ function renderHeatmap(timeLogs, start, end) {
 // ═══════════════════════════════════════════════
 //  SMART INSIGHTS
 // ═══════════════════════════════════════════════
-function renderInsights(timeLogs, prevTimeLogs) {
+function renderInsights(timeLogs, prevTimeLogs, worktypeRates = {}) {
     const container = document.getElementById('dash-insights-body');
     if (!container) return;
     container.innerHTML = '';
@@ -760,7 +769,7 @@ function renderInsights(timeLogs, prevTimeLogs) {
     // 4. Unreported timers
     const unreported = timeLogs.filter(l => !l.isReported);
     if (unreported.length > 0) {
-        const unreportedEarnings = unreported.reduce((s, l) => s + (l.duration / 3600) * (l.hourlyRate || 0), 0);
+        const unreportedEarnings = unreported.reduce((s, l) => s + (l.duration / 3600) * (worktypeRates[l.worktypeId] || l.hourlyRate || 0), 0);
         insights.push({
             icon: 'fa-exclamation-circle',
             color: '#f59e0b',
