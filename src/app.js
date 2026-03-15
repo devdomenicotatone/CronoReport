@@ -26,7 +26,11 @@ import '../savedTimersData.js';
 import '../savedTimersEvents.js';
 import '../recycleBinTimers.js';
 import '../recycleBinReports.js';
-import '../timer.js';
+import '../timerHelpers.js';
+import '../timerWidgets.js';
+import '../timerCard.js';
+import '../timerCrud.js';
+import '../timerInit.js';
 import '../menu.js';
 import '../templates.js';
 
