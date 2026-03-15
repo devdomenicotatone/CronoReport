@@ -1,7 +1,8 @@
 // savedTimersData.js
 import { CrModal } from './uiComponents.js';
-import { createTimerRow, formatDuration, getMonthName, formatDate, formatTimeShort } from './savedTimersUI.js';
+import { createTimerRow, formatDuration, getMonthName, formatDate, formatTimeShort, openEditSavedTimerModal } from './savedTimersUI.js';
 import { displayedTimers } from './savedTimersEvents.js';
+import { showAlert } from './main.js';
 
 // Quick filter state
 export let activeQuickYear = new Date().getFullYear();  // default: anno corrente

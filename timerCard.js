@@ -2,6 +2,7 @@
 import { createFaviconEl, loadRecentTasks, loadTodaySummary, updateActiveTimerCount } from './timerWidgets.js';
 import { formatDuration, updateLiveAmount } from './timerHelpers.js';
 import { activeTimers } from './timerInit.js';
+import { openEditTimerModal } from './timerCrud.js';
 
 export function createTimerCard(timer) {
     const card = document.createElement('div');

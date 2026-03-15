@@ -1,6 +1,7 @@
 // reportEvents.js
-import { loadClients, loadProjects, loadWorktypes, loadSavedConfigs, saveReportConfig, generatePDF, generateReportContentString, generateReportValuesArray, exportReportToGoogleSheet, createGoogleDoc, createGoogleSheet, extractDomainName, displayLogoPreview, clearLogoPreview } from './reportConfig.js';
-import { gapiInited, gisInited, handleAuthClick, maybeEnableButtons } from './firebaseConfig.js';
+import { loadClients, loadProjects, loadWorktypes, loadSavedConfigs, saveReportConfig, generatePDF, generateReportContentString, generateReportValuesArray, exportReportToGoogleSheet, createGoogleDoc, createGoogleSheet, extractDomainName, displayLogoPreview, clearLogoPreview, applySavedConfig } from './reportConfig.js';
+import { gapiInited, gisInited, handleAuthClick, maybeEnableButtons, initializeGoogleApiClient } from './firebaseConfig.js';
+import { formatDuration } from './timerHelpers.js';
 // Variabili globali necessarie
 let savedConfigSelect;
 let deleteConfigBtn;

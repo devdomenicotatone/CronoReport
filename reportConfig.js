@@ -1,4 +1,5 @@
 // reportConfig.js
+import { handleAuthClick } from './firebaseConfig.js';
 
 // Variabili globali necessarie per configurazioni e logo
 let savedConfigs = {}; // Oggetto per memorizzare le configurazioni salvate
