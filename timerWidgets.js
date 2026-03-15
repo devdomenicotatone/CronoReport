@@ -205,3 +205,91 @@ export function updateActiveTimerCount(activeTimers) {
         badge.style.display = 'none';
     }
 }
+
+// === TODAY LOG — Task completati oggi (inline timeline) ===
+
+export function loadTodayLog() {
+    const section = document.getElementById('today-log-section');
+    const listEl = document.getElementById('today-log-list');
+    const countBadge = document.getElementById('today-log-count');
+    const totalEl = document.getElementById('today-log-total');
+    if (!section || !listEl) return;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    db.collection('timeLogs')
+        .where('uid', '==', currentUser.uid)
+        .where('isDeleted', '==', false)
+        .where('startTime', '>=', firebase.firestore.Timestamp.fromDate(today))
+        .where('startTime', '<', firebase.firestore.Timestamp.fromDate(tomorrow))
+        .orderBy('startTime', 'desc')
+        .get()
+        .then(snapshot => {
+            const logs = [];
+            let totalDuration = 0;
+            let totalAmount = 0;
+
+            snapshot.forEach(doc => {
+                const d = doc.data();
+                logs.push(d);
+                totalDuration += d.duration || 0;
+                const rate = d.hourlyRate || 0;
+                totalAmount += ((d.duration || 0) / 3600) * rate;
+            });
+
+            if (logs.length === 0) {
+                section.style.display = 'none';
+                return;
+            }
+
+            section.style.display = '';
+            if (countBadge) countBadge.textContent = logs.length;
+
+            // Total time + amount
+            const tH = Math.floor(totalDuration / 3600);
+            const tM = Math.floor((totalDuration % 3600) / 60);
+            if (totalEl) {
+                totalEl.textContent = `${tH}h ${tM.toString().padStart(2, '0')}m · € ${totalAmount.toFixed(2)}`;
+            }
+
+            listEl.innerHTML = '';
+            logs.forEach(log => {
+                const row = document.createElement('div');
+                row.className = 'today-log-row';
+
+                // Time range
+                const startDate = log.startTime?.toDate?.() || new Date();
+                const endDate = log.endTime?.toDate?.() || new Date();
+                const startStr = startDate.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+                const endStr = endDate.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+
+                // Duration
+                const dur = log.duration || 0;
+                const dH = Math.floor(dur / 3600);
+                const dM = Math.floor((dur % 3600) / 60);
+                const durStr = dH > 0 ? `${dH}h ${dM.toString().padStart(2, '0')}m` : `${dM}m`;
+
+                // Color dot based on project name hash
+                const name = log.projectName || '?';
+                const colors = ['#6366f1','#8b5cf6','#ec4899','#f43f5e','#f97316','#eab308','#22c55e','#14b8a6','#06b6d4','#3b82f6'];
+                const hash = name.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+                const color = colors[hash % colors.length];
+
+                row.innerHTML = `
+                    <span class="today-log-time">${startStr} – ${endStr}</span>
+                    <span class="today-log-dot" style="background:${color}"></span>
+                    <span class="today-log-project">${log.projectName || '—'}</span>
+                    <span class="today-log-sep">·</span>
+                    <span class="today-log-worktype">${log.worktypeName || '—'}</span>
+                    <span class="today-log-duration">${durStr}</span>
+                `;
+                listEl.appendChild(row);
+            });
+        })
+        .catch(error => {
+            console.error('Errore nel caricamento del log odierno:', error);
+        });
+}

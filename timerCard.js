@@ -1,11 +1,25 @@
 // timerCard.js — Card UI e Timer Lifecycle (start, pause, resume, stop)
-import { createFaviconEl, loadRecentTasks, loadTodaySummary, updateActiveTimerCount } from './timerWidgets.js';
+import { createFaviconEl, loadRecentTasks, loadTodaySummary, loadTodayLog, updateActiveTimerCount } from './timerWidgets.js';
 import { formatDuration, updateLiveAmount } from './timerHelpers.js';
 
 // Shared state: activeTimers vive qui per evitare dipendenza circolare con timerInit/timerCrud
 export let activeTimers = [];
 
-// NOTE: openEditTimerModal (timerCrud.js) usato via dynamic import() a riga 140
+// === HELPER: hhmmss ↔ seconds ===
+function hhmmssToSeconds(str) {
+    const parts = (str || '').split(':').map(Number);
+    if (parts.length !== 3 || parts.some(isNaN)) return NaN;
+    return parts[0] * 3600 + parts[1] * 60 + parts[2];
+}
+
+function secondsToHHMMSS(sec) {
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = Math.floor(sec % 60);
+    return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+}
+
+// === CREATE TIMER CARD (with inline editing) ===
 
 export function createTimerCard(timer) {
     const card = document.createElement('div');
@@ -13,12 +27,24 @@ export function createTimerCard(timer) {
     if (timer.isPaused) card.classList.add('timer-card-paused');
     card.setAttribute('data-timer-id', timer.id);
 
-    // Accent bar — thin
-    const accentBar = document.createElement('div');
-    accentBar.className = 'h-1 w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 absolute top-0 left-0';
-    if (timer.isPaused) accentBar.className = 'h-1 w-full bg-surface-300 absolute top-0 left-0';
+    // Accent bar — use project-based color
+    const projName = timer.projectName || '?';
+    const projColors = ['#6366f1','#8b5cf6','#ec4899','#f43f5e','#f97316','#eab308','#22c55e','#14b8a6','#06b6d4','#3b82f6'];
+    const projHash = projName.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+    const projColor = projColors[projHash % projColors.length];
+    const projColorLight = projColor + '66';
 
-    // Body — compact padding
+    const accentBar = document.createElement('div');
+    accentBar.className = 'h-1 w-full absolute top-0 left-0';
+    if (timer.isPaused) {
+        accentBar.style.background = '#cbd5e1';
+    } else {
+        accentBar.style.background = `linear-gradient(90deg, ${projColor}, ${projColorLight}, ${projColor})`;
+        accentBar.style.backgroundSize = '200% 100%';
+        accentBar.style.animation = 'shimmer 4s linear infinite';
+    }
+
+    // Body
     const body = document.createElement('div');
     body.className = 'p-3 sm:p-4 pt-4 flex flex-col h-full';
 
@@ -37,11 +63,10 @@ export function createTimerCard(timer) {
     header.appendChild(title);
     header.appendChild(badge);
 
-    // === ROW 2: Project + link (sub-header) ===
+    // === ROW 2: Project name only (clean) ===
     const subHeader = document.createElement('div');
-    subHeader.className = 'flex items-center gap-1.5 mb-3';
+    subHeader.className = 'flex items-center gap-1.5 mb-1.5';
 
-    // Favicon before project name
     const projectFavicon = createFaviconEl(timer.projectName, '', 14);
     subHeader.appendChild(projectFavicon);
 
@@ -50,36 +75,166 @@ export function createTimerCard(timer) {
     projectSpan.textContent = timer.projectName;
     subHeader.appendChild(projectSpan);
 
-    if (timer.link) {
-        const isUrl = /^https?:\/\//i.test(timer.link);
-        const sep = document.createElement('span');
-        sep.className = 'text-surface-200 text-[10px]';
-        sep.textContent = '·';
-        subHeader.appendChild(sep);
+    // === ROW 2.5: Link + Note inline editing (single clean row) ===
+    const metaRow = document.createElement('div');
+    metaRow.className = 'flex items-center gap-2 mb-2.5';
 
-        if (isUrl) {
-            const linkA = document.createElement('a');
-            linkA.href = timer.link;
-            linkA.target = '_blank';
-            linkA.className = 'text-[10px] font-semibold text-indigo-500 hover:text-indigo-700 transition-colors truncate';
-            linkA.innerHTML = '<i class="fas fa-external-link-alt text-[8px] mr-0.5"></i>link';
-            subHeader.appendChild(linkA);
-        } else {
-            const noteSpan = document.createElement('span');
-            noteSpan.className = 'text-[10px] text-surface-400 italic truncate';
-            noteSpan.textContent = timer.link;
-            subHeader.appendChild(noteSpan);
+    // Inline editable link — icon opens URL, text is editable
+    const linkWrap = document.createElement('div');
+    linkWrap.className = 'timer-inline-field';
+
+    const linkIcon = document.createElement('i');
+    linkIcon.className = 'fas fa-link text-[9px] text-surface-300 cursor-pointer';
+    linkIcon.title = 'Apri link';
+    // Icon click → open URL in new tab (if valid URL)
+    linkIcon.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (timer.link && /^https?:\/\//i.test(timer.link)) {
+            window.open(timer.link, '_blank', 'noopener');
         }
+    });
+
+    const linkText = document.createElement('span');
+    linkText.className = 'timer-inline-text';
+    linkText.title = 'Clicca per modificare il link';
+    linkText.textContent = timer.link || '—';
+    if (!timer.link) linkText.classList.add('text-surface-300', 'italic');
+    // If valid URL, show icon as clickable
+    if (timer.link && /^https?:\/\//i.test(timer.link)) {
+        linkIcon.classList.remove('text-surface-300');
+        linkIcon.classList.add('text-indigo-400', 'hover:text-indigo-600');
     }
 
-    // === ROW 3: Timer display + live amount (inline) ===
+    linkWrap.appendChild(linkIcon);
+    linkWrap.appendChild(linkText);
+
+    // Text click → edit inline
+    linkText.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const input = document.createElement('input');
+        input.type = 'url';
+        input.className = 'timer-inline-input';
+        input.value = timer.link || '';
+        input.placeholder = 'https://...';
+        linkWrap.innerHTML = '';
+        linkWrap.appendChild(input);
+        input.focus();
+        input.select();
+
+        const save = () => {
+            const val = input.value.trim();
+            timer.link = val;
+            db.collection('timers').doc(timer.id).update({ link: val })
+                .catch(e => console.error('Errore aggiornamento link:', e));
+            linkWrap.innerHTML = '';
+            // Update icon style
+            linkIcon.className = 'fas fa-link text-[9px] cursor-pointer';
+            if (val && /^https?:\/\//i.test(val)) {
+                linkIcon.classList.add('text-indigo-400', 'hover:text-indigo-600');
+                linkIcon.title = 'Apri link';
+            } else {
+                linkIcon.classList.add('text-surface-300');
+                linkIcon.title = '';
+            }
+            linkText.textContent = val || '—';
+            linkText.className = val ? 'timer-inline-text' : 'timer-inline-text text-surface-300 italic';
+            linkWrap.appendChild(linkIcon);
+            linkWrap.appendChild(linkText);
+        };
+        input.addEventListener('blur', save);
+        input.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') input.blur(); if (ev.key === 'Escape') { input.value = timer.link || ''; input.blur(); } });
+    });
+
+    // Inline editable note
+    const noteWrap = document.createElement('div');
+    noteWrap.className = 'timer-inline-field flex-1';
+    const noteIcon = document.createElement('i');
+    noteIcon.className = 'fas fa-sticky-note text-[9px] text-surface-300';
+    const noteText = document.createElement('span');
+    noteText.className = 'timer-inline-text';
+    noteText.title = 'Clicca per aggiungere una nota';
+    noteText.textContent = timer.note || '—';
+    if (!timer.note) noteText.classList.add('text-surface-300', 'italic');
+    noteWrap.appendChild(noteIcon);
+    noteWrap.appendChild(noteText);
+
+    noteText.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'timer-inline-input';
+        input.value = timer.note || '';
+        input.placeholder = 'Appunti...';
+        noteWrap.innerHTML = '';
+        noteWrap.appendChild(input);
+        input.focus();
+        input.select();
+
+        const save = () => {
+            const val = input.value.trim();
+            timer.note = val;
+            db.collection('timers').doc(timer.id).update({ note: val })
+                .catch(e => console.error('Errore aggiornamento note:', e));
+            noteWrap.innerHTML = '';
+            noteWrap.appendChild(noteIcon);
+            noteText.textContent = val || '—';
+            noteText.className = val ? 'timer-inline-text' : 'timer-inline-text text-surface-300 italic';
+            noteWrap.appendChild(noteText);
+        };
+        input.addEventListener('blur', save);
+        input.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') input.blur(); if (ev.key === 'Escape') { input.value = timer.note || ''; input.blur(); } });
+    });
+
+    metaRow.appendChild(linkWrap);
+    metaRow.appendChild(noteWrap);
+
+    // === ROW 3: Timer display (EDITABLE) + live amount ===
     const timerRow = document.createElement('div');
     timerRow.className = 'flex items-baseline justify-between mb-3';
 
     const timerDisplay = document.createElement('div');
-    timerDisplay.className = 'text-2xl font-mono font-black text-surface-900 tracking-tight tabular-nums';
+    timerDisplay.className = 'text-2xl font-mono font-black text-surface-900 tracking-tight tabular-nums timer-inline-editable';
+    timerDisplay.title = 'Clicca per modificare il tempo';
     if (!timer.isPaused) timerDisplay.classList.add('timer-display-running');
     timerDisplay.textContent = formatDuration(timer.accumulatedElapsedTime);
+
+    // Inline time editing
+    timerDisplay.addEventListener('click', () => {
+        // Only allow editing when paused
+        if (!timer.isPaused) {
+            Swal.fire({ icon: 'info', title: 'Metti in pausa', text: 'Metti in pausa il timer prima di modificare il tempo.', confirmButtonText: 'OK', timer: 2500 });
+            return;
+        }
+        const currentVal = secondsToHHMMSS(timer.accumulatedElapsedTime);
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'timer-time-input';
+        input.value = currentVal;
+        input.placeholder = 'hh:mm:ss';
+        timerDisplay.textContent = '';
+        timerDisplay.appendChild(input);
+        input.focus();
+        input.select();
+
+        const save = () => {
+            const newSec = hhmmssToSeconds(input.value);
+            if (!isNaN(newSec) && newSec >= 0) {
+                timer.accumulatedElapsedTime = newSec;
+                timerDisplay.textContent = formatDuration(newSec);
+                updateLiveAmount(timer, newSec);
+                db.collection('timers').doc(timer.id).update({ accumulatedElapsedTime: newSec })
+                    .catch(e => console.error('Errore aggiornamento tempo:', e));
+            } else {
+                timerDisplay.textContent = formatDuration(timer.accumulatedElapsedTime);
+                Swal.fire({ icon: 'error', title: 'Formato non valido', text: 'Usa il formato hh:mm:ss', timer: 2000, showConfirmButton: false });
+            }
+        };
+        input.addEventListener('blur', save);
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') input.blur();
+            if (e.key === 'Escape') { timerDisplay.textContent = formatDuration(timer.accumulatedElapsedTime); }
+        });
+    });
 
     const liveAmount = document.createElement('div');
     liveAmount.className = 'timer-live-amount text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100';
@@ -89,7 +244,7 @@ export function createTimerCard(timer) {
     timerRow.appendChild(timerDisplay);
     timerRow.appendChild(liveAmount);
 
-    // === ROW 4: Action buttons (compact) ===
+    // === ROW 4: Action buttons — Pause/Resume + Stop + Delete ===
     const actions = document.createElement('div');
     actions.className = 'flex gap-1.5 mt-auto pt-2.5 border-t border-surface-100/50';
 
@@ -110,10 +265,10 @@ export function createTimerCard(timer) {
     stopBtn.innerHTML = '<i class="fas fa-stop mr-1"></i>Stop';
     stopBtn.title = 'Stop e Salva';
 
-    const editBtn = document.createElement('button');
-    editBtn.className = 'cr-btn cr-btn-sm py-1.5 bg-surface-50 hover:bg-surface-100 text-surface-500 border border-surface-200 active:scale-95 transition-all outline-none text-xs px-3';
-    editBtn.innerHTML = '<i class="fas fa-pen text-[10px]"></i>';
-    editBtn.title = 'Modifica Dati';
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'cr-btn cr-btn-sm py-1.5 bg-surface-50 hover:bg-rose-50 text-surface-400 hover:text-rose-500 border border-surface-200 hover:border-rose-200 active:scale-95 transition-all outline-none text-xs px-3';
+    deleteBtn.innerHTML = '<i class="fas fa-trash-alt text-[10px]"></i>';
+    deleteBtn.title = 'Elimina Timer';
 
     // Event listeners
     pauseBtn.addEventListener('click', () => {
@@ -122,7 +277,9 @@ export function createTimerCard(timer) {
         resumeBtn.style.display = '';
         timerDisplay.classList.remove('timer-display-running');
         card.classList.add('timer-card-paused');
-        accentBar.className = 'h-1 w-full bg-surface-300 absolute top-0 left-0';
+        accentBar.style.background = '#cbd5e1';
+        accentBar.style.backgroundSize = '';
+        accentBar.style.animation = 'none';
     });
 
     resumeBtn.addEventListener('click', () => {
@@ -131,26 +288,54 @@ export function createTimerCard(timer) {
         resumeBtn.style.display = 'none';
         timerDisplay.classList.add('timer-display-running');
         card.classList.remove('timer-card-paused');
-        accentBar.className = 'h-1 w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 absolute top-0 left-0';
+        accentBar.style.background = `linear-gradient(90deg, ${projColor}, ${projColorLight}, ${projColor})`;
+        accentBar.style.backgroundSize = '200% 100%';
+        accentBar.style.animation = 'shimmer 4s linear infinite';
     });
 
     stopBtn.addEventListener('click', () => {
         stopTimer(timer, card);
     });
 
-    editBtn.addEventListener('click', () => {
-        // Usa import dinamico per evitare circolarità con timerCrud.js
-        import('./timerCrud.js').then(m => m.openEditTimerModal(timer));
+    deleteBtn.addEventListener('click', () => {
+        Swal.fire({
+            title: 'Eliminare questo timer?',
+            text: 'Il timer verrà rimosso definitivamente.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Sì, elimina',
+            cancelButtonText: 'Annulla'
+        }).then(result => {
+            if (result.isConfirmed) {
+                clearInterval(timer.intervalId);
+                db.collection('timers').doc(timer.id).delete()
+                    .then(() => {
+                        const idx = activeTimers.indexOf(timer);
+                        if (idx > -1) activeTimers.splice(idx, 1);
+                        card.remove();
+                        updateActiveTimerCount(activeTimers);
+                        updateTabTitle();
+                        Swal.fire({ icon: 'success', title: 'Eliminato!', timer: 1500, showConfirmButton: false });
+                    })
+                    .catch(e => {
+                        console.error('Errore eliminazione timer:', e);
+                        Swal.fire({ icon: 'error', title: 'Errore', text: 'Impossibile eliminare il timer.' });
+                    });
+            }
+        });
     });
 
     actions.appendChild(pauseBtn);
     actions.appendChild(resumeBtn);
     actions.appendChild(stopBtn);
-    actions.appendChild(editBtn);
+    actions.appendChild(deleteBtn);
 
     // Assemble
     body.appendChild(header);
     body.appendChild(subHeader);
+    body.appendChild(metaRow);
     body.appendChild(timerRow);
     body.appendChild(actions);
 
@@ -163,7 +348,25 @@ export function createTimerCard(timer) {
     return card;
 }
 
-// === TIMER LIFECYCLE ===
+const ORIGINAL_TITLE = 'CronoReport';
+
+// Update browser tab title with the first running timer
+export function updateTabTitle() {
+    const running = activeTimers.find(t => !t.isPaused);
+    if (running) {
+        const now = new Date();
+        const elapsed = (now - running.lastStartTime) / 1000 + running.accumulatedElapsedTime;
+        const h = Math.floor(elapsed / 3600);
+        const m = Math.floor((elapsed % 3600) / 60);
+        const s = Math.floor(elapsed % 60);
+        const timeStr = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+        document.title = `⏱ ${timeStr} · ${running.projectName || running.clientName} - CronoReport`;
+    } else if (activeTimers.some(t => t.isPaused)) {
+        document.title = `⏸ Timer in pausa - CronoReport`;
+    } else {
+        document.title = ORIGINAL_TITLE;
+    }
+}
 
 export function startTimer(timer) {
     timer.intervalId = setInterval(() => {
@@ -172,6 +375,7 @@ export function startTimer(timer) {
             const totalElapsedTime = (now - timer.lastStartTime) / 1000 + timer.accumulatedElapsedTime;
             timer.timerDisplay.textContent = formatDuration(totalElapsedTime);
             updateLiveAmount(timer, totalElapsedTime);
+            updateTabTitle();
         }
     }, 1000);
 }
@@ -190,6 +394,7 @@ export function pauseTimer(timer) {
     }).catch(error => {
         console.error('Errore nell\'aggiornamento del timer (pausa):', error);
     });
+    updateTabTitle();
 }
 
 export function resumeTimer(timer) {
@@ -203,6 +408,7 @@ export function resumeTimer(timer) {
     }).catch(error => {
         console.error('Errore nell\'aggiornamento del timer (riprendi):', error);
     });
+    updateTabTitle();
 }
 
 export function stopTimer(timer, card) {
@@ -218,10 +424,6 @@ export function stopTimer(timer, card) {
 
     const startTime = timer.lastStartTime;
 
-    console.log('startTime:', startTime);
-    console.log('endTime:', now);
-    console.log('Total Elapsed Time (secondi):', totalElapsedTime);
-
     const timeLogData = {
         uid: currentUser.uid,
         clientId: timer.clientId,
@@ -231,6 +433,7 @@ export function stopTimer(timer, card) {
         projectName: timer.projectName,
         worktypeName: timer.worktypeName,
         link: timer.link || '',
+        note: timer.note || '',
         startTime: firebase.firestore.Timestamp.fromDate(startTime),
         endTime: firebase.firestore.Timestamp.fromDate(now),
         duration: totalElapsedTime,
@@ -265,6 +468,8 @@ export function stopTimer(timer, card) {
                 updateActiveTimerCount(activeTimers);
                 loadTodaySummary();
                 loadRecentTasks();
+                loadTodayLog();
+                updateTabTitle();
 
                 Swal.fire({
                     icon: 'success',

@@ -89,7 +89,7 @@ export const timerTemplate = `
                 <div class="flex-1 min-w-[140px]">
                     <label for="client-select" class="block text-xs font-bold text-surface-600 uppercase tracking-wider mb-1.5 pl-1">Cliente</label>
                     <select id="client-select" class="cr-select text-sm font-medium bg-surface-50 border-surface-200 focus:bg-white transition-colors">
-                        <option value="">-- Seleziona --</option>
+                        <option value="">--Seleziona Cliente--</option>
                     </select>
                 </div>
                 <div class="flex-1 min-w-[140px]">
@@ -104,9 +104,13 @@ export const timerTemplate = `
                         <option value="">-- Seleziona --</option>
                     </select>
                 </div>
-                <div class="flex-1 min-w-[160px]">
-                    <label for="link-input" class="block text-xs font-bold text-surface-600 uppercase tracking-wider mb-1.5 pl-1">Link / Note</label>
-                    <input type="text" id="link-input" class="cr-input text-sm font-medium bg-surface-50 border-surface-200 focus:bg-white transition-colors" placeholder="Es. Task Jira, URL...">
+                <div class="flex-1 min-w-[130px]">
+                    <label for="link-input" class="block text-xs font-bold text-surface-600 uppercase tracking-wider mb-1.5 pl-1">🔗 Link</label>
+                    <input type="url" id="link-input" class="cr-input text-sm font-medium bg-surface-50 border-surface-200 focus:bg-white transition-colors" placeholder="https://...">
+                </div>
+                <div class="flex-1 min-w-[130px]">
+                    <label for="note-input" class="block text-xs font-bold text-surface-600 uppercase tracking-wider mb-1.5 pl-1">📝 Note</label>
+                    <input type="text" id="note-input" class="cr-input text-sm font-medium bg-surface-50 border-surface-200 focus:bg-white transition-colors" placeholder="Appunti, dettagli...">
                 </div>
                 <button id="start-timer-btn" class="timer-start-btn shadow-md shadow-emerald-500/30 hover:shadow-emerald-500/50 active:scale-95 transition-all">
                     <i class="fas fa-play"></i> Avvia
@@ -178,61 +182,24 @@ export const timerTemplate = `
             <!-- Le card dei timer attivi saranno aggiunte dinamicamente -->
         </div>
     </div>
+
+    <!-- ═══ LOG DI OGGI ═══ -->
+    <div id="today-log-section" class="mt-8 animate-fade-in" style="display:none;">
+        <div class="flex items-center justify-between mb-4 pl-1">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center shadow-md shadow-indigo-500/20">
+                    <i class="fas fa-list-check text-white text-sm"></i>
+                </div>
+                <h3 class="text-lg font-extrabold text-surface-900 tracking-tight">Completati Oggi</h3>
+                <span id="today-log-count" class="text-xs font-bold bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full"></span>
+            </div>
+            <span id="today-log-total" class="text-xs font-bold text-surface-500"></span>
+        </div>
+        <div id="today-log-list" class="space-y-1.5">
+            <!-- Populated dynamically by loadTodayLog() -->
+        </div>
+    </div>
 </div>
 
-<!-- Modale per modificare il timer -->
-<div class="modal fade" id="edit-timer-modal" tabindex="-1" role="dialog" aria-labelledby="editTimerModalLabel">
-  <div class="modal-dialog" role="document">
-    <div class="modal-content" style="border-radius: 1rem; overflow: hidden; border: none;">
-      <div class="px-5 py-4 bg-gradient-to-r from-indigo-500 to-indigo-600">
-        <h5 class="text-white font-semibold" id="editTimerModalLabel">Modifica Timer</h5>
-        <button type="button" class="close text-white" data-cr-dismiss="modal" aria-label="Chiudi">
-          <span aria-hidden="true">&times;</span>
-        </button>
-      </div>
-      <div class="p-5 space-y-4">
-        <form id="edit-timer-form">
-          <input type="hidden" id="edit-timer-id">
-          <div class="mb-3">
-            <label for="edit-client-select" class="block text-sm font-medium text-surface-600 mb-1">Cliente:</label>
-            <select id="edit-client-select" class="cr-select"></select>
-          </div>
-          <div class="mb-3">
-            <label for="edit-project-select" class="block text-sm font-medium text-surface-600 mb-1">Progetto:</label>
-            <select id="edit-project-select" class="cr-select"></select>
-          </div>
-          <div class="mb-3">
-            <label for="edit-worktype-select" class="block text-sm font-medium text-surface-600 mb-1">Tipo di Lavoro:</label>
-            <select id="edit-worktype-select" class="cr-select"></select>
-          </div>
-          <div class="mb-3">
-            <label for="edit-link-input" class="block text-sm font-medium text-surface-600 mb-1">Link / Note (opzionale):</label>
-            <input type="text" id="edit-link-input" class="cr-input" placeholder="URL o nota...">
-          </div>
-          <div class="mb-3">
-            <label for="edit-accumulated-time" class="block text-sm font-medium text-surface-600 mb-1">Tempo accumulato (hh:mm:ss):</label>
-            <input type="text" id="edit-accumulated-time" class="cr-input" placeholder="Es: 01:23:45">
-            <small class="text-xs text-surface-400 mt-1">Inserisci il tempo nel formato hh:mm:ss</small>
-          </div>
-          <div class="mb-3">
-            <label for="edit-start-time" class="block text-sm font-medium text-surface-600 mb-1">Data/Ora Inizio:</label>
-            <input type="text" id="edit-start-time" class="cr-input" placeholder="DD/MM/YYYY HH:mm:ss">
-          </div>
-          <div class="mb-3">
-            <label for="edit-end-time" class="block text-sm font-medium text-surface-600 mb-1">Data/Ora Fine (opzionale):</label>
-            <input type="text" id="edit-end-time" class="cr-input" placeholder="DD/MM/YYYY HH:mm:ss">
-          </div>
-        </form>
-      </div>
-      <div class="flex justify-between px-5 py-4 border-t border-surface-100">
-        <button type="button" class="cr-btn cr-btn-danger cr-btn-sm" id="delete-timer-btn">Elimina Timer</button>
-        <div class="flex gap-2">
-          <button type="button" class="cr-btn cr-btn-outline cr-btn-sm" data-cr-dismiss="modal">Annulla</button>
-          <button type="button" class="cr-btn cr-btn-primary cr-btn-sm" id="save-timer-changes-btn">Salva Modifiche</button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
 `;
 

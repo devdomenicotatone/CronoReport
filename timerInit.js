@@ -1,15 +1,16 @@
 // timerInit.js — Inizializzazione eventi e caricamento timer attivi
 import { timerTemplate } from './templates.js';
 import { loadTimerClientDropdown, loadProjects, loadWorktypes, formatDuration, updateLiveAmount } from './timerHelpers.js';
-import { createTimerCard, startTimer, activeTimers } from './timerCard.js';
-import { loadRecentTasks, loadTodaySummary, updateActiveTimerCount } from './timerWidgets.js';
-import { createNewTimer, saveTimerChanges, deleteTimerFromModal } from './timerCrud.js';
+import { createTimerCard, startTimer, pauseTimer, stopTimer, activeTimers } from './timerCard.js';
+import { loadRecentTasks, loadTodaySummary, loadTodayLog, updateActiveTimerCount } from './timerWidgets.js';
+import { createNewTimer } from './timerCrud.js';
 
 // Variabili globali per i selettori e i timer
 let clientSelect;
 let projectSelect;
 let worktypeSelect;
 let linkInput;
+let noteInput;
 let manualStartTimeInput;
 let manualEndTimeInput;
 let startTimerBtn;
@@ -19,6 +20,7 @@ let timerCardsContainer;
 
 // Flag per evitare doppio bind
 let _timerEventsInitialized = false;
+let _keyboardBound = false;
 
 export async function initializeTimerEvents() {
     if (!currentUser) {
@@ -36,27 +38,12 @@ export async function initializeTimerEvents() {
         timerDiv.innerHTML = timerTemplate;
         document.body.appendChild(timerDiv);
         
-        // Inizializza flatpickr per i campi della modale, UNA VOLTA SOLA
-        flatpickr('#edit-start-time', {
-            enableTime: true,
-            enableSeconds: true,
-            time_24hr: true,
-            dateFormat: "d/m/Y H:i:S",
-            locale: "it"
-        });
-        
-        flatpickr('#edit-end-time', {
-            enableTime: true,
-            enableSeconds: true,
-            time_24hr: true,
-            dateFormat: "d/m/Y H:i:S",
-            locale: "it"
-        });
 
         clientSelect = document.getElementById('client-select');
         projectSelect = document.getElementById('project-select');
         worktypeSelect = document.getElementById('worktype-select');
         linkInput = document.getElementById('link-input');
+        noteInput = document.getElementById('note-input');
         manualStartTimeInput = document.getElementById('manual-start-time');
         manualEndTimeInput = document.getElementById('manual-end-time');
         startTimerBtn = document.getElementById('start-timer-btn');
@@ -106,6 +93,7 @@ export async function initializeTimerEvents() {
             const projectId = projectSelect.value;
             const worktypeId = worktypeSelect.value;
             const link = linkInput.value.trim();
+            const note = noteInput ? noteInput.value.trim() : '';
 
             const manualStartTimeValue = manualStartTimeInput.value;
             const manualEndTimeValue = manualEndTimeInput.value;
@@ -121,8 +109,9 @@ export async function initializeTimerEvents() {
                     return;
                 }
 
-                createNewTimer(clientId, projectId, worktypeId, link, manualStartTimeValue, manualEndTimeValue);
+                createNewTimer(clientId, projectId, worktypeId, link, note, manualStartTimeValue, manualEndTimeValue);
                 linkInput.value = '';
+                if (noteInput) noteInput.value = '';
                 manualStartTimeInput.value = '';
                 manualEndTimeInput.value = '';
             } else {
@@ -141,6 +130,7 @@ export async function initializeTimerEvents() {
         projectSelect = document.getElementById('project-select');
         worktypeSelect = document.getElementById('worktype-select');
         linkInput = document.getElementById('link-input');
+        noteInput = document.getElementById('note-input');
         manualStartTimeInput = document.getElementById('manual-start-time');
         manualEndTimeInput = document.getElementById('manual-end-time');
         startTimerBtn = document.getElementById('start-timer-btn');
@@ -167,6 +157,7 @@ export async function initializeTimerEvents() {
             const projectId = projectSelect.value;
             const worktypeId = worktypeSelect.value;
             const link = linkInput.value.trim();
+            const note = noteInput ? noteInput.value.trim() : '';
             const manualStartTimeValue = manualStartTimeInput.value;
             const manualEndTimeValue = manualEndTimeInput.value;
 
@@ -180,8 +171,9 @@ export async function initializeTimerEvents() {
                     });
                     return;
                 }
-                createNewTimer(clientId, projectId, worktypeId, link, manualStartTimeValue, manualEndTimeValue);
+                createNewTimer(clientId, projectId, worktypeId, link, note, manualStartTimeValue, manualEndTimeValue);
                 linkInput.value = '';
+                if (noteInput) noteInput.value = '';
                 manualStartTimeInput.value = '';
                 manualEndTimeInput.value = '';
             } else {
@@ -221,6 +213,9 @@ export async function initializeTimerEvents() {
     // === LOAD TODAY SUMMARY ===
     loadTodaySummary();
 
+    // === LOAD TODAY LOG ===
+    loadTodayLog();
+
     // Carica i timer attivi — clear existing first to prevent duplication
     activeTimers.forEach(t => { if (t.intervalId) clearInterval(t.intervalId); });
     activeTimers.length = 0;
@@ -242,6 +237,7 @@ export async function initializeTimerEvents() {
                     projectName: timerData.projectName,
                     worktypeName: timerData.worktypeName,
                     link: timerData.link || '',
+                    note: timerData.note || '',
                     accumulatedElapsedTime: timerData.accumulatedElapsedTime || 0,
                     lastStartTime: timerData.lastStartTime ? timerData.lastStartTime.toDate() : new Date(),
                     endTime: timerData.endTime ? timerData.endTime.toDate() : null,
@@ -270,22 +266,45 @@ export async function initializeTimerEvents() {
             console.error('Errore nel caricamento dei timer attivi:', error);
         });
 
-    initializeEditModalEvents();
-}
+    // === KEYBOARD SHORTCUTS (bind once) ===
+    if (!_keyboardBound) {
+        _keyboardBound = true;
+        document.addEventListener('keydown', (e) => {
+            if (!document.getElementById('timer-section')) return;
+            const tag = (e.target.tagName || '').toLowerCase();
+            if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
 
-function initializeEditModalEvents() {
-    const saveChangesBtn = document.getElementById('save-timer-changes-btn');
-    const deleteTimerBtn = document.getElementById('delete-timer-btn');
+            // Ctrl+Shift+S → Pause/Resume the first running timer
+            if (e.ctrlKey && e.shiftKey && e.key === 'S') {
+                e.preventDefault();
+                const running = activeTimers.find(t => !t.isPaused);
+                if (running) {
+                    const card = document.querySelector(`[data-timer-id="${running.id}"]`);
+                    if (card) {
+                        const pauseBtn = card.querySelector('button[title="Pausa"]');
+                        if (pauseBtn) pauseBtn.click();
+                    }
+                } else {
+                    const paused = activeTimers.find(t => t.isPaused);
+                    if (paused) {
+                        const card = document.querySelector(`[data-timer-id="${paused.id}"]`);
+                        if (card) {
+                            const resumeBtn = card.querySelector('button[title="Riprendi"]');
+                            if (resumeBtn) resumeBtn.click();
+                        }
+                    }
+                }
+            }
 
-    if (saveChangesBtn) {
-        saveChangesBtn.addEventListener('click', () => {
-            saveTimerChanges();
-        });
-    }
-
-    if (deleteTimerBtn) {
-        deleteTimerBtn.addEventListener('click', () => {
-            deleteTimerFromModal();
+            // Ctrl+Shift+N → Focus on start bar
+            if (e.ctrlKey && e.shiftKey && e.key === 'N') {
+                e.preventDefault();
+                const clientSel = document.getElementById('client-select');
+                if (clientSel) {
+                    clientSel.focus();
+                    clientSel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
         });
     }
 }
