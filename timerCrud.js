@@ -2,8 +2,7 @@
 import { CrModal } from './uiComponents.js';
 import { parseLocalDateTime, formatLocalDateTime, secondsToHHMMSS, hhmmssToSeconds, getHourlyRate } from './timerHelpers.js';
 import { createFaviconEl, loadRecentTasks, loadTodaySummary, updateActiveTimerCount } from './timerWidgets.js';
-import { createTimerCard, startTimer } from './timerCard.js';
-import { activeTimers } from './timerInit.js';
+import { createTimerCard, startTimer, activeTimers } from './timerCard.js';
 
 // === EDIT MODAL: Dropdown Loading ===
 

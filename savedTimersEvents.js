@@ -15,7 +15,7 @@ export async function initializeSavedTimersEvents() {
 
     const savedTimersList = document.getElementById('savedTimersAccordion');
     if (!savedTimersList) {
-        console.error("Elemento 'savedTimersAccordion' non trovato nel DOM.");
+        // Normale quando non si è nella sezione Timer Salvati
         return;
     }
 

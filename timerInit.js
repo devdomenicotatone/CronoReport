@@ -1,7 +1,7 @@
 // timerInit.js — Inizializzazione eventi e caricamento timer attivi
 import { timerTemplate } from './templates.js';
 import { loadTimerClientDropdown, loadProjects, loadWorktypes, formatDuration, updateLiveAmount } from './timerHelpers.js';
-import { createTimerCard, startTimer } from './timerCard.js';
+import { createTimerCard, startTimer, activeTimers } from './timerCard.js';
 import { loadRecentTasks, loadTodaySummary, updateActiveTimerCount } from './timerWidgets.js';
 import { createNewTimer, saveTimerChanges, deleteTimerFromModal } from './timerCrud.js';
 
@@ -15,8 +15,7 @@ let manualEndTimeInput;
 let startTimerBtn;
 let timerCardsContainer;
 
-// Gestione dei timer attivi
-export let activeTimers = [];
+// activeTimers è importato da timerCard.js (shared state)
 
 // Flag per evitare doppio bind
 let _timerEventsInitialized = false;

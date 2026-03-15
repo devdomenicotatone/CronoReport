@@ -1,7 +1,10 @@
 // timerCard.js — Card UI e Timer Lifecycle (start, pause, resume, stop)
 import { createFaviconEl, loadRecentTasks, loadTodaySummary, updateActiveTimerCount } from './timerWidgets.js';
 import { formatDuration, updateLiveAmount } from './timerHelpers.js';
-import { activeTimers } from './timerInit.js';
+
+// Shared state: activeTimers vive qui per evitare dipendenza circolare con timerInit/timerCrud
+export let activeTimers = [];
+
 // NOTE: openEditTimerModal (timerCrud.js) usato via dynamic import() a riga 140
 
 export function createTimerCard(timer) {
