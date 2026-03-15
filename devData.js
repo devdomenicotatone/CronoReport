@@ -232,9 +232,13 @@
     //  MOCK QUERY BUILDER
     // =============================================
 
-    function MockDoc(id, data) {
+    function MockDoc(id, data, collectionName) {
         this.id = id;
         this._data = JSON.parse(JSON.stringify(data)); // deep clone
+        // Provide a ref that mimics Firestore's doc.ref
+        if (collectionName) {
+            this.ref = new MockDocRef(collectionName, id);
+        }
         // Fix timestamp objects that got stringified
         Object.keys(this._data).forEach(key => {
             const val = this._data[key];
@@ -349,7 +353,7 @@
             results = results.slice(0, this._limitN);
         }
 
-        const docs = results.map(item => new MockDoc(item.id, item.data));
+        const docs = results.map(item => new MockDoc(item.id, item.data, this._collection));
         return Promise.resolve(new MockSnapshot(docs));
     };
 
