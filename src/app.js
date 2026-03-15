@@ -34,5 +34,8 @@ import '../timerInit.js';
 import '../menu.js';
 import '../templates.js';
 
+// Data migrations
+import '../migration.js';
+
 // Main orchestrator (deve essere ultimo — usa tutto il resto)
 import '../main.js';

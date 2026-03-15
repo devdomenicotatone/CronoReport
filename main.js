@@ -40,6 +40,9 @@ if (DEV_MODE) {
             const savedSection = location.hash.replace('#', '') || 'timer';
             loadSection(savedSection);
             setActiveNav(savedSection);
+            
+            // One-time migration: fix timers with missing hourlyRate
+            migrateTimerHourlyRates(user.uid);
 
         } else {
             currentUser = null;
