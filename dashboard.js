@@ -105,7 +105,8 @@ export const dashboardTemplate = `
                 <span class="dash-chart-title"><i class="fas fa-chart-pie"></i> Distribuzione Lavoro</span>
             </div>
             <div class="dash-chart-body dash-chart-body-doughnut" style="display:flex;flex-direction:column;overflow:hidden;">
-                <div style="flex:1;min-height:200px;position:relative;"><canvas id="dashWorktypeChart"></canvas></div>
+                <div style="flex:0 0 auto;min-height:180px;max-height:220px;position:relative;"><canvas id="dashWorktypeChart"></canvas></div>
+                <div id="dashWorktypeLegend" style="max-height:110px;overflow-y:auto;padding:8px 4px 4px;display:flex;flex-wrap:wrap;gap:6px 14px;justify-content:center;font-size:11px;"></div>
             </div>
         </div>
     </div>
@@ -545,11 +546,7 @@ function renderWorktypeChart(timeLogs) {
             maintainAspectRatio: true,
             cutout: '60%',
             plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: { boxWidth: 12, padding: 10, font: { size: 11 } },
-                    maxHeight: 120,
-                },
+                legend: { display: false },
                 tooltip: {
                     callbacks: {
                         label: (ctx) => {
@@ -581,6 +578,24 @@ function renderWorktypeChart(timeLogs) {
             }
         }]
     });
+
+    // Legenda HTML custom scrollabile
+    const legendEl = document.getElementById('dashWorktypeLegend');
+    if (legendEl) {
+        legendEl.innerHTML = '';
+        labels.forEach((label, i) => {
+            const item = document.createElement('span');
+            item.style.cssText = 'display:inline-flex;align-items:center;gap:4px;white-space:nowrap;cursor:pointer;';
+            const dot = document.createElement('span');
+            dot.style.cssText = `width:10px;height:10px;border-radius:50%;flex-shrink:0;background:${colors[i % colors.length]};`;
+            const txt = document.createElement('span');
+            txt.style.color = '#64748b';
+            txt.textContent = label;
+            item.appendChild(dot);
+            item.appendChild(txt);
+            legendEl.appendChild(item);
+        });
+    }
 }
 
 // ═══════════════════════════════════════════════
@@ -666,28 +681,20 @@ function renderHeatmap(timeLogs, start, end) {
     });
     container.appendChild(headerRow);
 
-    // Build weeks between start and end
+    // Build weeks — compatto: max 5 settimane (settimana corrente + 4 precedenti)
     const gridEl = document.createElement('div');
     gridEl.className = 'dash-hm-grid';
-    // Per 'all' con griglia grande, abilita scroll orizzontale
-    if (dashActivePeriod === 'all') {
-        container.style.overflowX = 'auto';
-        gridEl.style.minWidth = '700px';
-    }
+    container.style.overflowX = '';
 
-    // Adaptive cap: 12 weeks normalmente, 52 per 'all'
-    const isAllPeriod = dashActivePeriod === 'all';
-    const MAX_WEEKS = isAllPeriod ? 52 : 12;
-    const maxMs = MAX_WEEKS * 7 * 86400000;
-    let hmStart = new Date(start);
-    let hmEnd = new Date(end);
-    // Per 'all', heatmap mostra l'ultimo anno
-    if (isAllPeriod) {
-        hmEnd = new Date();
-        hmStart = new Date(hmEnd.getTime() - maxMs);
-    } else if (hmEnd.getTime() - hmStart.getTime() > maxMs) {
-        hmStart = new Date(hmEnd.getTime() - maxMs);
-    }
+    // Calcola finestra heatmap: ultime 5 settimane dal periodo selezionato
+    const MAX_WEEKS = 5;
+    const now = new Date();
+    let hmEnd = new Date(Math.min(end.getTime(), now.getTime()));
+    hmEnd.setHours(23, 59, 59, 999);
+    let hmStart = new Date(hmEnd);
+    hmStart.setDate(hmStart.getDate() - (MAX_WEEKS * 7) + 1);
+    // Non partire prima del range selezionato
+    if (hmStart < start) hmStart = new Date(start);
 
     // Find first Monday on or before hmStart
     const cur = new Date(hmStart);
