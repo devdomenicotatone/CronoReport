@@ -70,8 +70,6 @@
 
 /* styles.css — CronoReport Design System */
 
-@layer base {
-
 /* ============================================
    Global Styles
    ============================================ */
@@ -130,10 +128,6 @@ body {
 i.fas, i.far, i.fab {
     margin-right: 0;
 }
-
-} /* end @layer base */
-
-@layer components {
 
 /* ============================================
    Card System (used in templates)
@@ -2981,5 +2975,3 @@ a:not(.cr-btn):not(.btn):not(.nav-link):not(.bottom-nav-link):not(.more-nav-link
         transition-duration: 0.01ms !important;
     }
 }
-
-} /* end @layer components */

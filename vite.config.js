@@ -1,9 +1,12 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
+import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig(({ command }) => ({
     // Base path: '/' in dev, '/CronoReport/' in build (GitHub Pages)
     base: command === 'serve' ? '/' : '/CronoReport/',
+
+    plugins: [tailwindcss()],
 
     root: '.',
 
