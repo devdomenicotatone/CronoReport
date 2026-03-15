@@ -841,4 +841,3 @@ window.unmarkAllTimers = unmarkAllTimers;
 window.unmarkFilteredTimers = unmarkFilteredTimers;
 window.unmarkSelectedTimers = unmarkSelectedTimers;
 window.unmarkTimers = unmarkTimers;
-window.worktypeRates = worktypeRates;
