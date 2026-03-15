@@ -158,7 +158,7 @@ export function createTimerCard(timer) {
     noteWrap.appendChild(noteIcon);
     noteWrap.appendChild(noteText);
 
-    noteText.addEventListener('click', (e) => {
+    noteWrap.addEventListener('click', (e) => {
         e.stopPropagation();
         const input = document.createElement('input');
         input.type = 'text';
