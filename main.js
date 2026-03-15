@@ -42,7 +42,6 @@ if (DEV_MODE) {
     auth.onAuthStateChanged((user) => {
         if (user) {
             currentUser = user;
-            console.log("Utente autenticato:", currentUser.uid);
 
             // Update user display in navbar
             if (typeof updateUserDisplay === 'function') {
@@ -205,7 +204,7 @@ export async function renderUnifiedClientAccordion() {
             const clientData = clientDoc.data();
             const clientId = clientDoc.id;
 
-            // Fetch sites + worktypes in parallel
+            // Fetch projects + worktypes in parallel
             const [projectsSnap, worktypesSnap] = await Promise.all([
                 db.collection('projects').where('uid', '==', currentUser.uid).where('clientId', '==', clientId).orderBy('name').get(),
                 db.collection('worktypes').where('uid', '==', currentUser.uid).where('clientId', '==', clientId).orderBy('name').get()
@@ -275,10 +274,10 @@ export async function renderUnifiedClientAccordion() {
                 body.classList.toggle('expanded');
             });
 
-            // === SITES SECTION ===
+            // === PROJECTS SECTION ===
             const projectsSection = document.createElement('div');
             projectsSection.className = 'dm-sub-section';
-            projectsSection.innerHTML = `<div class="dm-sub-section-title"><i class="fas fa-map-marker-alt"></i> progetti</div>`;
+            projectsSection.innerHTML = `<div class="dm-sub-section-title"><i class="fas fa-folder-open"></i> Progetti</div>`;
 
             if (projectsSnap.empty) {
                 projectsSection.innerHTML += `<div class="dm-empty">Nessun progetto</div>`;
@@ -288,9 +287,9 @@ export async function renderUnifiedClientAccordion() {
                     const row = document.createElement('div');
                     row.className = 'dm-sub-item';
                     row.innerHTML = `
-                        <input class="dm-editable flex-1" value="${projectData.name}" data-id="${projectDoc.id}" data-collection="sites" data-field="name" placeholder="Nome progetto" />
-                        <input class="dm-editable dm-url-input" value="${projectData.url || ''}" data-id="${projectDoc.id}" data-collection="sites" data-field="url" placeholder="🔗 URL progetto..." />
-                        <button class="delete-btn" title="Elimina sito"><i class="fas fa-times"></i></button>
+                        <input class="dm-editable flex-1" value="${projectData.name}" data-id="${projectDoc.id}" data-collection="projects" data-field="name" placeholder="Nome progetto" />
+                        <input class="dm-editable dm-url-input" value="${projectData.url || ''}" data-id="${projectDoc.id}" data-collection="projects" data-field="url" placeholder="🔗 URL progetto..." />
+                        <button class="delete-btn" title="Elimina progetto"><i class="fas fa-times"></i></button>
                     `;
                     row.querySelector('.delete-btn').addEventListener('click', () => {
                         db.collection('projects').doc(projectDoc.id).delete().then(() => renderUnifiedClientAccordion());
@@ -400,12 +399,12 @@ export async function renderUnifiedClientAccordion() {
 /**
  * Update stat cards for data management
  */
-export function dmUpdateStats(clients, sites, worktypes) {
+export function dmUpdateStats(clients, projects, worktypes) {
     const c = document.getElementById('dm-stat-clients');
     const s = document.getElementById('dm-stat-projects');
     const w = document.getElementById('dm-stat-worktypes');
     if (c) c.textContent = clients;
-    if (s) s.textContent = sites;
+    if (s) s.textContent = projects;
     if (w) w.textContent = worktypes;
 }
 
