@@ -131,8 +131,84 @@ async function initializeTimerEvents() {
             }
         });
     } else {
-        // Re-grab DOM references on subsequent visits
+        // Re-grab ALL DOM references on subsequent visits
+        // (the old elements were destroyed by contentSection.innerHTML = '')
+        clientSelect = document.getElementById('client-select');
+        siteSelect = document.getElementById('site-select');
+        worktypeSelect = document.getElementById('worktype-select');
+        linkInput = document.getElementById('link-input');
+        manualStartTimeInput = document.getElementById('manual-start-time');
+        manualEndTimeInput = document.getElementById('manual-end-time');
+        startTimerBtn = document.getElementById('start-timer-btn');
         timerCardsContainer = document.getElementById('timer-cards');
+
+        // Re-populate client dropdown
+        loadTimerClientDropdown(clientSelect);
+
+        // Re-bind change listener (old element + listener was destroyed)
+        clientSelect.addEventListener('change', () => {
+            const selectedClientId = clientSelect.value;
+            if (selectedClientId) {
+                loadSites(siteSelect, selectedClientId);
+                loadWorktypes(worktypeSelect, selectedClientId);
+            } else {
+                siteSelect.innerHTML = '<option value="">-- Sito --</option>';
+                worktypeSelect.innerHTML = '<option value="">-- Tipo --</option>';
+            }
+        });
+
+        // Re-bind start button
+        startTimerBtn.addEventListener('click', () => {
+            const clientId = clientSelect.value;
+            const siteId = siteSelect.value;
+            const worktypeId = worktypeSelect.value;
+            const link = linkInput.value.trim();
+            const manualStartTimeValue = manualStartTimeInput.value;
+            const manualEndTimeValue = manualEndTimeInput.value;
+
+            if (clientId && siteId && worktypeId) {
+                if (manualEndTimeValue && !manualStartTimeValue) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Attenzione',
+                        text: 'Per inserire l\'ora di fine, devi prima specificare l\'ora di inizio.',
+                        confirmButtonText: 'OK'
+                    });
+                    return;
+                }
+                createNewTimer(clientId, siteId, worktypeId, link, manualStartTimeValue, manualEndTimeValue);
+                linkInput.value = '';
+                manualStartTimeInput.value = '';
+                manualEndTimeInput.value = '';
+            } else {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Attenzione',
+                    text: 'Seleziona cliente, sito e tipo di lavoro.',
+                    confirmButtonText: 'OK'
+                });
+            }
+        });
+
+        // Re-init flatpickr for manual time inputs
+        flatpickr(manualStartTimeInput, {
+            enableTime: true, enableSeconds: true, time_24hr: true,
+            dateFormat: "d/m/Y H:i:S", locale: "it"
+        });
+        flatpickr(manualEndTimeInput, {
+            enableTime: true, enableSeconds: true, time_24hr: true,
+            dateFormat: "d/m/Y H:i:S", locale: "it"
+        });
+
+        // Re-bind manual toggle
+        const manualToggle = document.getElementById('timer-manual-toggle');
+        const manualSection = document.getElementById('timer-manual-section');
+        if (manualToggle && manualSection) {
+            manualToggle.addEventListener('click', () => {
+                manualToggle.classList.toggle('open');
+                manualSection.classList.toggle('visible');
+            });
+        }
     }
 
     // === LOAD RECENT TASKS ===
