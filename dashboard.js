@@ -1,9 +1,10 @@
 // dashboard.js — Dashboard Analitica PRO (Mobile-First)
+// Refactored: Compute Once, Render Many
 
 // ═══════════════════════════════════════════════
 //  STATE
 // ═══════════════════════════════════════════════
-let dashActivePeriod = 'month'; // today | week | month | quarter | year | custom
+let dashActivePeriod = 'month'; // today | week | month | quarter | year | all
 let dashChartInstances = {};
 const DASH_CLIENT_COLORS = [
     { main: '#6366f1', light: 'rgba(99,102,241,0.18)' },   // indigo
@@ -15,14 +16,21 @@ const DASH_CLIENT_COLORS = [
     { main: '#ec4899', light: 'rgba(236,72,153,0.18)' },   // pink
     { main: '#14b8a6', light: 'rgba(20,184,166,0.18)' },   // teal
 ];
+
+// Mappa colori clienti: assegnati sequenzialmente in ordine alfabetico
+// → Sempre distinti (fino a 8 clienti) e stabili tra periodi
 let dashClientColorMap = {};
 
+function buildClientColorMap(clientNames) {
+    dashClientColorMap = {};
+    const sorted = [...clientNames].sort((a, b) => a.localeCompare(b));
+    sorted.forEach((name, i) => {
+        dashClientColorMap[name] = DASH_CLIENT_COLORS[i % DASH_CLIENT_COLORS.length];
+    });
+}
+
 function getDashClientColor(name) {
-    if (!dashClientColorMap[name]) {
-        const idx = Object.keys(dashClientColorMap).length;
-        dashClientColorMap[name] = DASH_CLIENT_COLORS[idx % DASH_CLIENT_COLORS.length];
-    }
-    return dashClientColorMap[name];
+    return dashClientColorMap[name] || DASH_CLIENT_COLORS[0];
 }
 
 // ═══════════════════════════════════════════════
@@ -221,6 +229,77 @@ function getDashDateRange(period) {
 }
 
 // ═══════════════════════════════════════════════
+//  DATA LAYER — Compute Once, Render Many
+// ═══════════════════════════════════════════════
+function computeDashboardData(timeLogs) {
+    const vm = {
+        totalSec: 0,
+        totalEarnings: 0,
+        workedDays: new Set(),
+        // {nome: {sec, hours, earnings}}
+        clientMap: {},
+        // {isoDate: {label, hours, earnings, clients: {nome: hours}}}
+        dateMap: {},
+        // {nome: {sec, earnings}}
+        worktypeMap: {},
+        // Array[7] di {sec, days: Set<isoDate>} — Lun(0)..Dom(6)
+        dayOfWeekMap: Array.from({ length: 7 }, () => ({ sec: 0, days: new Set() })),
+        unreportedCount: 0,
+        unreportedEarnings: 0,
+        clientCount: 0,
+    };
+
+    for (const l of timeLogs) {
+        const sec = l.duration || 0;
+        const rate = l.hourlyRate || 0;
+        const hours = sec / 3600;
+        const earning = hours * rate;
+        const date = l.startTime.toDate();
+        const isoDate = date.toISOString().split('T')[0];
+        const dateLabel = date.toLocaleDateString('it-IT', { day: '2-digit', month: 'short' });
+        const cn = l.clientName || 'Sconosciuto';
+        const wt = l.worktypeName || 'Altro';
+        const dow = date.getDay();
+        const dowIdx = dow === 0 ? 6 : dow - 1; // Mon=0 ... Sun=6
+
+        // Totali globali
+        vm.totalSec += sec;
+        vm.totalEarnings += earning;
+        vm.workedDays.add(isoDate);
+
+        // Aggregati per cliente
+        if (!vm.clientMap[cn]) vm.clientMap[cn] = { sec: 0, hours: 0, earnings: 0 };
+        vm.clientMap[cn].sec += sec;
+        vm.clientMap[cn].hours += hours;
+        vm.clientMap[cn].earnings += earning;
+
+        // Aggregati per data (per grafici bar/area e heatmap)
+        if (!vm.dateMap[isoDate]) vm.dateMap[isoDate] = { label: dateLabel, hours: 0, earnings: 0, clients: {} };
+        vm.dateMap[isoDate].hours += hours;
+        vm.dateMap[isoDate].earnings += earning;
+        vm.dateMap[isoDate].clients[cn] = (vm.dateMap[isoDate].clients[cn] || 0) + hours;
+
+        // Aggregati per tipo di lavoro
+        if (!vm.worktypeMap[wt]) vm.worktypeMap[wt] = { sec: 0, earnings: 0 };
+        vm.worktypeMap[wt].sec += sec;
+        vm.worktypeMap[wt].earnings += earning;
+
+        // Giorno della settimana — FIX BUG-4: conta i GIORNI unici, non i log
+        vm.dayOfWeekMap[dowIdx].sec += sec;
+        vm.dayOfWeekMap[dowIdx].days.add(isoDate);
+
+        // Timer non reportati
+        if (!l.isReported) {
+            vm.unreportedCount++;
+            vm.unreportedEarnings += earning;
+        }
+    }
+
+    vm.clientCount = Object.keys(vm.clientMap).length;
+    return vm;
+}
+
+// ═══════════════════════════════════════════════
 //  DATA LOADING
 // ═══════════════════════════════════════════════
 export async function loadDashboardData() {
@@ -237,21 +316,17 @@ export async function loadDashboardData() {
         const snapshot = await query.get();
         const timeLogs = snapshot.docs.map(d => d.data());
 
-        // Also fetch previous period for trend comparison
-        // Per 'all', confronta ultimo anno vs anno precedente
+        // Periodo precedente per trend comparison
+        // FIX BUG-3: per "all", filtra in-memory invece di fare una seconda query
         let prevTimeLogs = [];
         if (dashActivePeriod === 'all') {
             const now = new Date();
-            const lastYearStart = new Date(now.getFullYear() - 1, 0, 1);
-            const lastYearEnd = new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59, 999);
-            const prevQuery = db.collection('timeLogs')
-                .where('uid', '==', currentUser.uid)
-                .where('isDeleted', '==', false)
-                .where('startTime', '>=', firebase.firestore.Timestamp.fromDate(lastYearStart))
-                .where('startTime', '<=', firebase.firestore.Timestamp.fromDate(lastYearEnd))
-                .orderBy('startTime', 'desc');
-            const prevSnapshot = await prevQuery.get();
-            prevTimeLogs = prevSnapshot.docs.map(d => d.data());
+            const thisYear = now.getFullYear();
+            // Confronto equo: anno corrente vs anno precedente (entrambi in-memory)
+            prevTimeLogs = timeLogs.filter(l => {
+                const y = l.startTime.toDate().getFullYear();
+                return y === thisYear - 1;
+            });
         } else {
             const periodMs = end.getTime() - start.getTime();
             const prevStart = new Date(start.getTime() - periodMs);
@@ -266,17 +341,21 @@ export async function loadDashboardData() {
             prevTimeLogs = prevSnapshot.docs.map(d => d.data());
         }
 
-        // Reset color map
-        dashClientColorMap = {};
+        // Compute Once — singola passata su tutti i log
+        const vm = computeDashboardData(timeLogs);
+        const prevVm = computeDashboardData(prevTimeLogs);
 
-        // Render everything — l.hourlyRate dal documento è la fonte di verità
-        renderKPIs(timeLogs, prevTimeLogs, start, end);
-        renderWorkedTimeChart(timeLogs, start, end);
-        renderEarningsChart(timeLogs, start, end);
-        renderWorktypeChart(timeLogs);
-        renderClientRanking(timeLogs);
-        renderHeatmap(timeLogs, start, end);
-        renderInsights(timeLogs, prevTimeLogs);
+        // Assegna colori unici e stabili ai clienti (ordine alfabetico)
+        buildClientColorMap(Object.keys(vm.clientMap));
+
+        // Render Many — ogni render riceve il ViewModel pre-computato
+        renderKPIs(vm);
+        renderWorkedTimeChart(vm);
+        renderEarningsChart(vm);
+        renderWorktypeChart(vm);
+        renderClientRanking(vm);
+        renderHeatmap(vm, start, end);
+        renderInsights(vm, prevVm, dashActivePeriod);
 
     } catch (error) {
         console.error('Errore dashboard:', error);
@@ -292,6 +371,12 @@ function fmtHM(totalSeconds) {
     return `${h}h ${m.toString().padStart(2, '0')}m`;
 }
 
+function fmtHoursToHM(hours) {
+    const h = Math.floor(hours);
+    const m = Math.round((hours - h) * 60);
+    return `${h}h ${m.toString().padStart(2, '0')}m`;
+}
+
 function fmtEuro(amount) {
     return `€ ${amount.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -303,32 +388,21 @@ function fmtDateShort(date) {
 // ═══════════════════════════════════════════════
 //  KPI RENDERING
 // ═══════════════════════════════════════════════
-function renderKPIs(timeLogs, prevTimeLogs, start, end) {
-    // Total hours
-    const totalSec = timeLogs.reduce((s, l) => s + (l.duration || 0), 0);
-    document.getElementById('dash-kpi-hours').textContent = fmtHM(totalSec);
+function renderKPIs(vm) {
+    // Ore totali
+    document.getElementById('dash-kpi-hours').textContent = fmtHM(vm.totalSec);
 
-    // Total earnings — l.hourlyRate dal documento è la fonte di verità
-    const totalEarnings = timeLogs.reduce((s, l) => {
-        const rate = l.hourlyRate || 0;
-        return s + (l.duration / 3600) * rate;
-    }, 0);
-    document.getElementById('dash-kpi-earnings').textContent = fmtEuro(totalEarnings);
+    // Guadagni totali
+    document.getElementById('dash-kpi-earnings').textContent = fmtEuro(vm.totalEarnings);
 
-    // Average per worked day
-    const workedDays = new Set(timeLogs.map(l => l.startTime.toDate().toDateString())).size;
-    const avgSec = workedDays > 0 ? totalSec / workedDays : 0;
+    // Media per giorno lavorato
+    const workedDaysCount = vm.workedDays.size;
+    const avgSec = workedDaysCount > 0 ? vm.totalSec / workedDaysCount : 0;
     document.getElementById('dash-kpi-avg').textContent = fmtHM(avgSec);
 
-    // Top client
-    const clientHours = {};
-    timeLogs.forEach(l => {
-        const cn = l.clientName || 'Sconosciuto';
-        clientHours[cn] = (clientHours[cn] || 0) + (l.duration || 0);
-    });
-    const topClient = Object.entries(clientHours).sort((a, b) => b[1] - a[1])[0];
-    const topEl = document.getElementById('dash-kpi-top');
-    topEl.textContent = topClient ? topClient[0] : '—';
+    // Cliente top (per secondi lavorati, dal clientMap pre-computato)
+    const topClient = Object.entries(vm.clientMap).sort((a, b) => b[1].sec - a[1].sec)[0];
+    document.getElementById('dash-kpi-top').textContent = topClient ? topClient[0] : '—';
 
     // Animate KPI cards
     document.querySelectorAll('.dash-kpi-card').forEach((card, i) => {
@@ -342,32 +416,28 @@ function renderKPIs(timeLogs, prevTimeLogs, start, end) {
 // ═══════════════════════════════════════════════
 //  WORKED TIME CHART (STACKED BAR PER CLIENT)
 // ═══════════════════════════════════════════════
-function renderWorkedTimeChart(timeLogs, start, end) {
+function renderWorkedTimeChart(vm) {
     const canvas = document.getElementById('dashWorkedTimeChart');
     if (!canvas) return;
     if (dashChartInstances.workedTime) dashChartInstances.workedTime.destroy();
 
-    // Group by date and client
-    const dateClientMap = {};
-    const clientSet = new Set();
-    timeLogs.forEach(l => {
-        const dateStr = l.startTime.toDate().toLocaleDateString('it-IT', { day: '2-digit', month: 'short' });
-        const dateKey = l.startTime.toDate().toISOString().split('T')[0];
-        const cn = l.clientName || 'Sconosciuto';
-        clientSet.add(cn);
-        if (!dateClientMap[dateKey]) dateClientMap[dateKey] = { label: dateStr, clients: {} };
-        dateClientMap[dateKey].clients[cn] = (dateClientMap[dateKey].clients[cn] || 0) + l.duration / 3600;
-    });
+    const sortedDates = Object.keys(vm.dateMap).sort();
+    const labels = sortedDates.map(k => vm.dateMap[k].label);
 
-    const sortedDates = Object.keys(dateClientMap).sort();
-    const labels = sortedDates.map(k => dateClientMap[k].label);
+    // Raccogli tutti i clienti unici dalle date
+    const clientSet = new Set();
+    for (const k of sortedDates) {
+        for (const cn of Object.keys(vm.dateMap[k].clients)) {
+            clientSet.add(cn);
+        }
+    }
     const clients = Array.from(clientSet);
 
     const datasets = clients.map(cn => {
         const color = getDashClientColor(cn);
         return {
             label: cn,
-            data: sortedDates.map(k => dateClientMap[k].clients[cn] || 0),
+            data: sortedDates.map(k => vm.dateMap[k].clients[cn] || 0),
             backgroundColor: color.main + 'CC',
             borderColor: color.main,
             borderWidth: 1,
@@ -395,11 +465,7 @@ function renderWorkedTimeChart(timeLogs, start, end) {
                 legend: { position: 'bottom', labels: { boxWidth: 14, padding: 16, font: { size: 12 } } },
                 tooltip: {
                     callbacks: {
-                        label: (ctx) => {
-                            const h = Math.floor(ctx.parsed.y);
-                            const m = Math.round((ctx.parsed.y - h) * 60);
-                            return ` ${ctx.dataset.label}: ${h}h ${m.toString().padStart(2, '0')}m`;
-                        }
+                        label: (ctx) => ` ${ctx.dataset.label}: ${fmtHoursToHM(ctx.parsed.y)}`
                     }
                 }
             }
@@ -410,26 +476,16 @@ function renderWorkedTimeChart(timeLogs, start, end) {
 // ═══════════════════════════════════════════════
 //  EARNINGS CHART (AREA)
 // ═══════════════════════════════════════════════
-function renderEarningsChart(timeLogs, start, end) {
+function renderEarningsChart(vm) {
     const canvas = document.getElementById('dashEarningsChart');
     if (!canvas) return;
     if (dashChartInstances.earnings) dashChartInstances.earnings.destroy();
 
-    const earningsPerDay = {};
-    timeLogs.forEach(l => {
-        const dateKey = l.startTime.toDate().toISOString().split('T')[0];
-        const dateLabel = l.startTime.toDate().toLocaleDateString('it-IT', { day: '2-digit', month: 'short' });
-        const rate = l.hourlyRate || 0;
-        const amount = (l.duration / 3600) * rate;
-        if (!earningsPerDay[dateKey]) earningsPerDay[dateKey] = { label: dateLabel, amount: 0 };
-        earningsPerDay[dateKey].amount += amount;
-    });
+    const sortedKeys = Object.keys(vm.dateMap).sort();
+    const labels = sortedKeys.map(k => vm.dateMap[k].label);
+    const data = sortedKeys.map(k => vm.dateMap[k].earnings);
 
-    const sortedKeys = Object.keys(earningsPerDay).sort();
-    const labels = sortedKeys.map(k => earningsPerDay[k].label);
-    const data = sortedKeys.map(k => earningsPerDay[k].amount);
-
-    // Cumulative
+    // Cumulativo
     let cumulative = 0;
     const cumulativeData = data.map(v => { cumulative += v; return cumulative; });
 
@@ -494,19 +550,18 @@ function renderEarningsChart(timeLogs, start, end) {
 // ═══════════════════════════════════════════════
 //  WORKTYPE CHART (DOUGHNUT)
 // ═══════════════════════════════════════════════
-function renderWorktypeChart(timeLogs) {
+function renderWorktypeChart(vm) {
     const canvas = document.getElementById('dashWorktypeChart');
     if (!canvas) return;
     if (dashChartInstances.worktype) dashChartInstances.worktype.destroy();
 
+    // Converti da secondi a ore per la visualizzazione
     const wtHours = {};
-    timeLogs.forEach(l => {
-        const wt = l.worktypeName || 'Altro';
-        wtHours[wt] = (wtHours[wt] || 0) + l.duration / 3600;
-    });
+    for (const [wt, d] of Object.entries(vm.worktypeMap)) {
+        wtHours[wt] = d.sec / 3600;
+    }
 
-    // Raggruppa worktypes piccoli (<2%) in "Altro" se sono più di 10
-    const totalHoursRaw = Object.values(wtHours).reduce((s, v) => s + v, 0);
+    // Raggruppa worktypes piccoli in "Altro" se sono più di 10
     let labels, data;
     const MAX_SLICES = 10;
     const entries = Object.entries(wtHours).sort((a, b) => b[1] - a[1]);
@@ -550,10 +605,8 @@ function renderWorktypeChart(timeLogs) {
                 tooltip: {
                     callbacks: {
                         label: (ctx) => {
-                            const h = Math.floor(ctx.parsed);
-                            const m = Math.round((ctx.parsed - h) * 60);
                             const pct = totalHours > 0 ? ((ctx.parsed / totalHours) * 100).toFixed(1) : 0;
-                            return ` ${ctx.label}: ${h}h ${m.toString().padStart(2, '0')}m (${pct}%)`;
+                            return ` ${ctx.label}: ${fmtHoursToHM(ctx.parsed)} (${pct}%)`;
                         }
                     }
                 }
@@ -601,20 +654,12 @@ function renderWorktypeChart(timeLogs) {
 // ═══════════════════════════════════════════════
 //  CLIENT RANKING
 // ═══════════════════════════════════════════════
-function renderClientRanking(timeLogs) {
+function renderClientRanking(vm) {
     const container = document.getElementById('dash-client-ranking');
     if (!container) return;
     container.innerHTML = '';
 
-    const clientData = {};
-    timeLogs.forEach(l => {
-        const cn = l.clientName || 'Sconosciuto';
-        if (!clientData[cn]) clientData[cn] = { hours: 0, earnings: 0 };
-        clientData[cn].hours += l.duration / 3600;
-        clientData[cn].earnings += (l.duration / 3600) * (l.hourlyRate || 0);
-    });
-
-    const sorted = Object.entries(clientData).sort((a, b) => b[1].hours - a[1].hours);
+    const sorted = Object.entries(vm.clientMap).sort((a, b) => b[1].hours - a[1].hours);
     const maxHours = sorted.length > 0 ? sorted[0][1].hours : 1;
     const totalHours = sorted.reduce((s, [, v]) => s + v.hours, 0);
 
@@ -627,8 +672,6 @@ function renderClientRanking(timeLogs) {
         const color = getDashClientColor(name);
         const pct = totalHours > 0 ? ((data.hours / totalHours) * 100).toFixed(1) : 0;
         const barWidth = (data.hours / maxHours) * 100;
-        const h = Math.floor(data.hours);
-        const m = Math.round((data.hours - h) * 60);
 
         const row = document.createElement('div');
         row.className = 'dash-rank-row';
@@ -642,7 +685,7 @@ function renderClientRanking(timeLogs) {
                 </div>
             </div>
             <div class="dash-rank-stats">
-                <span class="dash-rank-hours">${h}h ${m.toString().padStart(2, '0')}m</span>
+                <span class="dash-rank-hours">${fmtHoursToHM(data.hours)}</span>
                 <span class="dash-rank-euro">${fmtEuro(data.earnings)}</span>
                 <span class="dash-rank-pct">${pct}%</span>
             </div>
@@ -654,17 +697,16 @@ function renderClientRanking(timeLogs) {
 // ═══════════════════════════════════════════════
 //  HEATMAP
 // ═══════════════════════════════════════════════
-function renderHeatmap(timeLogs, start, end) {
+function renderHeatmap(vm, start, end) {
     const container = document.getElementById('dash-heatmap-container');
     if (!container) return;
     container.innerHTML = '';
 
-    // Build day→hours map
+    // Usa dateMap pre-computato per le ore giornaliere
     const dayMap = {};
-    timeLogs.forEach(l => {
-        const key = l.startTime.toDate().toISOString().split('T')[0];
-        dayMap[key] = (dayMap[key] || 0) + l.duration / 3600;
-    });
+    for (const [isoDate, d] of Object.entries(vm.dateMap)) {
+        dayMap[isoDate] = d.hours;
+    }
 
     const maxH = Math.max(...Object.values(dayMap), 1);
 
@@ -681,19 +723,17 @@ function renderHeatmap(timeLogs, start, end) {
     });
     container.appendChild(headerRow);
 
-    // Build weeks — compatto: max 5 settimane (settimana corrente + 4 precedenti)
+    // Build weeks — compatto: max 5 settimane
     const gridEl = document.createElement('div');
     gridEl.className = 'dash-hm-grid';
     container.style.overflowX = '';
 
-    // Calcola finestra heatmap: ultime 5 settimane dal periodo selezionato
     const MAX_WEEKS = 5;
     const now = new Date();
     let hmEnd = new Date(Math.min(end.getTime(), now.getTime()));
     hmEnd.setHours(23, 59, 59, 999);
     let hmStart = new Date(hmEnd);
     hmStart.setDate(hmStart.getDate() - (MAX_WEEKS * 7) + 1);
-    // Non partire prima del range selezionato
     if (hmStart < start) hmStart = new Date(start);
 
     // Find first Monday on or before hmStart
@@ -721,9 +761,7 @@ function renderHeatmap(timeLogs, start, end) {
                 cell.style.background = '#f1f5f9';
             }
 
-            const h = Math.floor(hours);
-            const m = Math.round((hours - h) * 60);
-            cell.title = `${cellDate.toLocaleDateString('it-IT')}: ${hours > 0 ? h + 'h ' + m.toString().padStart(2, '0') + 'm' : 'Nessuna attività'}`;
+            cell.title = `${cellDate.toLocaleDateString('it-IT')}: ${hours > 0 ? fmtHoursToHM(hours) : 'Nessuna attività'}`;
 
             gridEl.appendChild(cell);
         }
@@ -750,84 +788,66 @@ function renderHeatmap(timeLogs, start, end) {
 // ═══════════════════════════════════════════════
 //  SMART INSIGHTS
 // ═══════════════════════════════════════════════
-function renderInsights(timeLogs, prevTimeLogs) {
+function renderInsights(vm, prevVm, period) {
     const container = document.getElementById('dash-insights-body');
     if (!container) return;
     container.innerHTML = '';
 
     const insights = [];
 
-    if (timeLogs.length === 0) {
+    if (vm.totalSec === 0) {
         container.innerHTML = '<div class="text-surface-400 text-sm p-2">Nessun dato disponibile per generare insights.</div>';
         return;
     }
 
-    // 1. Most productive day of the week
-    const dayHours = [0, 0, 0, 0, 0, 0, 0]; // Mon-Sun
-    const dayCounts = [0, 0, 0, 0, 0, 0, 0];
-    timeLogs.forEach(l => {
-        const dow = l.startTime.toDate().getDay();
-        const idx = dow === 0 ? 6 : dow - 1; // Mon=0 ... Sun=6
-        dayHours[idx] += l.duration / 3600;
-        dayCounts[idx]++;
-    });
+    // 1. Giorno più produttivo — FIX BUG-4: usa giorni unici, non conteggio log
     const dayNames = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'];
-    const dayAvgs = dayHours.map((h, i) => dayCounts[i] > 0 ? h / dayCounts[i] : 0);
+    const dayAvgs = vm.dayOfWeekMap.map(d => d.days.size > 0 ? d.sec / d.days.size : 0);
     const bestDayIdx = dayAvgs.indexOf(Math.max(...dayAvgs));
     if (dayAvgs[bestDayIdx] > 0) {
         insights.push({
             icon: 'fa-calendar-check',
             color: '#10b981',
-            text: `Il tuo giorno più produttivo è il <strong>${dayNames[bestDayIdx]}</strong> (media ${fmtHM(dayAvgs[bestDayIdx] * 3600)})`
+            text: `Il tuo giorno più produttivo è il <strong>${dayNames[bestDayIdx]}</strong> (media ${fmtHM(dayAvgs[bestDayIdx])})`
         });
     }
 
-    // 2. Most profitable worktype
-    const wtRates = {};
-    timeLogs.forEach(l => {
-        const wt = l.worktypeName || 'Altro';
-        const rate = l.hourlyRate || 0;
-        if (!wtRates[wt] || rate > wtRates[wt]) wtRates[wt] = rate;
-    });
-    const bestWt = Object.entries(wtRates).sort((a, b) => b[1] - a[1])[0];
-    if (bestWt && bestWt[1] > 0) {
+    // 2. Tipo di lavoro più redditizio — FIX BUG-5: usa guadagno totale, non rate massimo
+    const bestWt = Object.entries(vm.worktypeMap).sort((a, b) => b[1].earnings - a[1].earnings)[0];
+    if (bestWt && bestWt[1].earnings > 0) {
         insights.push({
             icon: 'fa-gem',
             color: '#8b5cf6',
-            text: `Il tipo di lavoro più redditizio è <strong>${bestWt[0]}</strong> (€${bestWt[1]}/h)`
+            text: `Il tipo di lavoro più redditizio è <strong>${bestWt[0]}</strong> (${fmtEuro(bestWt[1].earnings)} totali)`
         });
     }
 
-    // 3. Trend vs prev period
-    const totalSec = timeLogs.reduce((s, l) => s + (l.duration || 0), 0);
-    const prevTotalSec = prevTimeLogs.reduce((s, l) => s + (l.duration || 0), 0);
-    if (prevTotalSec > 0) {
-        const pctChange = ((totalSec - prevTotalSec) / prevTotalSec * 100).toFixed(0);
-        const isUp = totalSec >= prevTotalSec;
+    // 3. Trend vs periodo precedente
+    if (prevVm.totalSec > 0) {
+        const pctChange = ((vm.totalSec - prevVm.totalSec) / prevVm.totalSec * 100).toFixed(0);
+        const isUp = vm.totalSec >= prevVm.totalSec;
+        const periodLabel = period === 'all' ? "rispetto all'anno precedente" : 'rispetto al periodo precedente';
         insights.push({
             icon: isUp ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down',
             color: isUp ? '#10b981' : '#ef4444',
-            text: `Hai lavorato <strong>${Math.abs(pctChange)}% ${isUp ? 'in più' : 'in meno'}</strong> rispetto al periodo precedente`
+            text: `Hai lavorato <strong>${Math.abs(pctChange)}% ${isUp ? 'in più' : 'in meno'}</strong> ${periodLabel}`
         });
     }
 
-    // 4. Unreported timers
-    const unreported = timeLogs.filter(l => !l.isReported);
-    if (unreported.length > 0) {
-        const unreportedEarnings = unreported.reduce((s, l) => s + (l.duration / 3600) * (l.hourlyRate || 0), 0);
+    // 4. Timer non reportati
+    if (vm.unreportedCount > 0) {
         insights.push({
             icon: 'fa-exclamation-circle',
             color: '#f59e0b',
-            text: `<strong>${unreported.length} timer</strong> non ancora reportati (${fmtEuro(unreportedEarnings)} pending)`
+            text: `<strong>${vm.unreportedCount} timer</strong> non ancora reportati (${fmtEuro(vm.unreportedEarnings)} pending)`
         });
     }
 
-    // 5. Total clients worked with
-    const clientCount = new Set(timeLogs.map(l => l.clientName)).size;
+    // 5. Clienti nel periodo
     insights.push({
         icon: 'fa-users',
         color: '#6366f1',
-        text: `Hai lavorato con <strong>${clientCount} client${clientCount !== 1 ? 'i' : 'e'}</strong> in questo periodo`
+        text: `Hai lavorato con <strong>${vm.clientCount} client${vm.clientCount !== 1 ? 'i' : 'e'}</strong> in questo periodo`
     });
 
     // Render
@@ -844,7 +864,3 @@ function renderInsights(timeLogs, prevTimeLogs) {
         container.appendChild(div);
     });
 }
-
-// ═══════════════════════════════════════════════
-
-
