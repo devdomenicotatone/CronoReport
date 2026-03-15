@@ -42,13 +42,13 @@ export function createTimerCard(timer) {
     subHeader.className = 'flex items-center gap-1.5 mb-3';
 
     // Favicon before project name
-    const siteFavicon = createFaviconEl(timer.projectName, '', 14);
-    subHeader.appendChild(siteFavicon);
+    const projectFavicon = createFaviconEl(timer.projectName, '', 14);
+    subHeader.appendChild(projectFavicon);
 
-    const siteSpan = document.createElement('span');
-    siteSpan.className = 'text-[10px] font-semibold text-surface-400 uppercase tracking-wider truncate';
-    siteSpan.textContent = timer.projectName;
-    subHeader.appendChild(siteSpan);
+    const projectSpan = document.createElement('span');
+    projectSpan.className = 'text-[10px] font-semibold text-surface-400 uppercase tracking-wider truncate';
+    projectSpan.textContent = timer.projectName;
+    subHeader.appendChild(projectSpan);
 
     if (timer.link) {
         const isUrl = /^https?:\/\//i.test(timer.link);

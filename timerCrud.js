@@ -26,7 +26,7 @@ export function loadAllClientsForEditSelect(selectElement, selectedClientId) {
 }
 
 export function loadAllProjectsForEditSelect(selectElement, clientId, selectedprojectId) {
-    selectElement.innerHTML = '<option value="">--Seleziona Sito--</option>';
+    selectElement.innerHTML = '<option value="">--Seleziona Progetto--</option>';
     return db.collection('projects')
         .where('uid', '==', currentUser.uid)
         .where('clientId', '==', clientId)
@@ -305,9 +305,9 @@ export function openEditTimerModal(timer) {
         if (newClientId) {
             loadAllProjectsForEditSelect(projectSelect, newClientId, '')
                 .then(() => loadAllWorktypesForEditSelect(worktypeSelect, newClientId, ''))
-                .catch(error => console.error("Errore durante l'aggiornamento di siti e tipi di lavoro:", error));
+                .catch(error => console.error("Errore durante l'aggiornamento di progetti e tipi di lavoro:", error));
         } else {
-            projectSelect.innerHTML = '<option value="">--Seleziona Sito--</option>';
+            projectSelect.innerHTML = '<option value="">--Seleziona Progetto--</option>';
             worktypeSelect.innerHTML = '<option value="">--Seleziona Tipo di Lavoro--</option>';
         }
     });

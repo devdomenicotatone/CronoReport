@@ -683,7 +683,7 @@ export function displayTimers(timers) {
                 const content = document.createElement('div');
                 content.className = 'flex-1 min-w-0';
 
-                // RIGA 1: Data + Sito + Durata
+                // RIGA 1: Data + Progetto + Durata
                 const mainRow = document.createElement('div');
                 mainRow.className = 'flex items-center gap-2 flex-wrap';
 
@@ -692,9 +692,9 @@ export function displayTimers(timers) {
                 const startDate = logData.startTime.toDate();
                 dateSpan.textContent = startDate.toLocaleDateString('it-IT', { day: '2-digit', month: 'short' });
 
-                const siteSpan = document.createElement('span');
-                siteSpan.className = 'text-sm font-medium text-surface-700 truncate';
-                siteSpan.textContent = logData.projectName || '—';
+                const projectSpan = document.createElement('span');
+                projectSpan.className = 'text-sm font-medium text-surface-700 truncate';
+                projectSpan.textContent = logData.projectName || '—';
 
                 const spacer = document.createElement('span');
                 spacer.className = 'flex-1';
@@ -705,7 +705,7 @@ export function displayTimers(timers) {
                 durationSpan.textContent = `${Math.floor(dur / 3600)}h ${Math.floor((dur % 3600) / 60).toString().padStart(2, '0')}m`;
 
                 mainRow.appendChild(dateSpan);
-                mainRow.appendChild(siteSpan);
+                mainRow.appendChild(projectSpan);
                 mainRow.appendChild(spacer);
                 mainRow.appendChild(durationSpan);
 

@@ -379,7 +379,7 @@ export function createTimerRow(timerId, logData, isRecycleBin = false) {
 }
 
 export function loadAllProjectsForSavedTimerSelect(selectElement, clientId, selectedprojectId) {
-    selectElement.innerHTML = '<option value="">--Seleziona Sito--</option>';
+    selectElement.innerHTML = '<option value="">--Seleziona Progetto--</option>';
     return db.collection('projects')
         .where('uid', '==', currentUser.uid)
         .where('clientId', '==', clientId)
@@ -457,7 +457,7 @@ export function loadAllClientsForEditSelect(selectElement, selectedClientId) {
 }
 
 export function loadAllProjectsForEditSelect(selectElement, clientId, selectedprojectId) {
-    selectElement.innerHTML = '<option value="">--Seleziona Sito--</option>';
+    selectElement.innerHTML = '<option value="">--Seleziona Progetto--</option>';
     return db.collection('projects')
         .where('uid', '==', currentUser.uid)
         .where('clientId', '==', clientId)
@@ -517,7 +517,7 @@ export async function openEditSavedTimerModal(timerId) {
     const projectId = logData.projectId || '';
     const worktypeId = logData.worktypeId || '';
 
-    // Carichiamo i clienti, poi siti e poi worktypes
+    // Carichiamo i clienti, poi progetti e poi worktypes
     loadAllClientsForEditSelect(clientSelect, clientId)
       .then(() => loadAllProjectsForEditSelect(projectSelect, clientId, projectId))
       .then(() => loadAllWorktypesForEditSelect(worktypeSelect, clientId, worktypeId))
@@ -555,10 +555,10 @@ export async function openEditSavedTimerModal(timerId) {
     // Aggiungiamo un event listener per il cambio del cliente
     clientSelect.addEventListener('change', () => {
         const newClientId = clientSelect.value;
-        // Quando cambia il cliente, ricarichiamo i siti e i tipi di lavoro
+        // Quando cambia il cliente, ricarichiamo i progetti e i tipi di lavoro
         loadAllProjectsForEditSelect(projectSelect, newClientId, '')
           .then(() => loadAllWorktypesForEditSelect(worktypeSelect, newClientId, ''))
-          .catch(error => console.error("Errore durante l'aggiornamento di siti e tipi di lavoro:", error));
+          .catch(error => console.error("Errore durante l'aggiornamento di progetti e tipi di lavoro:", error));
     });
 
     CrModal.show('edit-saved-timer-modal');

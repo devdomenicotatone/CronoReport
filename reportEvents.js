@@ -70,13 +70,13 @@ export function setupReportSection() {
             loadProjects(filterProjectSelect, selectedClientId);
             loadWorktypes(filterWorktypeSelect, selectedClientId);
         } else {
-            filterProjectSelect.innerHTML = '<option value="">Tutti i Siti</option>';
+            filterProjectSelect.innerHTML = '<option value="">Tutti i Progetti</option>';
             filterWorktypeSelect.innerHTML = '<option value="">Tutti i Tipi di Lavoro</option>';
         }
         tryLoadPreview();
     });
 
-    // Trigger preview anche quando cambiano sito/worktype/checkbox
+    // Trigger preview anche quando cambiano progetto/worktype/checkbox
     filterProjectSelect.addEventListener('change', () => tryLoadPreview());
     filterWorktypeSelect.addEventListener('change', () => tryLoadPreview());
     document.getElementById('only-unreported').addEventListener('change', () => tryLoadPreview());

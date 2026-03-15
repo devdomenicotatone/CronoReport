@@ -83,7 +83,7 @@ export const reportTemplate = `
                     <div>
                         <label for="filter-project" class="block text-sm font-semibold text-surface-600 mb-1">Progetto</label>
                         <select id="filter-project" class="cr-input">
-                            <option value="">Tutti i Siti</option>
+                            <option value="">Tutti i Progetti</option>
                         </select>
                     </div>
                     <div>
@@ -266,7 +266,7 @@ export function loadClients(selectElement) {
 }
 
 export function loadProjects(selectElement, selectedClientId) {
-    selectElement.innerHTML = '<option value="">--Seleziona Sito--</option>';
+    selectElement.innerHTML = '<option value="">--Seleziona Progetto--</option>';
     let query = db.collection('projects')
         .where('uid', '==', currentUser.uid)
         .where('clientId', '==', selectedClientId)
@@ -279,16 +279,16 @@ export function loadProjects(selectElement, selectedClientId) {
             } else {
                 selectElement.disabled = false;
                 snapshot.forEach(doc => {
-                    const site = doc.data();
+                    const project = doc.data();
                     const option = document.createElement('option');
                     option.value = doc.id;
-                    option.textContent = site.name;
+                    option.textContent = project.name;
                     selectElement.appendChild(option);
                 });
             }
         })
         .catch(error => {
-            console.error('Errore nel caricamento dei siti:', error);
+            console.error('Errore nel caricamento dei progetti:', error);
             throw error;
         });
 }
