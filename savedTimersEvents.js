@@ -3,7 +3,6 @@
 // Variabili globali
 window.displayedTimers = []; // Array per memorizzare i timer visualizzati (shared state)
 let lastOperation = null;
-let worktypeRates = {}; // Definiamo la variabile worktypeRates
 
 // Funzione aggiornata per inizializzare gli eventi dei Timer Salvati
 async function initializeSavedTimersEvents() {
@@ -33,8 +32,7 @@ async function initializeSavedTimersEvents() {
     console.log("Carico i clienti per il filtro...");
     await loadClientsForFilter();
 
-    console.log("Carico le tariffe dei tipi di lavoro...");
-    await loadWorktypeRates();
+
 
     if (filterTimersBtn) {
         filterTimersBtn.addEventListener('click', () => {
@@ -237,22 +235,7 @@ async function initializeSavedTimersEvents() {
     console.log("Fine initializeSavedTimersEvents");
 }
 
-// Funzione per caricare le tariffe dei tipi di lavoro
-function loadWorktypeRates() {
-    return db.collection('worktypes')
-        .where('uid', '==', currentUser.uid)
-        .get()
-        .then(snapshot => {
-            snapshot.forEach(doc => {
-                const worktypeData = doc.data();
-                worktypeRates[doc.id] = worktypeData.hourlyRate || 0;
-            });
-            return worktypeRates; // Ritorna worktypeRates se necessario
-        })
-        .catch(error => {
-            console.error('Errore nel caricamento delle tariffe dei tipi di lavoro:', error);
-        });
-}
+
 
 function undoDeleteYear(operation) {
     const { clientName, year, timerIds, yearSection } = operation;
@@ -472,7 +455,7 @@ function filterDisplayedTimers(searchTerm) {
 
             if (!logData.isReported) {
                 const durationInHours = logData.duration / 3600;
-                const hourlyRate = worktypeRates[worktypeId] || 0;
+                const hourlyRate = logData.hourlyRate || 0;
                 const amount = durationInHours * hourlyRate;
 
                 if (!unreportedAmounts[clientName]) {

@@ -192,46 +192,30 @@ function loadSavedTimers(filters = {}) {
                 return;
             }
 
-            const worktypeRates = {};
+            snapshot.forEach(doc => {
+                const logData = doc.data();
+                const clientName = logData.clientName || 'Cliente Sconosciuto';
 
-            db.collection('worktypes')
-                .where('uid', '==', currentUser.uid)
-                .get()
-                .then(worktypeSnapshot => {
-                    worktypeSnapshot.forEach(worktypeDoc => {
-                        const worktypeData = worktypeDoc.data();
-                        worktypeRates[worktypeDoc.id] = worktypeData.hourlyRate || 0;
-                    });
-
-                    snapshot.forEach(doc => {
-                        const logData = doc.data();
-                        const clientName = logData.clientName || 'Cliente Sconosciuto';
-                        const worktypeId = logData.worktypeId;
-
-                        window.displayedTimers.push({
-                            id: doc.id,
-                            data: logData
-                        });
-
-                        if (!logData.isReported) {
-                            const durationInHours = logData.duration / 3600;
-                            const hourlyRate = worktypeRates[worktypeId] || 0;
-                            const amount = durationInHours * hourlyRate;
-
-                            if (!unreportedAmounts[clientName]) {
-                                unreportedAmounts[clientName] = 0;
-                            }
-                            unreportedAmounts[clientName] += amount;
-                        }
-                    });
-
-                    displayTimers(window.displayedTimers);
-                    displayUnreportedAmounts(unreportedAmounts);
-                    updateQuickFilterBar();
-                })
-                .catch(error => {
-                    console.error('Errore nel caricamento delle tariffe dei tipi di lavoro:', error);
+                window.displayedTimers.push({
+                    id: doc.id,
+                    data: logData
                 });
+
+                if (!logData.isReported) {
+                    const durationInHours = logData.duration / 3600;
+                    const hourlyRate = logData.hourlyRate || 0;
+                    const amount = durationInHours * hourlyRate;
+
+                    if (!unreportedAmounts[clientName]) {
+                        unreportedAmounts[clientName] = 0;
+                    }
+                    unreportedAmounts[clientName] += amount;
+                }
+            });
+
+            displayTimers(window.displayedTimers);
+            displayUnreportedAmounts(unreportedAmounts);
+            updateQuickFilterBar();
         })
         .catch(error => {
             console.error('Errore nel caricamento dei timer salvati:', error);
@@ -582,7 +566,7 @@ function displayTimers(timers) {
         let totalEarnings = 0;
         clientTimers.forEach(t => {
             totalSeconds += t.data.duration || 0;
-            const rate = worktypeRates[t.data.worktypeId] || t.data.hourlyRate || 0;
+            const rate = t.data.hourlyRate || 0;
             totalEarnings += (t.data.duration / 3600) * rate;
         });
 

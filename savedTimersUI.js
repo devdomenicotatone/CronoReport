@@ -654,7 +654,8 @@ function saveEditedSavedTimer() {
           siteName: siteName,
           worktypeName: worktypeName,
           link: link || '',
-          duration: durationSeconds
+          duration: durationSeconds,
+          hourlyRate: hourlyRate
       };
 
       if (newStartTime) {
