@@ -1,4 +1,5 @@
 // timerWidgets.js — Widget: Attività Recenti, Riepilogo Odierno, Favicon, Badge
+import { loadProjects, loadWorktypes } from './timerHelpers.js';
 
 // === FAVICON ===
 
@@ -7,18 +8,18 @@
  * Shows colored initial immediately, then tries loading the real
  * favicon from the domain. Only swaps if load succeeds.
  */
-function createFaviconEl(siteName, siteUrl, sizePx) {
+export function createFaviconEl(projectName, projectUrl, sizePx) {
     sizePx = sizePx || 16;
-    const name = siteName || '?';
+    const name = projectName || '?';
     const initial = name[0].toUpperCase();
     const colors = ['#6366f1','#8b5cf6','#ec4899','#f43f5e','#f97316','#eab308','#22c55e','#14b8a6','#06b6d4','#3b82f6'];
     const hash = name.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
     const color = colors[hash % colors.length];
 
-    // Try to extract domain from siteUrl or siteName
+    // Try to extract domain from projectUrl or projectName
     let domain = '';
-    if (siteUrl && /^https?:\/\//i.test(siteUrl)) {
-        try { domain = new URL(siteUrl).hostname; } catch(e) {}
+    if (projectUrl && /^https?:\/\//i.test(projectUrl)) {
+        try { domain = new URL(projectUrl).hostname; } catch(e) {}
     }
     if (!domain) {
         const cleaned = name.replace(/^https?:\/\//i, '').replace(/\/.*/,'').trim();
@@ -56,7 +57,7 @@ function createFaviconEl(siteName, siteUrl, sizePx) {
 
 // === RECENT TASKS ===
 
-function loadRecentTasks() {
+export function loadRecentTasks() {
     db.collection('timeLogs')
         .where('uid', '==', currentUser.uid)
         .orderBy('startTime', 'desc')
@@ -67,30 +68,30 @@ function loadRecentTasks() {
             const recents = [];
             snapshot.forEach(doc => {
                 const d = doc.data();
-                const key = `${d.clientId}|${d.siteId}|${d.worktypeId}`;
+                const key = `${d.clientId}|${d.projectId}|${d.worktypeId}`;
                 if (!seen.has(key) && recents.length < 5) {
                     seen.add(key);
                     recents.push({
                         clientId: d.clientId,
-                        siteId: d.siteId,
+                        projectId: d.projectId,
                         worktypeId: d.worktypeId,
                         clientName: d.clientName || '—',
-                        siteName: d.siteName || '—',
+                        projectName: d.projectName || '—',
                         worktypeName: d.worktypeName || '—',
                         link: d.link || '',
-                        siteUrl: d.siteUrl || ''
+                        projectUrl: d.projectUrl || ''
                     });
                 }
             });
 
-            // Fetch site URLs for favicon lookup
-            const siteIds = [...new Set(recents.map(r => r.siteId).filter(Boolean))];
-            const siteUrlMap = {};
-            for (const siteId of siteIds) {
+            // Fetch project URLs for favicon lookup
+            const projectIds = [...new Set(recents.map(r => r.projectId).filter(Boolean))];
+            const projectUrlMap = {};
+            for (const projectId of projectIds) {
                 try {
-                    const siteDoc = await db.collection('sites').doc(siteId).get();
-                    if (siteDoc.exists) {
-                        siteUrlMap[siteId] = siteDoc.data().url || '';
+                    const projectDoc = await db.collection('projects').doc(projectId).get();
+                    if (projectDoc.exists) {
+                        projectUrlMap[projectId] = projectDoc.data().url || '';
                     }
                 } catch (e) { /* ignore */ }
             }
@@ -110,10 +111,10 @@ function loadRecentTasks() {
                 const chip = document.createElement('div');
                 chip.className = 'timer-recent-chip';
 
-                const siteUrl = siteUrlMap[r.siteId] || r.siteUrl || '';
-                const siteName = r.siteName || '—';
+                const projectUrl = projectUrlMap[r.projectId] || r.projectUrl || '';
+                const projectName = r.projectName || '—';
 
-                const favicon = createFaviconEl(siteName, siteUrl, 16);
+                const favicon = createFaviconEl(projectName, projectUrl, 16);
                 favicon.classList.add('timer-recent-initial');
                 const labelSpan = document.createElement('span');
                 labelSpan.className = 'truncate max-w-[120px]';
@@ -121,20 +122,20 @@ function loadRecentTasks() {
                 chip.appendChild(favicon);
                 chip.appendChild(labelSpan);
 
-                chip.title = `${r.clientName} · ${r.siteName} · ${r.worktypeName}`;
+                chip.title = `${r.clientName} · ${r.projectName} · ${r.worktypeName}`;
                 chip.addEventListener('click', async () => {
                     const cs = document.getElementById('client-select');
-                    const ss = document.getElementById('site-select');
+                    const ss = document.getElementById('project-select');
                     const ws = document.getElementById('worktype-select');
 
                     cs.value = r.clientId;
                     // Load sites and worktypes, wait for both to finish
                     await Promise.all([
-                        loadSites(ss, r.clientId),
+                        loadProjects(ss, r.clientId),
                         loadWorktypes(ws, r.clientId)
                     ]);
 
-                    ss.value = r.siteId;
+                    ss.value = r.projectId;
                     ws.value = r.worktypeId;
                     document.getElementById('link-input').value = r.link;
                 });
@@ -148,7 +149,7 @@ function loadRecentTasks() {
 
 // === TODAY SUMMARY ===
 
-function loadTodaySummary() {
+export function loadTodaySummary() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
@@ -193,7 +194,7 @@ function loadTodaySummary() {
 
 // === ACTIVE TIMER COUNT ===
 
-function updateActiveTimerCount() {
+export function updateActiveTimerCount(activeTimers) {
     const badge = document.getElementById('active-timer-count');
     if (!badge) return;
     const count = activeTimers.length;
@@ -204,9 +205,3 @@ function updateActiveTimerCount() {
         badge.style.display = 'none';
     }
 }
-
-// === VITE MODULE: Registra globals ===
-window.createFaviconEl = createFaviconEl;
-window.loadRecentTasks = loadRecentTasks;
-window.loadTodaySummary = loadTodaySummary;
-window.updateActiveTimerCount = updateActiveTimerCount;

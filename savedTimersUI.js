@@ -1,7 +1,9 @@
 // savedTimersUI.js
+import { CrModal } from './uiComponents.js';
+import { secondsToHHMMSS, hhmmssToSeconds, parseLocalDateTime, formatLocalDateTime } from './timerHelpers.js';
 
 // Template per la sezione Timer Salvati — Timeline View
-const savedTimersTemplate = `
+export const savedTimersTemplate = `
 <div id="saved-timers-section" class="max-w-6xl mx-auto px-4 py-6">
     <!-- Header -->
     <div class="flex items-center justify-between mb-6">
@@ -167,8 +169,8 @@ const savedTimersTemplate = `
             <select id="edit-saved-client-select" class="cr-select"></select>
           </div>
           <div>
-            <label for="edit-saved-site-select" class="cr-label">Sito</label>
-            <select id="edit-saved-site-select" class="cr-select"></select>
+            <label for="edit-saved-project-select" class="cr-label">Progetto</label>
+            <select id="edit-saved-project-select" class="cr-select"></select>
           </div>
           <div>
             <label for="edit-saved-worktype-select" class="cr-label">Tipo di Lavoro</label>
@@ -250,7 +252,7 @@ const savedTimersTemplate = `
 // Il template viene inserito nel DOM da loadSection() in main.js
 // NON creiamo una copia nascosta qui per evitare ID duplicati nel DOM.
 
-function deleteTimerById(timerId) {
+export function deleteTimerById(timerId) {
     const timerRef = db.collection('timeLogs').doc(timerId);
     timerRef.update({
         isDeleted: true,
@@ -279,7 +281,7 @@ function deleteTimerById(timerId) {
 }
 
 // Funzione per creare l'elemento HTML di un timer salvato come riga di tabella
-function createTimerRow(timerId, logData, isRecycleBin = false) {
+export function createTimerRow(timerId, logData, isRecycleBin = false) {
     const row = document.createElement('tr');
 
     // Se NON siamo nel cestino, creiamo la colonna checkbox
@@ -297,9 +299,9 @@ function createTimerRow(timerId, logData, isRecycleBin = false) {
     // Se isRecycleBin è true non creiamo affatto questa colonna,
     // così la tabella è allineata correttamente con le intestazioni.
 
-    const siteCell = document.createElement('td');
-    siteCell.innerHTML = `<i class="fas fa-building mr-2"></i>${logData.siteName || 'Sito Sconosciuto'}`;
-    row.appendChild(siteCell);
+    const projectCell = document.createElement('td');
+    projectCell.innerHTML = `<i class="fas fa-building mr-2"></i>${logData.projectName || 'Progetto Sconosciuto'}`;
+    row.appendChild(projectCell);
 
     const worktypeCell = document.createElement('td');
     worktypeCell.innerHTML = `<i class="fas fa-briefcase mr-2"></i>${logData.worktypeName || 'N/A'}`;
@@ -371,9 +373,9 @@ function createTimerRow(timerId, logData, isRecycleBin = false) {
     return row;
 }
 
-function loadAllSitesForSavedTimerSelect(selectElement, clientId, selectedSiteId) {
+export function loadAllProjectsForSavedTimerSelect(selectElement, clientId, selectedprojectId) {
     selectElement.innerHTML = '<option value="">--Seleziona Sito--</option>';
-    return db.collection('sites')
+    return db.collection('projects')
         .where('uid', '==', currentUser.uid)
         .where('clientId', '==', clientId)
         .orderBy('name')
@@ -385,13 +387,13 @@ function loadAllSitesForSavedTimerSelect(selectElement, clientId, selectedSiteId
                 opt.textContent = doc.data().name;
                 selectElement.appendChild(opt);
             });
-            if (selectedSiteId) {
-                selectElement.value = selectedSiteId;
+            if (selectedprojectId) {
+                selectElement.value = selectedprojectId;
             }
         });
 }
 
-function loadAllWorktypesForSavedTimerSelect(selectElement, clientId, selectedWorktypeId) {
+export function loadAllWorktypesForSavedTimerSelect(selectElement, clientId, selectedWorktypeId) {
     selectElement.innerHTML = '<option value="">--Seleziona Tipo di Lavoro--</option>';
     return db.collection('worktypes')
         .where('uid', '==', currentUser.uid)
@@ -411,7 +413,7 @@ function loadAllWorktypesForSavedTimerSelect(selectElement, clientId, selectedWo
         });
 }
 
-function attachSavedTimersListeners() {
+export function attachSavedTimersListeners() {
     const saveEditedBtn = document.getElementById('save-edited-saved-timer-btn');
     if (saveEditedBtn) {
         console.log("Aggancio eventListener a #save-edited-saved-timer-btn");
@@ -424,13 +426,13 @@ function attachSavedTimersListeners() {
     }
 }
 
-function initializeSavedTimersSection() {
+export function initializeSavedTimersSection() {
     initializeSavedTimersEvents();
     attachSavedTimersListeners();
 }
 
 // Funzioni di supporto per caricare i dati nelle select della modale di modifica timer salvato
-function loadAllClientsForEditSelect(selectElement, selectedClientId) {
+export function loadAllClientsForEditSelect(selectElement, selectedClientId) {
     return db.collection('clients')
         .where('uid', '==', currentUser.uid)
         .orderBy('name')
@@ -449,9 +451,9 @@ function loadAllClientsForEditSelect(selectElement, selectedClientId) {
         });
 }
 
-function loadAllSitesForEditSelect(selectElement, clientId, selectedSiteId) {
+export function loadAllProjectsForEditSelect(selectElement, clientId, selectedprojectId) {
     selectElement.innerHTML = '<option value="">--Seleziona Sito--</option>';
-    return db.collection('sites')
+    return db.collection('projects')
         .where('uid', '==', currentUser.uid)
         .where('clientId', '==', clientId)
         .orderBy('name')
@@ -463,13 +465,13 @@ function loadAllSitesForEditSelect(selectElement, clientId, selectedSiteId) {
                 opt.textContent = doc.data().name;
                 selectElement.appendChild(opt);
             });
-            if (selectedSiteId) {
-                selectElement.value = selectedSiteId;
+            if (selectedprojectId) {
+                selectElement.value = selectedprojectId;
             }
         });
 }
 
-function loadAllWorktypesForEditSelect(selectElement, clientId, selectedWorktypeId) {
+export function loadAllWorktypesForEditSelect(selectElement, clientId, selectedWorktypeId) {
     selectElement.innerHTML = '<option value="">--Seleziona Tipo di Lavoro--</option>';
     return db.collection('worktypes')
         .where('uid', '==', currentUser.uid)
@@ -490,7 +492,7 @@ function loadAllWorktypesForEditSelect(selectElement, clientId, selectedWorktype
 }
 
 // Funzione per aprire la modale di modifica di un timer salvato
-function openEditSavedTimerModal(timerId) {
+export function openEditSavedTimerModal(timerId) {
     console.log("openEditSavedTimerModal chiamata con timerId:", timerId);
     const timerObj = displayedTimers.find(t => t.id === timerId);
     if (!timerObj) {
@@ -502,16 +504,16 @@ function openEditSavedTimerModal(timerId) {
     document.getElementById('edit-saved-timer-id').value = timerId;
 
     const clientSelect = document.getElementById('edit-saved-client-select');
-    const siteSelect = document.getElementById('edit-saved-site-select');
+    const projectSelect = document.getElementById('edit-saved-project-select');
     const worktypeSelect = document.getElementById('edit-saved-worktype-select');
 
     const clientId = logData.clientId || '';
-    const siteId = logData.siteId || '';
+    const projectId = logData.projectId || '';
     const worktypeId = logData.worktypeId || '';
 
     // Carichiamo i clienti, poi siti e poi worktypes
     loadAllClientsForEditSelect(clientSelect, clientId)
-      .then(() => loadAllSitesForEditSelect(siteSelect, clientId, siteId))
+      .then(() => loadAllProjectsForEditSelect(projectSelect, clientId, projectId))
       .then(() => loadAllWorktypesForEditSelect(worktypeSelect, clientId, worktypeId))
       .catch(error => console.error('Errore nel caricamento dati per la modale di modifica (saved):', error));
 
@@ -548,7 +550,7 @@ function openEditSavedTimerModal(timerId) {
     clientSelect.addEventListener('change', () => {
         const newClientId = clientSelect.value;
         // Quando cambia il cliente, ricarichiamo i siti e i tipi di lavoro
-        loadAllSitesForEditSelect(siteSelect, newClientId, '')
+        loadAllProjectsForEditSelect(projectSelect, newClientId, '')
           .then(() => loadAllWorktypesForEditSelect(worktypeSelect, newClientId, ''))
           .catch(error => console.error("Errore durante l'aggiornamento di siti e tipi di lavoro:", error));
     });
@@ -556,11 +558,11 @@ function openEditSavedTimerModal(timerId) {
     CrModal.show('edit-saved-timer-modal');
 }
 
-function saveEditedSavedTimer() {
+export function saveEditedSavedTimer() {
     console.log("Inizio saveEditedSavedTimer");
     const timerId = document.getElementById('edit-saved-timer-id').value.trim();
     const clientId = document.getElementById('edit-saved-client-select').value.trim();
-    const siteId = document.getElementById('edit-saved-site-select').value.trim();
+    const projectId = document.getElementById('edit-saved-project-select').value.trim();
     const worktypeId = document.getElementById('edit-saved-worktype-select').value.trim();
     const link = document.getElementById('edit-saved-link').value.trim();
     const durationStr = document.getElementById('edit-saved-duration').value.trim();
@@ -627,16 +629,16 @@ function saveEditedSavedTimer() {
 
     console.log("Timer trovato:", timerObj);
 
-    // Ricaviamo i nomi da client, site, worktype
-    let clientName = 'Sconosciuto', siteName = 'Sconosciuto', worktypeName = 'N/A';
+    // Ricaviamo i nomi da client, project, worktype
+    let clientName = 'Sconosciuto', projectName = 'Sconosciuto', worktypeName = 'N/A';
     db.collection('clients').doc(clientId).get().then(clientDoc => {
       if (clientDoc.exists) {
         clientName = clientDoc.data().name;
       }
-      return db.collection('sites').doc(siteId).get();
-    }).then(siteDoc => {
-      if (siteDoc.exists) {
-        siteName = siteDoc.data().name;
+      return db.collection('projects').doc(projectId).get();
+    }).then(projectDoc => {
+      if (projectDoc.exists) {
+        projectName = projectDoc.data().name;
       }
       return db.collection('worktypes').doc(worktypeId).get();
     }).then(worktypeDoc => {
@@ -648,10 +650,10 @@ function saveEditedSavedTimer() {
 
       const updateData = {
           clientId: clientId,
-          siteId: siteId,
+          projectId: projectId,
           worktypeId: worktypeId,
           clientName: clientName,
-          siteName: siteName,
+          projectName: projectName,
           worktypeName: worktypeName,
           link: link || '',
           duration: durationSeconds,
@@ -694,13 +696,13 @@ function saveEditedSavedTimer() {
 }
 
 // Funzione per creare l'elemento HTML di un timer nel cestino come riga di tabella
-function createRecycleBinRow(timerId, logData) {
+export function createRecycleBinRow(timerId, logData) {
     // Crea l'elemento riga (tr)
     const row = document.createElement('tr');
 
     // Colonna per Cliente e Sito con icona
     const clientCell = document.createElement('td');
-    clientCell.innerHTML = `<i class="fas fa-building mr-2"></i>${logData.clientName} - ${logData.siteName}`;
+    clientCell.innerHTML = `<i class="fas fa-building mr-2"></i>${logData.clientName} - ${logData.projectName}`;
     row.appendChild(clientCell);
 
     // Colonna per Tipo di Lavoro con icona
@@ -767,7 +769,7 @@ function createRecycleBinRow(timerId, logData) {
 }
 
 // Funzione per ottenere il nome del mese
-function getMonthName(monthNumber) {
+export function getMonthName(monthNumber) {
     const months = [
         'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
         'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
@@ -776,7 +778,7 @@ function getMonthName(monthNumber) {
 }
 
 // Funzione per formattare la durata in ore, minuti e secondi
-function formatDuration(seconds) {
+export function formatDuration(seconds) {
     const hrs = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
     const secs = Math.floor(seconds % 60);
@@ -788,32 +790,32 @@ function formatDuration(seconds) {
     return hrsDisplay + minsDisplay + secsDisplay;
 }
 
-function padZero(num) {
+export function padZero(num) {
     return num.toString().padStart(2, '0');
 }
 
-function formatTime(date) {
+export function formatTime(date) {
     return date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
 }
 
-function formatTimeWithSeconds(timestamp) {
+export function formatTimeWithSeconds(timestamp) {
     const date = timestamp.toDate();
     return date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
-function formatTimeShort(timestamp) {
+export function formatTimeShort(timestamp) {
     const date = timestamp.toDate();
     return date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
 }
 
-function formatDate(dateInput) {
+export function formatDate(dateInput) {
     const options = { day: '2-digit', month: '2-digit', year: 'numeric' };
     const dateObj = dateInput instanceof Date ? dateInput : new Date(dateInput);
     return dateObj.toLocaleDateString('it-IT', options);
 }
 
 // Funzione per formattare la data e l'ora
-function formatDateTime(timestamp) {
+export function formatDateTime(timestamp) {
     const date = timestamp.toDate();
     return date.toLocaleString('it-IT', {
         day: '2-digit',
@@ -823,25 +825,4 @@ function formatDateTime(timestamp) {
         minute: '2-digit'
     });
 }
-// === VITE MODULE: Registra globals ===
-window.attachSavedTimersListeners = attachSavedTimersListeners;
-window.createRecycleBinRow = createRecycleBinRow;
-window.createTimerRow = createTimerRow;
-window.deleteTimerById = deleteTimerById;
-window.formatDate = formatDate;
-window.formatDateTime = formatDateTime;
-window.formatDuration = formatDuration;
-window.formatTime = formatTime;
-window.formatTimeShort = formatTimeShort;
-window.formatTimeWithSeconds = formatTimeWithSeconds;
-window.getMonthName = getMonthName;
-window.initializeSavedTimersSection = initializeSavedTimersSection;
-window.loadAllClientsForEditSelect = loadAllClientsForEditSelect;
-window.loadAllSitesForEditSelect = loadAllSitesForEditSelect;
-window.loadAllSitesForSavedTimerSelect = loadAllSitesForSavedTimerSelect;
-window.loadAllWorktypesForEditSelect = loadAllWorktypesForEditSelect;
-window.loadAllWorktypesForSavedTimerSelect = loadAllWorktypesForSavedTimerSelect;
-window.openEditSavedTimerModal = openEditSavedTimerModal;
-window.padZero = padZero;
-window.savedTimersTemplate = savedTimersTemplate;
-window.saveEditedSavedTimer = saveEditedSavedTimer;
+

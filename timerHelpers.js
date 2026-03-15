@@ -2,7 +2,7 @@
 
 // === DROPDOWN LOADING ===
 
-function loadTimerClientDropdown(selectElement) {
+export function loadTimerClientDropdown(selectElement) {
     selectElement.innerHTML = '<option value="">--Seleziona Cliente--</option>';
     db.collection('clients')
         .where('uid', '==', currentUser.uid)
@@ -20,10 +20,10 @@ function loadTimerClientDropdown(selectElement) {
         });
 }
 
-function loadSites(selectElement, clientId) {
-    selectElement.innerHTML = '<option value="">--Seleziona Sito--</option>';
+export function loadProjects(selectElement, clientId) {
+    selectElement.innerHTML = '<option value="">--Seleziona Progetto--</option>';
     return (
-    db.collection('sites')
+    db.collection('projects')
         .where('uid', '==', currentUser.uid)
         .where('clientId', '==', clientId)
         .get()
@@ -36,12 +36,12 @@ function loadSites(selectElement, clientId) {
             });
         })
         .catch(error => {
-            console.error('Errore nel caricamento dei siti nel Timer:', error);
+            console.error('Errore nel caricamento dei progetti nel Timer:', error);
         })
     );
 }
 
-function loadWorktypes(selectElement, clientId) {
+export function loadWorktypes(selectElement, clientId) {
     selectElement.innerHTML = '<option value="">--Seleziona Tipo di Lavoro--</option>';
     return (
     db.collection('worktypes')
@@ -64,7 +64,7 @@ function loadWorktypes(selectElement, clientId) {
 
 // === DATE/TIME PARSING & FORMATTING ===
 
-function parseLocalDateTime(s) {
+export function parseLocalDateTime(s) {
     const [datePart, timePart] = s.split(' ');
     if (!datePart || !timePart) return null;
     const [day, month, year] = datePart.split('/').map(Number);
@@ -78,7 +78,7 @@ function parseLocalDateTime(s) {
     return new Date(year, month - 1, day, hour, minute, second);
 }
 
-function formatLocalDateTime(date) {
+export function formatLocalDateTime(date) {
     const dd = String(date.getDate()).padStart(2,'0');
     const mm = String(date.getMonth()+1).padStart(2,'0');
     const yyyy = date.getFullYear();
@@ -90,14 +90,14 @@ function formatLocalDateTime(date) {
 
 // === DURATION FORMATTING ===
 
-function secondsToHHMMSS(totalSeconds) {
+export function secondsToHHMMSS(totalSeconds) {
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = Math.floor(totalSeconds % 60);
     return `${hours.toString().padStart(2,'0')}:${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
 }
 
-function hhmmssToSeconds(hhmmss) {
+export function hhmmssToSeconds(hhmmss) {
     const parts = hhmmss.split(':');
     if (parts.length !== 3) return NaN;
     const hours = parseInt(parts[0]);
@@ -107,13 +107,13 @@ function hhmmssToSeconds(hhmmss) {
     return hours * 3600 + minutes * 60 + seconds;
 }
 
-function formatDuration(seconds) {
+export function formatDuration(seconds) {
     return secondsToHHMMSS(seconds);
 }
 
 // === RATE & AMOUNT ===
 
-async function getHourlyRate() {
+export async function getHourlyRate() {
     try {
         const snapshot = await db.collection('reportConfigs')
             .where('uid', '==', currentUser.uid)
@@ -132,21 +132,9 @@ async function getHourlyRate() {
     }
 }
 
-function updateLiveAmount(timer, totalElapsedSeconds) {
+export function updateLiveAmount(timer, totalElapsedSeconds) {
     if (!timer.liveAmountDisplay) return;
     const hours = totalElapsedSeconds / 3600;
     const amount = hours * (timer.hourlyRate || 0);
     timer.liveAmountDisplay.textContent = `€ ${amount.toFixed(2)}`;
 }
-
-// === VITE MODULE: Registra globals ===
-window.loadTimerClientDropdown = loadTimerClientDropdown;
-window.loadSites = loadSites;
-window.loadWorktypes = loadWorktypes;
-window.parseLocalDateTime = parseLocalDateTime;
-window.formatLocalDateTime = formatLocalDateTime;
-window.secondsToHHMMSS = secondsToHHMMSS;
-window.hhmmssToSeconds = hhmmssToSeconds;
-window.formatDuration = formatDuration;
-window.getHourlyRate = getHourlyRate;
-window.updateLiveAmount = updateLiveAmount;

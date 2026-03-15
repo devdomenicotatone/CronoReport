@@ -3,7 +3,7 @@
 /**
  * Initialize all menu functionality: sidebar nav, bottom nav, more menu, logout
  */
-function initializeMenu() {
+export function initializeMenu() {
     // === Sidebar Navigation (Desktop) ===
     const sidebarLinks = document.querySelectorAll('#sidebar-nav .nav-link');
     sidebarLinks.forEach(link => {
@@ -11,7 +11,8 @@ function initializeMenu() {
             e.preventDefault();
             const section = link.getAttribute('data-section');
             if (section) {
-                loadSection(section);
+                // Usa import dinamico per evitare dipendenza circolare con main.js
+                import('./main.js').then(m => m.loadSection(section));
                 setActiveNav(section);
             }
         });
@@ -24,7 +25,7 @@ function initializeMenu() {
             e.preventDefault();
             const section = link.getAttribute('data-section');
             if (section) {
-                loadSection(section);
+                import('./main.js').then(m => m.loadSection(section));
                 setActiveNav(section);
                 closeMoreMenu();
             }
@@ -55,7 +56,7 @@ function initializeMenu() {
                 e.preventDefault();
                 const section = link.getAttribute('data-section');
                 if (section) {
-                    loadSection(section);
+                    import('./main.js').then(m => m.loadSection(section));
                     setActiveNav(section);
                     closeMoreMenu();
                 }
@@ -92,7 +93,7 @@ function initializeMenu() {
 /**
  * Close the mobile "More" popup menu
  */
-function closeMoreMenu() {
+export function closeMoreMenu() {
     const morePopup = document.getElementById('more-menu-popup');
     if (morePopup) {
         morePopup.classList.add('hidden');
@@ -103,7 +104,7 @@ function closeMoreMenu() {
  * Set the active navigation item across sidebar and bottom nav
  * @param {string} section - The section identifier
  */
-function setActiveNav(section) {
+export function setActiveNav(section) {
     // Update sidebar links
     document.querySelectorAll('#sidebar-nav .nav-link').forEach(link => {
         if (link.getAttribute('data-section') === section) {
@@ -144,7 +145,7 @@ function setActiveNav(section) {
  * Update the user display info in sidebar and mobile header
  * @param {object} user - Firebase user object
  */
-function updateUserDisplay(user) {
+export function updateUserDisplay(user) {
     if (!user) return;
 
     const initial = (user.displayName || user.email || '?').charAt(0).toUpperCase();
@@ -171,12 +172,12 @@ function updateUserDisplay(user) {
 
 // The menu is now inline in index.html, so we just initialize directly
 // Keep the loadMenu function for backwards compatibility
-function loadMenu() {
+export function loadMenu() {
     initializeMenu();
 }
 
 // Alias for backwards compatibility
-function updateActiveMenuItem(section) {
+export function updateActiveMenuItem(section) {
     setActiveNav(section);
 }
 
@@ -184,10 +185,3 @@ function updateActiveMenuItem(section) {
 document.addEventListener('DOMContentLoaded', () => {
     initializeMenu();
 });
-// === VITE MODULE: Registra globals ===
-window.closeMoreMenu = closeMoreMenu;
-window.initializeMenu = initializeMenu;
-window.loadMenu = loadMenu;
-window.setActiveNav = setActiveNav;
-window.updateActiveMenuItem = updateActiveMenuItem;
-window.updateUserDisplay = updateUserDisplay;

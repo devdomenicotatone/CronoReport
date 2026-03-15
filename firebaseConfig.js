@@ -15,8 +15,8 @@ const DISCOVERY_DOCS = [
   // firebase.initializeApp — già eseguito nell'inline script di index.html
   
   let tokenClient;
-  let gapiInited = false;
-  let gisInited = false;
+  export let gapiInited = false;
+  export let gisInited = false;
   
   // Funzione chiamata quando la libreria GAPI è caricata
   function gapiLoaded() {
@@ -52,7 +52,7 @@ const DISCOVERY_DOCS = [
   }
   
   // Funzione per gestire l'autenticazione e l'autorizzazione con rinnovo silente del token
-  function handleAuthClick(callback) {
+  export function handleAuthClick(callback) {
     tokenClient.callback = async (response) => {
         if (response.error) {
             console.error('Errore durante l\'autenticazione:', response);
@@ -70,7 +70,7 @@ const DISCOVERY_DOCS = [
   }
   
   // Funzione per gestire la disconnessione
-  function handleSignOutClick() {
+  export function handleSignOutClick() {
     const token = gapi.client.getToken();
     if (token) {
         google.accounts.oauth2.revoke(token.access_token);
@@ -78,7 +78,7 @@ const DISCOVERY_DOCS = [
     }
   }
   
-  function initializeGoogleApiClient(accessToken) {
+  export function initializeGoogleApiClient(accessToken) {
     return new Promise((resolve, reject) => {
         gapi.load('client', () => {
             gapi.client.init({
@@ -111,7 +111,7 @@ const DISCOVERY_DOCS = [
   }
   
   // Modifica maybeEnableButtons per essere accessibile globalmente e verificare se i pulsanti esistono
-  function maybeEnableButtons() {
+  export function maybeEnableButtons() {
     if (gapiInited && gisInited) {
         // Buttons use id="export-google-doc-btn" (not class)
         const docBtn = document.getElementById('export-google-doc-btn');
@@ -120,10 +120,7 @@ const DISCOVERY_DOCS = [
         if (sheetBtn) sheetBtn.disabled = false;
     }
   }
-// === VITE MODULE: Registra globals ===
+
+// gapiLoaded e gisLoaded devono restare su window perché chiamati da onload="" in index.html
 window.gapiLoaded = gapiLoaded;
 window.gisLoaded = gisLoaded;
-window.handleAuthClick = handleAuthClick;
-window.handleSignOutClick = handleSignOutClick;
-window.initializeGoogleApiClient = initializeGoogleApiClient;
-window.maybeEnableButtons = maybeEnableButtons;

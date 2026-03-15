@@ -1,5 +1,17 @@
 // main.js
 // DEV_MODE, auth, db, currentUser sono definiti globalmente in index.html
+import { dataManagementTemplate, timerTemplate } from './templates.js';
+import { initializeMenu, updateUserDisplay, setActiveNav } from './menu.js';
+import { initializeTimerEvents } from './timerInit.js';
+import { savedTimersTemplate, initializeSavedTimersSection } from './savedTimersUI.js';
+import { initializeSavedTimersEvents } from './savedTimersEvents.js';
+import { initializeRecycleBinTimersEvents } from './recycleBinTimers.js';
+import { initializeRecycleBinReportsEvents, recycleBinTemplate } from './recycleBinReports.js';
+import { reportTemplate } from './reportConfig.js';
+import { initializeReportEvents } from './reportEvents.js';
+import { reportHistoryTemplate, initializeReportHistoryEvents } from './reportHistory.js';
+import { dashboardTemplate, initializeDashboardEvents } from './dashboard.js';
+import { CrTabs } from './uiComponents.js';
 
 if (DEV_MODE) {
     // Fake user per sviluppo
@@ -54,7 +66,7 @@ if (DEV_MODE) {
  * Funzione per caricare le sezioni in base al menu
  * @param {string} section - Nome della sezione da caricare
  */
-function loadSection(section) {
+export function loadSection(section) {
     // Save scroll position of previous section before switching
     const prevSection = location.hash.replace('#', '');
     if (prevSection) {
@@ -74,7 +86,7 @@ function loadSection(section) {
             initializeTimerEvents();
             break;
         case 'saved-timers':
-            contentSection.innerHTML = window.savedTimersTemplate;
+            contentSection.innerHTML = savedTimersTemplate;
             if (currentUser) {
                 initializeSavedTimersEvents();
             } else {
@@ -123,7 +135,7 @@ function loadSection(section) {
 /**
  * Funzione per inizializzare gli eventi della Gestione Dati (Ultra Pro)
  */
-function initializeDataManagementEvents() {
+export function initializeDataManagementEvents() {
     const addClientBtn = document.getElementById('add-client-btn');
     const newClientName = document.getElementById('new-client-name');
     const searchInput = document.getElementById('dm-search-input');
@@ -167,19 +179,19 @@ function initializeDataManagementEvents() {
 /**
  * Notifiche SweetAlert2
  */
-function showAlert(icon, title, text) {
+export function showAlert(icon, title, text) {
     Swal.fire({ icon, title, text, confirmButtonColor: '#3085d6' });
 }
 
 /**
- * Render the unified client accordion with sites and worktypes nested
+ * Render the unified client accordion with projects and worktypes nested
  */
-async function renderUnifiedClientAccordion() {
+export async function renderUnifiedClientAccordion() {
     const container = document.getElementById('dm-client-accordion');
     if (!container) return;
     container.innerHTML = '';
 
-    let totalClients = 0, totalSites = 0, totalWorktypes = 0;
+    let totalClients = 0, totalProjects = 0, totalWorktypes = 0;
 
     try {
         const clientSnap = await db.collection('clients')
@@ -194,12 +206,12 @@ async function renderUnifiedClientAccordion() {
             const clientId = clientDoc.id;
 
             // Fetch sites + worktypes in parallel
-            const [sitesSnap, worktypesSnap] = await Promise.all([
-                db.collection('sites').where('uid', '==', currentUser.uid).where('clientId', '==', clientId).orderBy('name').get(),
+            const [projectsSnap, worktypesSnap] = await Promise.all([
+                db.collection('projects').where('uid', '==', currentUser.uid).where('clientId', '==', clientId).orderBy('name').get(),
                 db.collection('worktypes').where('uid', '==', currentUser.uid).where('clientId', '==', clientId).orderBy('name').get()
             ]);
 
-            totalSites += sitesSnap.size;
+            totalProjects += projectsSnap.size;
             totalWorktypes += worktypesSnap.size;
 
             // === BUILD CARD ===
@@ -215,7 +227,7 @@ async function renderUnifiedClientAccordion() {
                     <input class="dm-editable font-semibold" value="${clientData.name}" data-id="${clientId}" data-collection="clients" data-field="name" />
                 </div>
                 <div class="flex items-center gap-2">
-                    <span class="dm-badge dm-badge-teal">${sitesSnap.size} siti</span>
+                    <span class="dm-badge dm-badge-teal">${projectsSnap.size} progetti</span>
                     <span class="dm-badge dm-badge-amber">${worktypesSnap.size} tipi</span>
                     <button class="p-1 text-rose-400 hover:text-rose-600 transition" title="Elimina cliente"><i class="fas fa-trash-alt text-xs"></i></button>
                     <i class="fas fa-chevron-down chevron"></i>
@@ -264,54 +276,54 @@ async function renderUnifiedClientAccordion() {
             });
 
             // === SITES SECTION ===
-            const sitesSection = document.createElement('div');
-            sitesSection.className = 'dm-sub-section';
-            sitesSection.innerHTML = `<div class="dm-sub-section-title"><i class="fas fa-map-marker-alt"></i> Siti</div>`;
+            const projectsSection = document.createElement('div');
+            projectsSection.className = 'dm-sub-section';
+            projectsSection.innerHTML = `<div class="dm-sub-section-title"><i class="fas fa-map-marker-alt"></i> progetti</div>`;
 
-            if (sitesSnap.empty) {
-                sitesSection.innerHTML += `<div class="dm-empty">Nessun sito</div>`;
+            if (projectsSnap.empty) {
+                projectsSection.innerHTML += `<div class="dm-empty">Nessun progetto</div>`;
             } else {
-                sitesSnap.forEach(siteDoc => {
-                    const siteData = siteDoc.data();
+                projectsSnap.forEach(projectDoc => {
+                    const projectData = projectDoc.data();
                     const row = document.createElement('div');
                     row.className = 'dm-sub-item';
                     row.innerHTML = `
-                        <input class="dm-editable flex-1" value="${siteData.name}" data-id="${siteDoc.id}" data-collection="sites" data-field="name" placeholder="Nome sito" />
-                        <input class="dm-editable dm-url-input" value="${siteData.url || ''}" data-id="${siteDoc.id}" data-collection="sites" data-field="url" placeholder="🔗 URL sito..." />
+                        <input class="dm-editable flex-1" value="${projectData.name}" data-id="${projectDoc.id}" data-collection="sites" data-field="name" placeholder="Nome progetto" />
+                        <input class="dm-editable dm-url-input" value="${projectData.url || ''}" data-id="${projectDoc.id}" data-collection="sites" data-field="url" placeholder="🔗 URL progetto..." />
                         <button class="delete-btn" title="Elimina sito"><i class="fas fa-times"></i></button>
                     `;
                     row.querySelector('.delete-btn').addEventListener('click', () => {
-                        db.collection('sites').doc(siteDoc.id).delete().then(() => renderUnifiedClientAccordion());
+                        db.collection('projects').doc(projectDoc.id).delete().then(() => renderUnifiedClientAccordion());
                     });
                     // Inline edit for both name and url
                     row.querySelectorAll('.dm-editable').forEach(inp => {
                         inp.addEventListener('blur', (e) => {
                             const field = e.target.dataset.field;
                             const v = e.target.value.trim();
-                            const oldVal = field === 'url' ? (siteData.url || '') : siteData.name;
+                            const oldVal = field === 'url' ? (projectData.url || '') : projectData.name;
                             if (v !== oldVal) {
-                                db.collection('sites').doc(siteDoc.id).update({ [field]: v });
+                                db.collection('projects').doc(projectDoc.id).update({ [field]: v });
                             }
                         });
                     });
-                    sitesSection.appendChild(row);
+                    projectsSection.appendChild(row);
                 });
             }
 
-            // Add site inline
-            const addSiteRow = document.createElement('div');
-            addSiteRow.className = 'dm-add-row';
-            addSiteRow.innerHTML = `<input type="text" class="flex-1" placeholder="Nuovo sito..." /><input type="text" class="dm-url-input" placeholder="🔗 URL..." /><button class="dm-add-btn"><i class="fas fa-plus"></i></button>`;
-            addSiteRow.querySelector('.dm-add-btn').addEventListener('click', () => {
-                const inputs = addSiteRow.querySelectorAll('input');
+            // Add project inline
+            const addProjectRow = document.createElement('div');
+            addProjectRow.className = 'dm-add-row';
+            addProjectRow.innerHTML = `<input type="text" class="flex-1" placeholder="Nuovo progetto..." /><input type="text" class="dm-url-input" placeholder="🔗 URL..." /><button class="dm-add-btn"><i class="fas fa-plus"></i></button>`;
+            addProjectRow.querySelector('.dm-add-btn').addEventListener('click', () => {
+                const inputs = addProjectRow.querySelectorAll('input');
                 const name = inputs[0].value.trim();
                 const url = inputs[1].value.trim();
                 if (!name) return;
-                db.collection('sites').add({
+                db.collection('projects').add({
                     name, url, uid: currentUser.uid, clientId, createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 }).then(() => renderUnifiedClientAccordion());
             });
-            sitesSection.appendChild(addSiteRow);
+            projectsSection.appendChild(addProjectRow);
 
             // === WORKTYPES SECTION ===
             const wtSection = document.createElement('div');
@@ -370,7 +382,7 @@ async function renderUnifiedClientAccordion() {
             wtSection.appendChild(addWtRow);
 
             // Assemble
-            body.appendChild(sitesSection);
+            body.appendChild(projectsSection);
             body.appendChild(wtSection);
             card.appendChild(header);
             card.appendChild(body);
@@ -378,7 +390,7 @@ async function renderUnifiedClientAccordion() {
         }
 
         // Update stats
-        dmUpdateStats(totalClients, totalSites, totalWorktypes);
+        dmUpdateStats(totalClients, totalProjects, totalWorktypes);
 
     } catch (error) {
         console.error('Errore nel rendering accordion:', error);
@@ -388,9 +400,9 @@ async function renderUnifiedClientAccordion() {
 /**
  * Update stat cards for data management
  */
-function dmUpdateStats(clients, sites, worktypes) {
+export function dmUpdateStats(clients, sites, worktypes) {
     const c = document.getElementById('dm-stat-clients');
-    const s = document.getElementById('dm-stat-sites');
+    const s = document.getElementById('dm-stat-projects');
     const w = document.getElementById('dm-stat-worktypes');
     if (c) c.textContent = clients;
     if (s) s.textContent = sites;
@@ -400,7 +412,7 @@ function dmUpdateStats(clients, sites, worktypes) {
 /**
  * Load clients for select element (used by timer and report pages)
  */
-function loadClientsForSelect(selectElement) {
+export function loadClientsForSelect(selectElement) {
     selectElement.innerHTML = '<option value="">--Seleziona Cliente--</option>';
     db.collection('clients')
         .where('uid', '==', currentUser.uid)
@@ -422,10 +434,4 @@ function loadClientsForSelect(selectElement) {
 /**
  * Inserimento dei template nel DOM
  */
-// === VITE MODULE: Registra globals ===
-window.dmUpdateStats = dmUpdateStats;
-window.initializeDataManagementEvents = initializeDataManagementEvents;
-window.loadClientsForSelect = loadClientsForSelect;
-window.loadSection = loadSection;
-window.renderUnifiedClientAccordion = renderUnifiedClientAccordion;
-window.showAlert = showAlert;
+

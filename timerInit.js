@@ -1,8 +1,13 @@
 // timerInit.js — Inizializzazione eventi e caricamento timer attivi
+import { timerTemplate } from './templates.js';
+import { loadTimerClientDropdown, loadProjects, loadWorktypes, formatDuration, updateLiveAmount } from './timerHelpers.js';
+import { createTimerCard, startTimer } from './timerCard.js';
+import { loadRecentTasks, loadTodaySummary, updateActiveTimerCount } from './timerWidgets.js';
+import { createNewTimer, saveTimerChanges, deleteTimerFromModal } from './timerCrud.js';
 
 // Variabili globali per i selettori e i timer
 let clientSelect;
-let siteSelect;
+let projectSelect;
 let worktypeSelect;
 let linkInput;
 let manualStartTimeInput;
@@ -11,12 +16,12 @@ let startTimerBtn;
 let timerCardsContainer;
 
 // Gestione dei timer attivi
-let activeTimers = [];
+export let activeTimers = [];
 
 // Flag per evitare doppio bind
 let _timerEventsInitialized = false;
 
-async function initializeTimerEvents() {
+export async function initializeTimerEvents() {
     if (!currentUser) {
         console.error("Utente non autenticato: currentUser è null in initializeTimerEvents.");
         return; 
@@ -50,7 +55,7 @@ async function initializeTimerEvents() {
         });
 
         clientSelect = document.getElementById('client-select');
-        siteSelect = document.getElementById('site-select');
+        projectSelect = document.getElementById('project-select');
         worktypeSelect = document.getElementById('worktype-select');
         linkInput = document.getElementById('link-input');
         manualStartTimeInput = document.getElementById('manual-start-time');
@@ -79,10 +84,10 @@ async function initializeTimerEvents() {
         clientSelect.addEventListener('change', () => {
             const selectedClientId = clientSelect.value;
             if (selectedClientId) {
-                loadSites(siteSelect, selectedClientId);
+                loadProjects(projectSelect, selectedClientId);
                 loadWorktypes(worktypeSelect, selectedClientId);
             } else {
-                siteSelect.innerHTML = '<option value="">-- Sito --</option>';
+                projectSelect.innerHTML = '<option value="">-- Progetto --</option>';
                 worktypeSelect.innerHTML = '<option value="">-- Tipo --</option>';
             }
         });
@@ -99,14 +104,14 @@ async function initializeTimerEvents() {
 
         startTimerBtn.addEventListener('click', () => {
             const clientId = clientSelect.value;
-            const siteId = siteSelect.value;
+            const projectId = projectSelect.value;
             const worktypeId = worktypeSelect.value;
             const link = linkInput.value.trim();
 
             const manualStartTimeValue = manualStartTimeInput.value;
             const manualEndTimeValue = manualEndTimeInput.value;
 
-            if (clientId && siteId && worktypeId) {
+            if (clientId && projectId && worktypeId) {
                 if (manualEndTimeValue && !manualStartTimeValue) {
                     Swal.fire({
                         icon: 'warning',
@@ -117,7 +122,7 @@ async function initializeTimerEvents() {
                     return;
                 }
 
-                createNewTimer(clientId, siteId, worktypeId, link, manualStartTimeValue, manualEndTimeValue);
+                createNewTimer(clientId, projectId, worktypeId, link, manualStartTimeValue, manualEndTimeValue);
                 linkInput.value = '';
                 manualStartTimeInput.value = '';
                 manualEndTimeInput.value = '';
@@ -134,7 +139,7 @@ async function initializeTimerEvents() {
         // Re-grab ALL DOM references on subsequent visits
         // (the old elements were destroyed by contentSection.innerHTML = '')
         clientSelect = document.getElementById('client-select');
-        siteSelect = document.getElementById('site-select');
+        projectSelect = document.getElementById('project-select');
         worktypeSelect = document.getElementById('worktype-select');
         linkInput = document.getElementById('link-input');
         manualStartTimeInput = document.getElementById('manual-start-time');
@@ -149,10 +154,10 @@ async function initializeTimerEvents() {
         clientSelect.addEventListener('change', () => {
             const selectedClientId = clientSelect.value;
             if (selectedClientId) {
-                loadSites(siteSelect, selectedClientId);
+                loadProjects(projectSelect, selectedClientId);
                 loadWorktypes(worktypeSelect, selectedClientId);
             } else {
-                siteSelect.innerHTML = '<option value="">-- Sito --</option>';
+                projectSelect.innerHTML = '<option value="">-- Progetto --</option>';
                 worktypeSelect.innerHTML = '<option value="">-- Tipo --</option>';
             }
         });
@@ -160,13 +165,13 @@ async function initializeTimerEvents() {
         // Re-bind start button
         startTimerBtn.addEventListener('click', () => {
             const clientId = clientSelect.value;
-            const siteId = siteSelect.value;
+            const projectId = projectSelect.value;
             const worktypeId = worktypeSelect.value;
             const link = linkInput.value.trim();
             const manualStartTimeValue = manualStartTimeInput.value;
             const manualEndTimeValue = manualEndTimeInput.value;
 
-            if (clientId && siteId && worktypeId) {
+            if (clientId && projectId && worktypeId) {
                 if (manualEndTimeValue && !manualStartTimeValue) {
                     Swal.fire({
                         icon: 'warning',
@@ -176,7 +181,7 @@ async function initializeTimerEvents() {
                     });
                     return;
                 }
-                createNewTimer(clientId, siteId, worktypeId, link, manualStartTimeValue, manualEndTimeValue);
+                createNewTimer(clientId, projectId, worktypeId, link, manualStartTimeValue, manualEndTimeValue);
                 linkInput.value = '';
                 manualStartTimeInput.value = '';
                 manualEndTimeInput.value = '';
@@ -232,10 +237,10 @@ async function initializeTimerEvents() {
                 const timer = {
                     id: doc.id,
                     clientId: timerData.clientId,
-                    siteId: timerData.siteId,
+                    projectId: timerData.projectId,
                     worktypeId: timerData.worktypeId,
                     clientName: timerData.clientName,
-                    siteName: timerData.siteName,
+                    projectName: timerData.projectName,
                     worktypeName: timerData.worktypeName,
                     link: timerData.link || '',
                     accumulatedElapsedTime: timerData.accumulatedElapsedTime || 0,
@@ -260,7 +265,7 @@ async function initializeTimerEvents() {
                     updateLiveAmount(timer, totalElapsedTime);
                 }
             });
-            updateActiveTimerCount();
+            updateActiveTimerCount(activeTimers);
         })
         .catch(error => {
             console.error('Errore nel caricamento dei timer attivi:', error);
@@ -285,8 +290,3 @@ function initializeEditModalEvents() {
         });
     }
 }
-
-// === VITE MODULE: Registra globals ===
-window.activeTimers = activeTimers;
-window.initializeTimerEvents = initializeTimerEvents;
-window.initializeEditModalEvents = initializeEditModalEvents;

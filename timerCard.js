@@ -1,6 +1,9 @@
 // timerCard.js — Card UI e Timer Lifecycle (start, pause, resume, stop)
+import { createFaviconEl, loadRecentTasks, loadTodaySummary, updateActiveTimerCount } from './timerWidgets.js';
+import { formatDuration, updateLiveAmount } from './timerHelpers.js';
+import { activeTimers } from './timerInit.js';
 
-function createTimerCard(timer) {
+export function createTimerCard(timer) {
     const card = document.createElement('div');
     card.className = 'cr-card overflow-hidden timer-card relative border-0 shadow-md shadow-surface-200/40 transition-all duration-200 hover:shadow-lg hover:shadow-surface-300/50';
     if (timer.isPaused) card.classList.add('timer-card-paused');
@@ -30,17 +33,17 @@ function createTimerCard(timer) {
     header.appendChild(title);
     header.appendChild(badge);
 
-    // === ROW 2: Site + link (sub-header) ===
+    // === ROW 2: Project + link (sub-header) ===
     const subHeader = document.createElement('div');
     subHeader.className = 'flex items-center gap-1.5 mb-3';
 
-    // Favicon before site name
-    const siteFavicon = createFaviconEl(timer.siteName, '', 14);
+    // Favicon before project name
+    const siteFavicon = createFaviconEl(timer.projectName, '', 14);
     subHeader.appendChild(siteFavicon);
 
     const siteSpan = document.createElement('span');
     siteSpan.className = 'text-[10px] font-semibold text-surface-400 uppercase tracking-wider truncate';
-    siteSpan.textContent = timer.siteName;
+    siteSpan.textContent = timer.projectName;
     subHeader.appendChild(siteSpan);
 
     if (timer.link) {
@@ -132,7 +135,8 @@ function createTimerCard(timer) {
     });
 
     editBtn.addEventListener('click', () => {
-        openEditTimerModal(timer);
+        // Usa import dinamico per evitare circolarità con timerCrud.js
+        import('./timerCrud.js').then(m => m.openEditTimerModal(timer));
     });
 
     actions.appendChild(pauseBtn);
@@ -157,7 +161,7 @@ function createTimerCard(timer) {
 
 // === TIMER LIFECYCLE ===
 
-function startTimer(timer) {
+export function startTimer(timer) {
     timer.intervalId = setInterval(() => {
         if (!timer.isPaused) {
             const now = new Date();
@@ -168,7 +172,7 @@ function startTimer(timer) {
     }, 1000);
 }
 
-function pauseTimer(timer) {
+export function pauseTimer(timer) {
     clearInterval(timer.intervalId);
     timer.isPaused = true;
     const now = new Date();
@@ -184,7 +188,7 @@ function pauseTimer(timer) {
     });
 }
 
-function resumeTimer(timer) {
+export function resumeTimer(timer) {
     timer.isPaused = false;
     timer.lastStartTime = new Date();
     startTimer(timer);
@@ -197,7 +201,7 @@ function resumeTimer(timer) {
     });
 }
 
-function stopTimer(timer, card) {
+export function stopTimer(timer, card) {
     clearInterval(timer.intervalId);
 
     const now = new Date();
@@ -217,10 +221,10 @@ function stopTimer(timer, card) {
     const timeLogData = {
         uid: currentUser.uid,
         clientId: timer.clientId,
-        siteId: timer.siteId,
+        projectId: timer.projectId,
         worktypeId: timer.worktypeId,
         clientName: timer.clientName,
-        siteName: timer.siteName,
+        projectName: timer.projectName,
         worktypeName: timer.worktypeName,
         link: timer.link || '',
         startTime: firebase.firestore.Timestamp.fromDate(startTime),
@@ -254,7 +258,7 @@ function stopTimer(timer, card) {
                 }
 
                 card.remove();
-                updateActiveTimerCount();
+                updateActiveTimerCount(activeTimers);
                 loadTodaySummary();
                 loadRecentTasks();
 
@@ -277,10 +281,3 @@ function stopTimer(timer, card) {
             });
         });
 }
-
-// === VITE MODULE: Registra globals ===
-window.createTimerCard = createTimerCard;
-window.startTimer = startTimer;
-window.pauseTimer = pauseTimer;
-window.resumeTimer = resumeTimer;
-window.stopTimer = stopTimer;

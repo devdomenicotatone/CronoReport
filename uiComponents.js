@@ -6,7 +6,7 @@
 // ============================================
 // CrModal — Lightweight modal manager
 // ============================================
-const CrModal = {
+export const CrModal = {
     show(idOrEl) {
         const modal = typeof idOrEl === 'string' ? document.getElementById(idOrEl) || document.querySelector(idOrEl) : idOrEl;
         if (!modal) return;
@@ -47,7 +47,7 @@ const CrModal = {
 // ============================================
 // CrCollapse — Lightweight collapse/accordion
 // ============================================
-const CrCollapse = {
+export const CrCollapse = {
     toggle(el) {
         if (typeof el === 'string') el = document.querySelector(el);
         if (!el) return;
@@ -86,7 +86,7 @@ const CrCollapse = {
 // ============================================
 // CrTabs — Lightweight tab switcher
 // ============================================
-const CrTabs = {
+export const CrTabs = {
     init(containerSelector) {
         const container = typeof containerSelector === 'string' ? document.querySelector(containerSelector) : containerSelector;
         if (!container) return;
@@ -148,7 +148,3 @@ document.addEventListener('click', function (e) {
     }
 });
 
-// === VITE MODULE: Registra globals ===
-window.CrModal = CrModal;
-window.CrCollapse = CrCollapse;
-window.CrTabs = CrTabs;

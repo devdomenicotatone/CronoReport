@@ -1,11 +1,14 @@
 // savedTimersEvents.js
+import { gapiInited, gisInited, handleAuthClick, maybeEnableButtons } from './firebaseConfig.js';
+import { loadSavedTimers, getCurrentFilters, loadAvailableYears, loadClientsForFilter, updateQuickFilterBar, activeQuickYear, activeQuickMonth, populateMonthChips, displayTimers, setActiveQuickYear, setActiveQuickMonth } from './savedTimersData.js';
+import { attachSavedTimersListeners, deleteTimerById, formatDuration } from './savedTimersUI.js';
 
 // Variabili globali
-window.displayedTimers = []; // Array per memorizzare i timer visualizzati (shared state)
+export let displayedTimers = []; // Array per memorizzare i timer visualizzati (shared state)
 let lastOperation = null;
 
 // Funzione aggiornata per inizializzare gli eventi dei Timer Salvati
-async function initializeSavedTimersEvents() {
+export async function initializeSavedTimersEvents() {
     if (!currentUser) {
         console.error("currentUser non definito in initializeSavedTimersEvents. Interruzione.");
         return;
@@ -144,10 +147,10 @@ async function initializeSavedTimersEvents() {
             if (!chip) return;
             const val = chip.dataset.year;
             if (val === 'all') {
-                window.activeQuickYear = null;
-                window.activeQuickMonth = null;
+                setActiveQuickYear(null);
+                setActiveQuickMonth(null);
             } else {
-                window.activeQuickYear = parseInt(val);
+                setActiveQuickYear(parseInt(val));
             }
             // Reset date inputs manuali per evitare conflitti
             const dateStart = document.getElementById('filter-date-start');
@@ -166,12 +169,12 @@ async function initializeSavedTimersEvents() {
             if (!chip) return;
             const val = chip.dataset.month;
             if (val === 'all') {
-                window.activeQuickMonth = null;
+                setActiveQuickMonth(null);
             } else {
-                window.activeQuickMonth = parseInt(val);
+                setActiveQuickMonth(parseInt(val));
                 // Se non c'è un anno selezionato, usa l'anno corrente
-                if (window.activeQuickYear === null) {
-                    window.activeQuickYear = new Date().getFullYear();
+                if (activeQuickYear === null) {
+                    setActiveQuickYear(new Date().getFullYear());
                 }
             }
             // Reset date inputs manuali
@@ -237,7 +240,7 @@ async function initializeSavedTimersEvents() {
 
 
 
-function undoDeleteYear(operation) {
+export function undoDeleteYear(operation) {
     const { clientName, year, timerIds, yearSection } = operation;
     const batch = db.batch();
 
@@ -286,7 +289,7 @@ function undoDeleteYear(operation) {
     });
 }
 
-function undoDeleteMonth(operation) {
+export function undoDeleteMonth(operation) {
     const { clientName, year, month, timerIds, monthSection } = operation;
     const batch = db.batch();
 
@@ -335,7 +338,7 @@ function undoDeleteMonth(operation) {
     });
 }
 
-function deleteMonthTimers(clientName, year, month, monthSection) {
+export function deleteMonthTimers(clientName, year, month, monthSection) {
     Swal.fire({
         title: 'Sei sicuro?',
         text: `Vuoi eliminare tutti i timer del mese di ${getMonthName(parseInt(month))} ${year} per il cliente ${clientName}?`,
@@ -416,13 +419,13 @@ function deleteMonthTimers(clientName, year, month, monthSection) {
 }
 
 // Funzione per filtrare i timer salvati
-function filterTimers() {
+export function filterTimers() {
     const filters = getCurrentFilters();
     loadSavedTimers(filters);
 }
 
 // Funzione per filtrare i timer visualizzati in base al termine di ricerca
-function filterDisplayedTimers(searchTerm) {
+export function filterDisplayedTimers(searchTerm) {
     if (searchTerm === '') {
         // Se il termine di ricerca è vuoto, mostra tutti i timer con i filtri correnti
         const filters = getCurrentFilters();
@@ -438,7 +441,7 @@ function filterDisplayedTimers(searchTerm) {
             // Controlla se uno dei campi contiene il termine di ricerca
             return (
                 (logData.clientName && logData.clientName.toLowerCase().includes(searchLower)) ||
-                (logData.siteName && logData.siteName.toLowerCase().includes(searchLower)) ||
+                (logData.projectName && logData.projectName.toLowerCase().includes(searchLower)) ||
                 (logData.worktypeName && logData.worktypeName.toLowerCase().includes(searchLower)) ||
                 (logData.link && logData.link.toLowerCase().includes(searchLower)) ||
                 (formatDateTime(logData.startTime).toLowerCase().includes(searchLower)) ||
@@ -474,7 +477,7 @@ function filterDisplayedTimers(searchTerm) {
 }
 
 // Funzione per esportare i timer in Google Docs
-function exportTimersToGoogleDoc() {
+export function exportTimersToGoogleDoc() {
     if (!gapiInited || !gisInited) {
         Swal.fire({
             icon: 'warning',
@@ -499,7 +502,7 @@ function exportTimersToGoogleDoc() {
     });
 }
 
-function proceedWithExportToGoogleDoc() {
+export function proceedWithExportToGoogleDoc() {
     // Genera il contenuto del report
     const reportContent = generateTimersReportContent(displayedTimers);
 
@@ -510,7 +513,7 @@ function proceedWithExportToGoogleDoc() {
 }
 
 // Funzione per esportare i timer in Google Sheets
-function exportTimersToGoogleSheet() {
+export function exportTimersToGoogleSheet() {
     if (!gapiInited || !gisInited) {
         Swal.fire({
             icon: 'warning',
@@ -535,7 +538,7 @@ function exportTimersToGoogleSheet() {
     });
 }
 
-function proceedWithExportToGoogleSheet() {
+export function proceedWithExportToGoogleSheet() {
     // Genera l'array di valori
     const reportValues = generateTimersReportValues(displayedTimers);
 
@@ -546,14 +549,14 @@ function proceedWithExportToGoogleSheet() {
 }
 
 // Funzione per generare il contenuto del report per Google Docs
-function generateTimersReportContent(timers) {
+export function generateTimersReportContent(timers) {
     let content = 'Storico Timer\n\n';
 
     timers.forEach(timerObj => {
         const logData = timerObj.data;
 
         const clientName = logData.clientName || 'N/A';
-        const siteName = logData.siteName || 'N/A';
+        const projectName = logData.projectName || 'N/A';
         const worktypeName = logData.worktypeName || 'N/A';
         const duration = formatDuration(logData.duration);
         const startTime = formatDateTime(logData.startTime);
@@ -561,7 +564,7 @@ function generateTimersReportContent(timers) {
         const link = logData.link || '';
 
         content += `Cliente: ${clientName}\n`;
-        content += `Sito: ${siteName}\n`;
+        content += `Sito: ${projectName}\n`;
         content += `Tipo di Lavoro: ${worktypeName}\n`;
         content += `Durata: ${duration}\n`;
         content += `Inizio: ${startTime}\n`;
@@ -574,7 +577,7 @@ function generateTimersReportContent(timers) {
 }
 
 // Funzione per generare i valori del report per Google Sheets
-function generateTimersReportValues(timers) {
+export function generateTimersReportValues(timers) {
     const values = [];
 
     // Aggiungi la riga di intestazione
@@ -584,21 +587,21 @@ function generateTimersReportValues(timers) {
         const logData = timerObj.data;
 
         const clientName = logData.clientName || 'N/A';
-        const siteName = logData.siteName || 'N/A';
+        const projectName = logData.projectName || 'N/A';
         const worktypeName = logData.worktypeName || 'N/A';
         const duration = formatDuration(logData.duration);
         const startTime = formatDateTime(logData.startTime);
         const endTime = formatDateTime(logData.endTime);
         const link = logData.link || '';
 
-        values.push([clientName, siteName, worktypeName, duration, startTime, endTime, link]);
+        values.push([clientName, projectName, worktypeName, duration, startTime, endTime, link]);
     });
 
     return values;
 }
 
 // Funzioni per creare il documento Google Docs
-function createGoogleDoc(reportContent, fileName) {
+export function createGoogleDoc(reportContent, fileName) {
     gapi.client.docs.documents.create({
         title: fileName
     }).then((response) => {
@@ -611,7 +614,7 @@ function createGoogleDoc(reportContent, fileName) {
     });
 }
 
-function insertContentIntoDoc(documentId, reportContent) {
+export function insertContentIntoDoc(documentId, reportContent) {
     const requests = [];
 
     // Aggiungi il testo al documento
@@ -637,7 +640,7 @@ function insertContentIntoDoc(documentId, reportContent) {
 }
 
 // Funzioni per creare il foglio Google Sheets
-function createGoogleSheet(reportValues, fileName) {
+export function createGoogleSheet(reportValues, fileName) {
     gapi.client.sheets.spreadsheets.create({
         properties: {
             title: fileName
@@ -653,7 +656,7 @@ function createGoogleSheet(reportValues, fileName) {
     });
 }
 
-function insertDataIntoSheet(spreadsheetId, sheetName, reportValues) {
+export function insertDataIntoSheet(spreadsheetId, sheetName, reportValues) {
     const range = `${sheetName}!A1`;
 
     gapi.client.sheets.spreadsheets.values.update({
@@ -671,7 +674,7 @@ function insertDataIntoSheet(spreadsheetId, sheetName, reportValues) {
 }
 
 // Funzione per rimuovere il contrassegno a tutti i timer
-function unmarkAllTimers() {
+export function unmarkAllTimers() {
     Swal.fire({
         title: 'Sei sicuro?',
         text: 'Vuoi rimuovere il contrassegno da tutti i timer?',
@@ -696,7 +699,7 @@ function unmarkAllTimers() {
 }
 
 // Funzione per rimuovere il contrassegno ai timer selezionati
-function unmarkSelectedTimers() {
+export function unmarkSelectedTimers() {
     const selectedTimers = Array.from(document.querySelectorAll('.timer-checkbox:checked')).map(checkbox => checkbox.value);
     if (selectedTimers.length === 0) {
         Swal.fire({
@@ -711,7 +714,7 @@ function unmarkSelectedTimers() {
 }
 
 // Funzione per rimuovere il contrassegno ai timer filtrati
-function unmarkFilteredTimers() {
+export function unmarkFilteredTimers() {
     const timerIds = displayedTimers.map(timer => timer.id);
     if (timerIds.length === 0) {
         Swal.fire({
@@ -726,7 +729,7 @@ function unmarkFilteredTimers() {
 }
 
 // Funzione per rimuovere il contrassegno ai timer specificati
-function unmarkTimers(timerIds) {
+export function unmarkTimers(timerIds) {
     const batch = db.batch();
     timerIds.forEach(timerId => {
         const timerRef = db.collection('timeLogs').doc(timerId);
@@ -752,7 +755,7 @@ function unmarkTimers(timerIds) {
 }
 
 // Funzione per annullare la rimozione del contrassegno
-function undoUnmarkTimers(timerIds) {
+export function undoUnmarkTimers(timerIds) {
     const batch = db.batch();
     timerIds.forEach(timerId => {
         const timerRef = db.collection('timeLogs').doc(timerId);
@@ -775,7 +778,7 @@ function undoUnmarkTimers(timerIds) {
 }
 
 // Funzione per annullare l'eliminazione di un timer
-function undoDeleteTimer(timerId) {
+export function undoDeleteTimer(timerId) {
     db.collection('timeLogs').doc(timerId).update({
         isDeleted: false,
         deletedAt: null
@@ -816,28 +819,4 @@ firebase.auth().onAuthStateChanged(function (user) {
         window.location.href = 'login.html';
     }
 });
-// === VITE MODULE: Registra globals ===
-window.displayedTimers = displayedTimers;
-window.createGoogleDoc = createGoogleDoc;
-window.createGoogleSheet = createGoogleSheet;
-window.deleteMonthTimers = deleteMonthTimers;
-window.exportTimersToGoogleDoc = exportTimersToGoogleDoc;
-window.exportTimersToGoogleSheet = exportTimersToGoogleSheet;
-window.filterDisplayedTimers = filterDisplayedTimers;
-window.filterTimers = filterTimers;
-window.generateTimersReportContent = generateTimersReportContent;
-window.generateTimersReportValues = generateTimersReportValues;
-window.initializeSavedTimersEvents = initializeSavedTimersEvents;
-window.insertContentIntoDoc = insertContentIntoDoc;
-window.insertDataIntoSheet = insertDataIntoSheet;
-window.loadWorktypeRates = loadWorktypeRates;
-window.proceedWithExportToGoogleDoc = proceedWithExportToGoogleDoc;
-window.proceedWithExportToGoogleSheet = proceedWithExportToGoogleSheet;
-window.undoDeleteMonth = undoDeleteMonth;
-window.undoDeleteTimer = undoDeleteTimer;
-window.undoDeleteYear = undoDeleteYear;
-window.undoUnmarkTimers = undoUnmarkTimers;
-window.unmarkAllTimers = unmarkAllTimers;
-window.unmarkFilteredTimers = unmarkFilteredTimers;
-window.unmarkSelectedTimers = unmarkSelectedTimers;
-window.unmarkTimers = unmarkTimers;
+

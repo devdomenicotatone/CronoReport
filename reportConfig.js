@@ -4,7 +4,7 @@
 let savedConfigs = {}; // Oggetto per memorizzare le configurazioni salvate
 let companyLogoBase64 = ''; // Variabile per memorizzare il logo in base64
 
-const reportTemplate = `
+export const reportTemplate = `
 <div id="report-section" class="max-w-6xl mx-auto px-4 py-6">
     <div class="flex items-center gap-3 mb-8">
         <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg">
@@ -80,8 +80,8 @@ const reportTemplate = `
                         <select id="filter-client" class="cr-input" required></select>
                     </div>
                     <div>
-                        <label for="filter-site" class="block text-sm font-semibold text-surface-600 mb-1">Sito</label>
-                        <select id="filter-site" class="cr-input">
+                        <label for="filter-project" class="block text-sm font-semibold text-surface-600 mb-1">Progetto</label>
+                        <select id="filter-project" class="cr-input">
                             <option value="">Tutti i Siti</option>
                         </select>
                     </div>
@@ -211,7 +211,7 @@ reportDiv.innerHTML = reportTemplate;
 document.body.appendChild(reportDiv);
 
 // Funzione per estrarre il nome del dominio dall'URL
-function extractDomainName(url) {
+export function extractDomainName(url) {
     try {
         const hostname = new URL(url).hostname;
         let domain = hostname.startsWith('www.') ? hostname.substring(4) : hostname;
@@ -222,7 +222,7 @@ function extractDomainName(url) {
 }
 
 // Funzione per visualizzare l'anteprima del logo
-function displayLogoPreview(base64Data) {
+export function displayLogoPreview(base64Data) {
     const previewContainer = document.getElementById('logo-preview-container');
     previewContainer.innerHTML = '';
 
@@ -235,7 +235,7 @@ function displayLogoPreview(base64Data) {
 }
 
 // Funzione per rimuovere l'anteprima del logo
-function clearLogoPreview() {
+export function clearLogoPreview() {
     const previewContainer = document.getElementById('logo-preview-container');
     if (previewContainer) {
         previewContainer.innerHTML = '';
@@ -243,7 +243,7 @@ function clearLogoPreview() {
 }
 
 // Caricamento filtri
-function loadClients(selectElement) {
+export function loadClients(selectElement) {
     selectElement.innerHTML = '<option value="">--Seleziona Cliente--</option>';
     return db.collection('clients')
         .where('uid', '==', currentUser.uid)
@@ -264,9 +264,9 @@ function loadClients(selectElement) {
         });
 }
 
-function loadSites(selectElement, selectedClientId) {
+export function loadProjects(selectElement, selectedClientId) {
     selectElement.innerHTML = '<option value="">--Seleziona Sito--</option>';
-    let query = db.collection('sites')
+    let query = db.collection('projects')
         .where('uid', '==', currentUser.uid)
         .where('clientId', '==', selectedClientId)
         .orderBy('name');
@@ -292,7 +292,7 @@ function loadSites(selectElement, selectedClientId) {
         });
 }
 
-function loadWorktypes(selectElement, selectedClientId) {
+export function loadWorktypes(selectElement, selectedClientId) {
     selectElement.innerHTML = '<option value="">--Seleziona Tipo di Lavoro--</option>';
     let query = db.collection('worktypes')
         .where('uid', '==', currentUser.uid)
@@ -321,7 +321,7 @@ function loadWorktypes(selectElement, selectedClientId) {
 }
 
 // Funzione per caricare le configurazioni salvate
-function loadSavedConfigs() {
+export function loadSavedConfigs() {
     const savedConfigSelect = document.getElementById('saved-config-select');
     const deleteConfigBtn = document.getElementById('delete-config-btn');
 
@@ -356,7 +356,7 @@ function loadSavedConfigs() {
 }
 
 // Funzione per salvare una configurazione
-function saveReportConfig(config) {
+export function saveReportConfig(config) {
     db.collection('reportConfigs').add({
         uid: currentUser.uid,
         name: config.name,
@@ -384,7 +384,7 @@ function saveReportConfig(config) {
 }
 
 // Funzione per applicare una configurazione salvata
-async function applySavedConfig(configId) {
+export async function applySavedConfig(configId) {
     const config = savedConfigs[configId];
     if (config) {
         document.getElementById('report-header').value = config.reportHeader;
@@ -398,7 +398,7 @@ async function applySavedConfig(configId) {
 }
 
 // Funzione per generare PDF — Template Ultra Pro
-function generatePDF(reportHeader, reportData, totalHours, totalAmount, companyLogoBase64, reportFileName, includeHourlyRate) {
+export function generatePDF(reportHeader, reportData, totalHours, totalAmount, companyLogoBase64, reportFileName, includeHourlyRate) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('p', 'mm', 'a4'); // Portrait A4
 
@@ -632,13 +632,13 @@ function generatePDF(reportHeader, reportData, totalHours, totalAmount, companyL
     }
 }
 
-function exportReportToGoogleSheet(reportValues, fileName) {
+export function exportReportToGoogleSheet(reportValues, fileName) {
     handleAuthClick(() => {
         createGoogleSheet(reportValues, fileName);
     });
 }
 
-function createGoogleDoc(reportContent, fileName) {
+export function createGoogleDoc(reportContent, fileName) {
     gapi.client.docs.documents.create({
         title: fileName
     }).then((response) => {
@@ -649,7 +649,7 @@ function createGoogleDoc(reportContent, fileName) {
     });
 }
 
-function insertContentIntoDoc(documentId, reportContent) {
+export function insertContentIntoDoc(documentId, reportContent) {
     const requests = [{
         insertText: {
             location: { index: 1 },
@@ -668,7 +668,7 @@ function insertContentIntoDoc(documentId, reportContent) {
     });
 }
 
-function generateReportContentString(reportHeader, reportData, totalAmount, includeHourlyRate) {
+export function generateReportContentString(reportHeader, reportData, totalAmount, includeHourlyRate) {
     let content = `${reportHeader}\n\n`;
     reportData.forEach(item => {
         content += `Data: ${item.date}\n`;
@@ -684,7 +684,7 @@ function generateReportContentString(reportHeader, reportData, totalAmount, incl
     return content;
 }
 
-function createGoogleSheet(reportValues, fileName) {
+export function createGoogleSheet(reportValues, fileName) {
     gapi.client.sheets.spreadsheets.create({
         properties: { title: fileName }
     }).then((response) => {
@@ -696,7 +696,7 @@ function createGoogleSheet(reportValues, fileName) {
     });
 }
 
-function insertDataIntoSheet(spreadsheetId, sheetName, reportValues) {
+export function insertDataIntoSheet(spreadsheetId, sheetName, reportValues) {
     const range = `${sheetName}!A1`;
 
     gapi.client.sheets.spreadsheets.values.update({
@@ -712,7 +712,7 @@ function insertDataIntoSheet(spreadsheetId, sheetName, reportValues) {
     });
 }
 
-function generateReportValuesArray(reportHeader, reportData, totalAmount, includeHourlyRate) {
+export function generateReportValuesArray(reportHeader, reportData, totalAmount, includeHourlyRate) {
     const values = [];
     values.push([reportHeader]);
     values.push([]);
@@ -736,22 +736,5 @@ function generateReportValuesArray(reportHeader, reportData, totalAmount, includ
 
     return values;
 }
-// === VITE MODULE: Registra globals ===
-window.applySavedConfig = applySavedConfig;
-window.clearLogoPreview = clearLogoPreview;
-window.createGoogleDoc = createGoogleDoc;
-window.createGoogleSheet = createGoogleSheet;
-window.displayLogoPreview = displayLogoPreview;
-window.exportReportToGoogleSheet = exportReportToGoogleSheet;
-window.extractDomainName = extractDomainName;
-window.generatePDF = generatePDF;
-window.generateReportContentString = generateReportContentString;
-window.generateReportValuesArray = generateReportValuesArray;
-window.insertContentIntoDoc = insertContentIntoDoc;
-window.insertDataIntoSheet = insertDataIntoSheet;
-window.loadClients = loadClients;
-window.loadSavedConfigs = loadSavedConfigs;
-window.loadSites = loadSites;
-window.loadWorktypes = loadWorktypes;
-window.reportTemplate = reportTemplate;
-window.saveReportConfig = saveReportConfig;
+
+

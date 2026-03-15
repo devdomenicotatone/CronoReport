@@ -1,7 +1,7 @@
 // reportHistory.js
-
+import { generatePDF } from './reportConfig.js';
 // Template per la sezione Storico Report
-const reportHistoryTemplate = `
+export const reportHistoryTemplate = `
 <div id="report-history-section" class="max-w-6xl mx-auto px-4 py-6" style="padding-bottom: 5.5rem;">
     <div class="flex items-center justify-between mb-6">
         <div class="flex items-center gap-3">
@@ -54,7 +54,7 @@ const reportHistoryTemplate = `
 /**
  * Funzione per inizializzare gli eventi della sezione Storico Report
  */
-function initializeReportHistoryEvents() {
+export function initializeReportHistoryEvents() {
     const reportHistoryAccordion = document.getElementById('reportHistoryAccordion');
     const refreshReportHistoryBtn = document.getElementById('refresh-report-history-btn');
     const searchReportInput = document.getElementById('search-report-input');
@@ -382,17 +382,17 @@ function initializeReportHistoryEvents() {
                         periodSpan.textContent = `${r.startDate || '—'} → ${r.endDate || '—'}`;
 
                         // Sito/Tipo lavoro
-                        if (r.filterSiteName) {
+                        if (r.filterProjectName) {
                             const sep = document.createElement('span');
                             sep.className = 'text-surface-200';
                             sep.textContent = '·';
                             detailRow.appendChild(periodSpan);
                             detailRow.appendChild(sep);
 
-                            const siteSpan = document.createElement('span');
-                            siteSpan.className = 'text-xs text-surface-400';
-                            siteSpan.textContent = r.filterSiteName;
-                            detailRow.appendChild(siteSpan);
+                            const projectSpan = document.createElement('span');
+                            projectSpan.className = 'text-xs text-surface-400';
+                            projectSpan.textContent = r.filterProjectName;
+                            detailRow.appendChild(projectSpan);
                         } else {
                             detailRow.appendChild(periodSpan);
                         }
@@ -582,6 +582,5 @@ function initializeReportHistoryEvents() {
         loadReportHistory(searchReportInput.value.trim());
     });
 }
-// === VITE MODULE: Registra globals ===
-window.initializeReportHistoryEvents = initializeReportHistoryEvents;
-window.reportHistoryTemplate = reportHistoryTemplate;
+
+

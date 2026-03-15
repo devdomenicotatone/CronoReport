@@ -1,8 +1,13 @@
 // timerCrud.js — Operazioni CRUD: crea, modifica, elimina timer
+import { CrModal } from './uiComponents.js';
+import { parseLocalDateTime, formatLocalDateTime, secondsToHHMMSS, hhmmssToSeconds, getHourlyRate } from './timerHelpers.js';
+import { createFaviconEl, loadRecentTasks, loadTodaySummary, updateActiveTimerCount } from './timerWidgets.js';
+import { createTimerCard, startTimer } from './timerCard.js';
+import { activeTimers } from './timerInit.js';
 
 // === EDIT MODAL: Dropdown Loading ===
 
-function loadAllClientsForEditSelect(selectElement, selectedClientId) {
+export function loadAllClientsForEditSelect(selectElement, selectedClientId) {
     return db.collection('clients')
         .where('uid', '==', currentUser.uid)
         .orderBy('name')
@@ -21,9 +26,9 @@ function loadAllClientsForEditSelect(selectElement, selectedClientId) {
         });
 }
 
-function loadAllSitesForEditSelect(selectElement, clientId, selectedSiteId) {
+export function loadAllProjectsForEditSelect(selectElement, clientId, selectedprojectId) {
     selectElement.innerHTML = '<option value="">--Seleziona Sito--</option>';
-    return db.collection('sites')
+    return db.collection('projects')
         .where('uid', '==', currentUser.uid)
         .where('clientId', '==', clientId)
         .orderBy('name')
@@ -35,13 +40,13 @@ function loadAllSitesForEditSelect(selectElement, clientId, selectedSiteId) {
                 opt.textContent = doc.data().name;
                 selectElement.appendChild(opt);
             });
-            if (selectedSiteId) {
-                selectElement.value = selectedSiteId;
+            if (selectedprojectId) {
+                selectElement.value = selectedprojectId;
             }
         });
 }
 
-function loadAllWorktypesForEditSelect(selectElement, clientId, selectedWorktypeId) {
+export function loadAllWorktypesForEditSelect(selectElement, clientId, selectedWorktypeId) {
     selectElement.innerHTML = '<option value="">--Seleziona Tipo di Lavoro--</option>';
     return db.collection('worktypes')
         .where('uid', '==', currentUser.uid)
@@ -63,13 +68,13 @@ function loadAllWorktypesForEditSelect(selectElement, clientId, selectedWorktype
 
 // === CREATE NEW TIMER ===
 
-async function createNewTimer(clientId, siteId, worktypeId, link, manualStartTimeValue, manualEndTimeValue) {
+export async function createNewTimer(clientId, projectId, worktypeId, link, manualStartTimeValue, manualEndTimeValue) {
     const clientSelectEl = document.getElementById('client-select');
-    const siteSelectEl = document.getElementById('site-select');
+    const projectSelectEl = document.getElementById('project-select');
     const worktypeSelectEl = document.getElementById('worktype-select');
 
     const clientName = clientSelectEl.options[clientSelectEl.selectedIndex].text;
-    const siteName = siteSelectEl.options[siteSelectEl.selectedIndex].text;
+    const projectName = projectSelectEl.options[projectSelectEl.selectedIndex].text;
     const worktypeName = worktypeSelectEl.options[worktypeSelectEl.selectedIndex].text;
 
     let hourlyRate = 0;
@@ -123,10 +128,10 @@ async function createNewTimer(clientId, siteId, worktypeId, link, manualStartTim
         db.collection('timeLogs').add({
             uid: currentUser.uid,
             clientId: clientId,
-            siteId: siteId,
+            projectId: projectId,
             worktypeId: worktypeId,
             clientName: clientName,
-            siteName: siteName,
+            projectName: projectName,
             worktypeName: worktypeName,
             link: link || '',
             startTime: firebase.firestore.Timestamp.fromDate(manualStartTime),
@@ -177,10 +182,10 @@ async function createNewTimer(clientId, siteId, worktypeId, link, manualStartTim
 
         const timer = {
             clientId: clientId,
-            siteId: siteId,
+            projectId: projectId,
             worktypeId: worktypeId,
             clientName: clientName,
-            siteName: siteName,
+            projectName: projectName,
             worktypeName: worktypeName,
             link: link,
             accumulatedElapsedTime: accumulatedElapsedTime,
@@ -195,10 +200,10 @@ async function createNewTimer(clientId, siteId, worktypeId, link, manualStartTim
         db.collection('timers').add({
             uid: currentUser.uid,
             clientId: clientId,
-            siteId: siteId,
+            projectId: projectId,
             worktypeId: worktypeId,
             clientName: clientName,
-            siteName: siteName,
+            projectName: projectName,
             worktypeName: worktypeName,
             link: link || '',
             accumulatedElapsedTime: timer.accumulatedElapsedTime,
@@ -212,7 +217,7 @@ async function createNewTimer(clientId, siteId, worktypeId, link, manualStartTim
             const timerCard = createTimerCard(timer);
             document.getElementById('timer-cards').appendChild(timerCard);
             startTimer(timer);
-            updateActiveTimerCount();
+            updateActiveTimerCount(activeTimers);
         }).catch(error => {
             console.error('Errore nel salvataggio del timer:', error);
             Swal.fire({
@@ -234,10 +239,10 @@ async function createNewTimer(clientId, siteId, worktypeId, link, manualStartTim
 
         const timer = {
             clientId: clientId,
-            siteId: siteId,
+            projectId: projectId,
             worktypeId: worktypeId,
             clientName: clientName,
-            siteName: siteName,
+            projectName: projectName,
             worktypeName: worktypeName,
             link: link,
             accumulatedElapsedTime: 0,
@@ -252,10 +257,10 @@ async function createNewTimer(clientId, siteId, worktypeId, link, manualStartTim
         db.collection('timers').add({
             uid: currentUser.uid,
             clientId: clientId,
-            siteId: siteId,
+            projectId: projectId,
             worktypeId: worktypeId,
             clientName: clientName,
-            siteName: siteName,
+            projectName: projectName,
             worktypeName: worktypeName,
             link: link || '',
             accumulatedElapsedTime: timer.accumulatedElapsedTime,
@@ -269,7 +274,7 @@ async function createNewTimer(clientId, siteId, worktypeId, link, manualStartTim
             const timerCard = createTimerCard(timer);
             document.getElementById('timer-cards').appendChild(timerCard);
             startTimer(timer);
-            updateActiveTimerCount();
+            updateActiveTimerCount(activeTimers);
         }).catch(error => {
             console.error('Errore nel salvataggio del timer:', error);
             Swal.fire({
@@ -284,26 +289,26 @@ async function createNewTimer(clientId, siteId, worktypeId, link, manualStartTim
 
 // === OPEN EDIT MODAL ===
 
-function openEditTimerModal(timer) {
+export function openEditTimerModal(timer) {
     document.getElementById('edit-timer-id').value = timer.id;
 
     const clientSelect = document.getElementById('edit-client-select');
-    const siteSelect = document.getElementById('edit-site-select');
+    const projectSelect = document.getElementById('edit-project-select');
     const worktypeSelect = document.getElementById('edit-worktype-select');
 
     loadAllClientsForEditSelect(clientSelect, timer.clientId)
-        .then(() => loadAllSitesForEditSelect(siteSelect, timer.clientId, timer.siteId))
+        .then(() => loadAllProjectsForEditSelect(projectSelect, timer.clientId, timer.projectId))
         .then(() => loadAllWorktypesForEditSelect(worktypeSelect, timer.clientId, timer.worktypeId))
         .catch(error => console.error('Errore nel caricamento dati per la modale di modifica:', error));
 
     clientSelect.addEventListener('change', () => {
         const newClientId = clientSelect.value;
         if (newClientId) {
-            loadAllSitesForEditSelect(siteSelect, newClientId, '')
+            loadAllProjectsForEditSelect(projectSelect, newClientId, '')
                 .then(() => loadAllWorktypesForEditSelect(worktypeSelect, newClientId, ''))
                 .catch(error => console.error("Errore durante l'aggiornamento di siti e tipi di lavoro:", error));
         } else {
-            siteSelect.innerHTML = '<option value="">--Seleziona Sito--</option>';
+            projectSelect.innerHTML = '<option value="">--Seleziona Sito--</option>';
             worktypeSelect.innerHTML = '<option value="">--Seleziona Tipo di Lavoro--</option>';
         }
     });
@@ -325,7 +330,7 @@ function openEditTimerModal(timer) {
 
 // === DELETE TIMER FROM MODAL ===
 
-function deleteTimerFromModal() {
+export function deleteTimerFromModal() {
     const timerId = document.getElementById('edit-timer-id').value;
     if (!timerId) return;
 
@@ -379,10 +384,10 @@ function deleteTimerFromModal() {
 
 // === SAVE TIMER CHANGES ===
 
-function saveTimerChanges() {
+export function saveTimerChanges() {
     const timerId = document.getElementById('edit-timer-id').value;
     const clientId = document.getElementById('edit-client-select').value;
-    const siteId = document.getElementById('edit-site-select').value;
+    const projectId = document.getElementById('edit-project-select').value;
     const worktypeId = document.getElementById('edit-worktype-select').value;
     const link = document.getElementById('edit-link-input').value.trim();
     const accumulatedTimeStr = document.getElementById('edit-accumulated-time').value.trim();
@@ -427,15 +432,15 @@ function saveTimerChanges() {
 
     Promise.all([
         db.collection('clients').doc(clientId).get(),
-        db.collection('sites').doc(siteId).get(),
+        db.collection('projects').doc(projectId).get(),
         db.collection('worktypes').doc(worktypeId).get()
     ]).then(results => {
         const clientDoc = results[0];
-        const siteDoc = results[1];
+        const projectDoc = results[1];
         const worktypeDoc = results[2];
 
         const clientName = clientDoc.exists ? clientDoc.data().name : 'Sconosciuto';
-        const siteName = siteDoc.exists ? siteDoc.data().name : 'Sconosciuto';
+        const projectName = projectDoc.exists ? projectDoc.data().name : 'Sconosciuto';
         let worktypeName = 'Sconosciuto';
         let hourlyRate = 0;
         if (worktypeDoc.exists) {
@@ -445,10 +450,10 @@ function saveTimerChanges() {
 
         const updateData = {
             clientId: clientId,
-            siteId: siteId,
+            projectId: projectId,
             worktypeId: worktypeId,
             clientName: clientName,
-            siteName: siteName,
+            projectName: projectName,
             worktypeName: worktypeName,
             link: link,
             accumulatedElapsedTime: accumulatedSeconds,
@@ -465,10 +470,10 @@ function saveTimerChanges() {
                 const timeLogData = {
                     uid: currentUser.uid,
                     clientId: clientId,
-                    siteId: siteId,
+                    projectId: projectId,
                     worktypeId: worktypeId,
                     clientName: clientName,
-                    siteName: siteName,
+                    projectName: projectName,
                     worktypeName: worktypeName,
                     link: link || '',
                     startTime: firebase.firestore.Timestamp.fromDate(newStartTime),
@@ -532,10 +537,10 @@ function saveTimerChanges() {
                 const timer = activeTimers.find(t => t.id === timerId);
                 if (timer) {
                     timer.clientId = clientId;
-                    timer.siteId = siteId;
+                    timer.projectId = projectId;
                     timer.worktypeId = worktypeId;
                     timer.clientName = clientName;
-                    timer.siteName = siteName;
+                    timer.projectName = projectName;
                     timer.worktypeName = worktypeName;
                     timer.link = link;
                     timer.accumulatedElapsedTime = accumulatedSeconds;
@@ -581,11 +586,4 @@ function saveTimerChanges() {
     });
 }
 
-// === VITE MODULE: Registra globals ===
-window.createNewTimer = createNewTimer;
-window.openEditTimerModal = openEditTimerModal;
-window.deleteTimerFromModal = deleteTimerFromModal;
-window.saveTimerChanges = saveTimerChanges;
-window.loadAllClientsForEditSelect = loadAllClientsForEditSelect;
-window.loadAllSitesForEditSelect = loadAllSitesForEditSelect;
-window.loadAllWorktypesForEditSelect = loadAllWorktypesForEditSelect;
+

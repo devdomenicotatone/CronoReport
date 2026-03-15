@@ -1,6 +1,6 @@
 // recycleBinReports.js
 
-const recycleBinTemplate = `
+export const recycleBinTemplate = `
 <div id="recycle-bin-section" class="max-w-6xl mx-auto px-4 py-6">
     <div class="flex items-center justify-between mb-6">
         <div class="flex items-center gap-3">
@@ -70,7 +70,7 @@ function getRbColor(name) {
 }
 
 // Funzione per inizializzare gli eventi della sezione Cestino Report
-function initializeRecycleBinReportsEvents() {
+export function initializeRecycleBinReportsEvents() {
     const searchInput = document.getElementById('search-recycle-reports-input');
 
     searchInput.addEventListener('input', () => {
@@ -81,7 +81,7 @@ function initializeRecycleBinReportsEvents() {
     loadRecycleBinReports();
 }
 
-function loadRecycleBinReports(searchTerm = '') {
+export function loadRecycleBinReports(searchTerm = '') {
     const recycleBinReportsDiv = document.getElementById('recycle-bin-reports');
     recycleBinReportsDiv.innerHTML = '';
 
@@ -310,7 +310,7 @@ function loadRecycleBinReports(searchTerm = '') {
 }
 
 // Ripristina un singolo report
-function restoreReport(reportId, rowElement) {
+export function restoreReport(reportId, rowElement) {
     db.collection('reports').doc(reportId).update({
         isDeleted: false,
         deletedAt: firebase.firestore.FieldValue.delete()
@@ -323,7 +323,7 @@ function restoreReport(reportId, rowElement) {
 }
 
 // Ripristina tutti i report di un cliente
-function restoreClientReports(clientName) {
+export function restoreClientReports(clientName) {
     let query = db.collection('reports')
         .where('uid', '==', currentUser.uid)
         .where('isDeleted', '==', true);
@@ -349,7 +349,7 @@ function restoreClientReports(clientName) {
 }
 
 // Elimina definitivamente un singolo report
-function permanentlyDeleteReport(reportId, rowElement) {
+export function permanentlyDeleteReport(reportId, rowElement) {
     Swal.fire({
         title: 'Eliminare definitivamente?',
         text: 'Questo report non potrà essere recuperato.',
@@ -372,7 +372,7 @@ function permanentlyDeleteReport(reportId, rowElement) {
 }
 
 // Elimina definitivamente tutti i report di un cliente
-function permanentlyDeleteClientReports(clientName, sectionElement) {
+export function permanentlyDeleteClientReports(clientName, sectionElement) {
     let query = db.collection('reports')
         .where('uid', '==', currentUser.uid)
         .where('isDeleted', '==', true);
@@ -393,12 +393,4 @@ function permanentlyDeleteClientReports(clientName, sectionElement) {
         console.error('Errore eliminazione report cliente:', error);
     });
 }
-// === VITE MODULE: Registra globals ===
-window.getRbColor = getRbColor;
-window.initializeRecycleBinReportsEvents = initializeRecycleBinReportsEvents;
-window.loadRecycleBinReports = loadRecycleBinReports;
-window.permanentlyDeleteClientReports = permanentlyDeleteClientReports;
-window.permanentlyDeleteReport = permanentlyDeleteReport;
-window.recycleBinTemplate = recycleBinTemplate;
-window.restoreClientReports = restoreClientReports;
-window.restoreReport = restoreReport;
+

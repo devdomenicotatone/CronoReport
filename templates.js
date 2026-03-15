@@ -8,7 +8,7 @@
 // ==========================================
 //  GESTIONE DATI
 // ==========================================
-const dataManagementTemplate = `
+export const dataManagementTemplate = `
 <div id="data-management" class="max-w-6xl mx-auto px-4 py-6">
     
     <!-- Header -->
@@ -27,9 +27,9 @@ const dataManagementTemplate = `
             <div class="rw-stat-value" id="dm-stat-clients">0</div>
         </div>
         <div class="rw-stat-card stat-amount">
-            <div class="rw-stat-icon"><i class="fas fa-map-marker-alt"></i></div>
-            <div class="rw-stat-label">Siti</div>
-            <div class="rw-stat-value" id="dm-stat-sites">0</div>
+            <div class="rw-stat-icon"><i class="fas fa-folder-open"></i></div>
+            <div class="rw-stat-label">Progetti</div>
+            <div class="rw-stat-value" id="dm-stat-projects">0</div>
         </div>
         <div class="rw-stat-card stat-count">
             <div class="rw-stat-icon"><i class="fas fa-tools"></i></div>
@@ -64,7 +64,7 @@ const dataManagementTemplate = `
 // ==========================================
 //  TIMER DI LAVORO
 // ==========================================
-const timerTemplate = `
+export const timerTemplate = `
 <div id="timer-section" class="max-w-6xl mx-auto px-4 py-6">
 
     <!-- Header sezione -->
@@ -93,8 +93,8 @@ const timerTemplate = `
                     </select>
                 </div>
                 <div class="flex-1 min-w-[140px]">
-                    <label for="site-select" class="block text-xs font-bold text-surface-600 uppercase tracking-wider mb-1.5 pl-1">Sito</label>
-                    <select id="site-select" class="cr-select text-sm font-medium bg-surface-50 border-surface-200 focus:bg-white transition-colors">
+                    <label for="project-select" class="block text-xs font-bold text-surface-600 uppercase tracking-wider mb-1.5 pl-1">Progetto</label>
+                    <select id="project-select" class="cr-select text-sm font-medium bg-surface-50 border-surface-200 focus:bg-white transition-colors">
                         <option value="">-- Seleziona --</option>
                     </select>
                 </div>
@@ -198,8 +198,8 @@ const timerTemplate = `
             <select id="edit-client-select" class="cr-select"></select>
           </div>
           <div class="mb-3">
-            <label for="edit-site-select" class="block text-sm font-medium text-surface-600 mb-1">Sito:</label>
-            <select id="edit-site-select" class="cr-select"></select>
+            <label for="edit-project-select" class="block text-sm font-medium text-surface-600 mb-1">Progetto:</label>
+            <select id="edit-project-select" class="cr-select"></select>
           </div>
           <div class="mb-3">
             <label for="edit-worktype-select" class="block text-sm font-medium text-surface-600 mb-1">Tipo di Lavoro:</label>
@@ -235,6 +235,4 @@ const timerTemplate = `
   </div>
 </div>
 `;
-// === VITE MODULE: Registra globals ===
-window.dataManagementTemplate = dataManagementTemplate;
-window.timerTemplate = timerTemplate;
+

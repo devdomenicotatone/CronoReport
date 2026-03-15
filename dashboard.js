@@ -28,7 +28,7 @@ function getDashClientColor(name) {
 // ═══════════════════════════════════════════════
 //  TEMPLATE
 // ═══════════════════════════════════════════════
-const dashboardTemplate = `
+export const dashboardTemplate = `
 <div id="dashboard-section" class="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
 
     <!-- Header -->
@@ -151,7 +151,7 @@ const dashboardTemplate = `
 // ═══════════════════════════════════════════════
 //  INITIALIZATION
 // ═══════════════════════════════════════════════
-function initializeDashboardEvents() {
+export function initializeDashboardEvents() {
     const contentSection = document.getElementById('content-section');
     contentSection.innerHTML = dashboardTemplate;
 
@@ -222,7 +222,7 @@ function getDashDateRange(period) {
 // ═══════════════════════════════════════════════
 //  DATA LOADING
 // ═══════════════════════════════════════════════
-async function loadDashboardData() {
+export async function loadDashboardData() {
     try {
         const { start, end } = getDashDateRange(dashActivePeriod);
 
@@ -792,8 +792,5 @@ function renderInsights(timeLogs, prevTimeLogs) {
 }
 
 // ═══════════════════════════════════════════════
-//  VITE MODULE: Registra globals
-// ═══════════════════════════════════════════════
-window.dashboardTemplate = dashboardTemplate;
-window.initializeDashboardEvents = initializeDashboardEvents;
-window.loadDashboardData = loadDashboardData;
+
+

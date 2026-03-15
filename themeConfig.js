@@ -47,7 +47,7 @@ if (typeof Swal !== 'undefined') {
 // ==========================================
 if (typeof Chart !== 'undefined') {
     // Palette colori design system
-    window.CR_CHART_COLORS = {
+    const CR_CHART_COLORS = {
         indigo: 'rgba(99, 102, 241, 1)',
         indigoLight: 'rgba(99, 102, 241, 0.15)',
         violet: 'rgba(139, 92, 246, 1)',
@@ -64,7 +64,8 @@ if (typeof Chart !== 'undefined') {
         slateLight: 'rgba(100, 116, 139, 0.15)',
     };
 
-    // Palette per dataset multipli
+    // Palette per dataset multipli — esportata globalmente perché usata da dashboard charts
+    window.CR_CHART_COLORS = CR_CHART_COLORS;
     window.CR_CHART_PALETTE = [
         CR_CHART_COLORS.indigo, CR_CHART_COLORS.emerald,
         CR_CHART_COLORS.amber, CR_CHART_COLORS.rose,

@@ -1,14 +1,21 @@
 // savedTimersData.js
+import { CrModal } from './uiComponents.js';
+import { createTimerRow, formatDuration, getMonthName, formatDate, formatTimeShort } from './savedTimersUI.js';
+import { displayedTimers } from './savedTimersEvents.js';
 
 // Quick filter state
-window.activeQuickYear = new Date().getFullYear();  // default: anno corrente
-window.activeQuickMonth = null; // null = tutti i mesi
+export let activeQuickYear = new Date().getFullYear();  // default: anno corrente
+export let activeQuickMonth = null; // null = tutti i mesi
+
+// Setter functions per mutare lo stato da moduli esterni
+export function setActiveQuickYear(val) { activeQuickYear = val; }
+export function setActiveQuickMonth(val) { activeQuickMonth = val; }
 let availableMonthsByYear = {}; // { 2026: [1, 2, 3], 2025: [1, ..., 12] }
 
 const MONTH_NAMES_SHORT = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
 
 // Funzione per caricare gli anni e mesi disponibili e popolare i chip
-function loadAvailableYears() {
+export function loadAvailableYears() {
     return db.collection('timeLogs')
         .where('uid', '==', currentUser.uid)
         .where('isDeleted', '==', false)
@@ -43,21 +50,21 @@ function loadAvailableYears() {
 }
 
 // Popola i chip degli anni nella Quick Filter Bar
-function populateYearChips(years) {
+export function populateYearChips(years) {
     const container = document.getElementById('qf-year-chips');
     if (!container) return;
     container.innerHTML = '';
 
     // Chip "Tutti"
     const allBtn = document.createElement('button');
-    allBtn.className = 'qf-chip qf-chip-all' + (window.activeQuickYear === null ? ' qf-chip-active' : '');
+    allBtn.className = 'qf-chip qf-chip-all' + (activeQuickYear === null ? ' qf-chip-active' : '');
     allBtn.dataset.year = 'all';
     allBtn.textContent = 'Tutti';
     container.appendChild(allBtn);
 
     years.forEach(year => {
         const btn = document.createElement('button');
-        btn.className = 'qf-chip' + (window.activeQuickYear === year ? ' qf-chip-active' : '');
+        btn.className = 'qf-chip' + (activeQuickYear === year ? ' qf-chip-active' : '');
         btn.dataset.year = year;
         btn.textContent = year;
         container.appendChild(btn);
@@ -65,7 +72,7 @@ function populateYearChips(years) {
 }
 
 // Popola i chip dei mesi in base all'anno selezionato (solo mesi con dati)
-function populateMonthChips(year) {
+export function populateMonthChips(year) {
     const container = document.getElementById('qf-month-chips');
     const section = document.getElementById('qf-month-section');
     if (!container || !section) return;
@@ -80,14 +87,14 @@ function populateMonthChips(year) {
 
     // Chip "Tutti" per i mesi
     const allBtn = document.createElement('button');
-    allBtn.className = 'qf-chip qf-chip-all' + (window.activeQuickMonth === null ? ' qf-chip-active' : '');
+    allBtn.className = 'qf-chip qf-chip-all' + (activeQuickMonth === null ? ' qf-chip-active' : '');
     allBtn.dataset.month = 'all';
     allBtn.textContent = 'Tutti';
     container.appendChild(allBtn);
 
     months.forEach(month => {
         const btn = document.createElement('button');
-        btn.className = 'qf-chip' + (window.activeQuickMonth === month ? ' qf-chip-active' : '');
+        btn.className = 'qf-chip' + (activeQuickMonth === month ? ' qf-chip-active' : '');
         btn.dataset.month = month;
         btn.textContent = MONTH_NAMES_SHORT[month - 1];
         container.appendChild(btn);
@@ -99,38 +106,38 @@ function populateMonthChips(year) {
 }
 
 // Aggiorna lo stato visivo dei chip nella Quick Filter Bar
-function updateQuickFilterBar() {
+export function updateQuickFilterBar() {
     // Aggiorna year chips
     const yearChips = document.querySelectorAll('#qf-year-chips .qf-chip');
     yearChips.forEach(chip => {
         const val = chip.dataset.year;
-        const isActive = (val === 'all' && window.activeQuickYear === null) ||
-                         (val !== 'all' && parseInt(val) === window.activeQuickYear);
+        const isActive = (val === 'all' && activeQuickYear === null) ||
+                         (val !== 'all' && parseInt(val) === activeQuickYear);
         chip.classList.toggle('qf-chip-active', isActive);
     });
 
     // Mostra/nascondi mesi in base all'anno
     const section = document.getElementById('qf-month-section');
-    if (window.activeQuickYear === null) {
+    if (activeQuickYear === null) {
         // Nessun anno selezionato: nascondi mesi
         if (section) section.style.display = 'none';
     } else {
         // Anno selezionato: popola e mostra mesi con dati
-        populateMonthChips(window.activeQuickYear);
+        populateMonthChips(activeQuickYear);
     }
 
     // Aggiorna month chips active state
     const monthChips = document.querySelectorAll('#qf-month-chips .qf-chip');
     monthChips.forEach(chip => {
         const val = chip.dataset.month;
-        const isActive = (val === 'all' && window.activeQuickMonth === null) ||
-                         (val !== 'all' && parseInt(val) === window.activeQuickMonth);
+        const isActive = (val === 'all' && activeQuickMonth === null) ||
+                         (val !== 'all' && parseInt(val) === activeQuickMonth);
         chip.classList.toggle('qf-chip-active', isActive);
     });
 }
 
 // Funzione per caricare i timer salvati in base ai filtri
-function loadSavedTimers(filters = {}) {
+export function loadSavedTimers(filters = {}) {
     const savedTimersList = document.getElementById('savedTimersAccordion');
     savedTimersList.innerHTML = '';
 
@@ -157,10 +164,10 @@ function loadSavedTimers(filters = {}) {
             endDateObj.setHours(23, 59, 59, 999);
             query = query.where('startTime', '<=', firebase.firestore.Timestamp.fromDate(endDateObj));
         }
-    } else if (window.activeQuickYear !== null) {
+    } else if (activeQuickYear !== null) {
         // Quick filter: filtra per anno (e opzionalmente mese)
-        const year = window.activeQuickYear;
-        const month = window.activeQuickMonth; // 1-12 or null
+        const year = activeQuickYear;
+        const month = activeQuickMonth; // 1-12 or null
         let startDate, endDate;
 
         if (month !== null) {
@@ -181,7 +188,7 @@ function loadSavedTimers(filters = {}) {
 
     query.orderBy('startTime', 'desc').get()
         .then(snapshot => {
-            window.displayedTimers = [];
+            displayedTimers.length = 0;
             const unreportedAmounts = {};
 
             if (snapshot.empty) {
@@ -196,7 +203,7 @@ function loadSavedTimers(filters = {}) {
                 const logData = doc.data();
                 const clientName = logData.clientName || 'Cliente Sconosciuto';
 
-                window.displayedTimers.push({
+                displayedTimers.push({
                     id: doc.id,
                     data: logData
                 });
@@ -213,7 +220,7 @@ function loadSavedTimers(filters = {}) {
                 }
             });
 
-            displayTimers(window.displayedTimers);
+            displayTimers(displayedTimers);
             displayUnreportedAmounts(unreportedAmounts);
             updateQuickFilterBar();
         })
@@ -222,11 +229,11 @@ function loadSavedTimers(filters = {}) {
         });
 }
 
-function generateSafeId(prefix, name) {
+export function generateSafeId(prefix, name) {
     return prefix + '-' + name.replace(/[^a-zA-Z0-9_-]/g, '_');
 }
 
-function displayUnreportedAmounts(unreportedAmounts) {
+export function displayUnreportedAmounts(unreportedAmounts) {
     // 1. Aggiorna la stats card totale
     const statEl = document.getElementById('tl-stat-unreported');
     let total = 0;
@@ -325,7 +332,7 @@ function displayUnreportedAmounts(unreportedAmounts) {
     }
 }
 
-function saveReminderSettings(clientName, reminderAmount, reminderDate) {
+export function saveReminderSettings(clientName, reminderAmount, reminderDate) {
     // Controlla se esiste già un promemoria per questo cliente
     db.collection('reminders')
         .where('uid', '==', currentUser.uid)
@@ -372,7 +379,7 @@ function saveReminderSettings(clientName, reminderAmount, reminderDate) {
         });
 }
 
-function loadReminderSettings(clientName, reminderCell, currentAmount) {
+export function loadReminderSettings(clientName, reminderCell, currentAmount) {
     db.collection('reminders')
         .where('uid', '==', currentUser.uid)
         .where('clientName', '==', clientName)
@@ -403,7 +410,7 @@ function loadReminderSettings(clientName, reminderCell, currentAmount) {
         });
 }
 
-function checkReminder(clientName, currentAmount, reminderData) {
+export function checkReminder(clientName, currentAmount, reminderData) {
     let shouldRemind = false;
 
     // Controlla l'importo
@@ -444,7 +451,7 @@ function checkReminder(clientName, currentAmount, reminderData) {
     }
 }
 
-function showSetReminderModal(clientName, currentAmount) {
+export function showSetReminderModal(clientName, currentAmount) {
     // Imposta il nome del cliente nella modale
     document.getElementById('modal-client-name').textContent = clientName;
 
@@ -506,7 +513,7 @@ const clientColorPalette = [
 const clientColorMap = {};
 let clientColorIndex = 0;
 
-function getClientColor(clientName) {
+export function getClientColor(clientName) {
     if (!clientColorMap[clientName]) {
         clientColorMap[clientName] = clientColorPalette[clientColorIndex % clientColorPalette.length];
         clientColorIndex++;
@@ -515,7 +522,7 @@ function getClientColor(clientName) {
 }
 
 // Funzione per visualizzare i timer raggruppati per cliente
-function displayTimers(timers) {
+export function displayTimers(timers) {
     const savedTimersList = document.getElementById('savedTimersAccordion');
     savedTimersList.innerHTML = '';
 
@@ -683,7 +690,7 @@ function displayTimers(timers) {
 
                 const siteSpan = document.createElement('span');
                 siteSpan.className = 'text-sm font-medium text-surface-700 truncate';
-                siteSpan.textContent = logData.siteName || '—';
+                siteSpan.textContent = logData.projectName || '—';
 
                 const spacer = document.createElement('span');
                 spacer.className = 'flex-1';
@@ -813,7 +820,7 @@ function displayTimers(timers) {
 }
 
 // Aggiorna le stats cards
-function updateTimelineStats(timers) {
+export function updateTimelineStats(timers) {
     // Ore totali
     let totalSeconds = 0;
     timers.forEach(t => { totalSeconds += t.data.duration || 0; });
@@ -832,7 +839,7 @@ function updateTimelineStats(timers) {
 }
 
 // Funzione per caricare i clienti nel filtro
-function loadClientsForFilter() {
+export function loadClientsForFilter() {
     const filterClientSelect = document.getElementById('filter-client');
     return db.collection('clients')
         .where('uid', '==', currentUser.uid)
@@ -853,7 +860,7 @@ function loadClientsForFilter() {
 }
 
 // Funzione per ottenere i filtri correnti
-function getCurrentFilters() {
+export function getCurrentFilters() {
     const filterDateStart = document.getElementById('filter-date-start').value;
     const filterDateEnd = document.getElementById('filter-date-end').value;
     const filterClient = document.getElementById('filter-client').value;
@@ -864,20 +871,4 @@ function getCurrentFilters() {
         client: filterClient
     };
 }
-// === VITE MODULE: Registra globals ===
-window.checkReminder = checkReminder;
-window.displayTimers = displayTimers;
-window.displayUnreportedAmounts = displayUnreportedAmounts;
-window.generateSafeId = generateSafeId;
-window.getClientColor = getClientColor;
-window.getCurrentFilters = getCurrentFilters;
-window.loadAvailableYears = loadAvailableYears;
-window.loadClientsForFilter = loadClientsForFilter;
-window.loadReminderSettings = loadReminderSettings;
-window.loadSavedTimers = loadSavedTimers;
-window.populateMonthChips = populateMonthChips;
-window.populateYearChips = populateYearChips;
-window.saveReminderSettings = saveReminderSettings;
-window.showSetReminderModal = showSetReminderModal;
-window.updateQuickFilterBar = updateQuickFilterBar;
-window.updateTimelineStats = updateTimelineStats;
+

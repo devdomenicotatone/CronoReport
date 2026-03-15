@@ -1,4 +1,6 @@
 // recycleBinTimers.js
+import { formatTimeShort } from './savedTimersUI.js';
+import { loadSavedTimers, getCurrentFilters } from './savedTimersData.js';
 
 // Palette colori per badge (consistente con il resto)
 const rbtColorPalette = [
@@ -22,7 +24,7 @@ function getRbtColor(name) {
 }
 
 // Funzione per inizializzare gli eventi della sezione Cestino Timer
-function initializeRecycleBinTimersEvents() {
+export function initializeRecycleBinTimersEvents() {
     const recycleBinTimersDiv = document.getElementById('recycle-bin-timers');
 
     // Aggiungi barra ricerca inline
@@ -47,7 +49,7 @@ function initializeRecycleBinTimersEvents() {
     loadRecycleBinTimers();
 }
 
-function loadRecycleBinTimers(searchTerm = '') {
+export function loadRecycleBinTimers(searchTerm = '') {
     const recycleBinTimersDiv = document.getElementById('recycle-bin-timers');
     recycleBinTimersDiv.innerHTML = '';
 
@@ -204,10 +206,10 @@ function loadRecycleBinTimers(searchTerm = '') {
                     const startDate = logData.startTime.toDate();
                     dateSpan.textContent = startDate.toLocaleDateString('it-IT', { day: '2-digit', month: 'short' });
 
-                    // Site
+                    // Project
                     const siteSpan = document.createElement('span');
                     siteSpan.className = 'text-sm font-medium text-surface-700 truncate';
-                    siteSpan.textContent = logData.siteName || '—';
+                    siteSpan.textContent = logData.projectName || '—';
 
                     const spacer = document.createElement('span');
                     spacer.className = 'flex-1';
@@ -287,7 +289,7 @@ function loadRecycleBinTimers(searchTerm = '') {
 }
 
 // Ripristina un singolo timer
-function restoreTimer(timerId, rowElement) {
+export function restoreTimer(timerId, rowElement) {
     db.collection('timeLogs').doc(timerId).update({
         isDeleted: false,
         deletedAt: firebase.firestore.FieldValue.delete()
@@ -300,7 +302,7 @@ function restoreTimer(timerId, rowElement) {
 }
 
 // Ripristina tutti i timer di un cliente
-function restoreClientTimers(clientName) {
+export function restoreClientTimers(clientName) {
     db.collection('timeLogs')
         .where('uid', '==', currentUser.uid)
         .where('isDeleted', '==', true)
@@ -323,7 +325,7 @@ function restoreClientTimers(clientName) {
 }
 
 // Funzione per "eliminare" un timer salvato (spostandolo nel cestino)
-function deleteTimer(timerId, barElement) {
+export function deleteTimer(timerId, barElement) {
     Swal.fire({
         title: 'Sei sicuro?', text: 'Il timer sarà spostato nel cestino.',
         icon: 'warning', showCancelButton: true,
@@ -346,7 +348,7 @@ function deleteTimer(timerId, barElement) {
 }
 
 // Annulla eliminazione
-function undoDeleteTimer(timerId) {
+export function undoDeleteTimer(timerId) {
     db.collection('timeLogs').doc(timerId).update({
         isDeleted: false,
         deletedAt: firebase.firestore.FieldValue.delete()
@@ -360,7 +362,7 @@ function undoDeleteTimer(timerId) {
 }
 
 // Elimina definitivamente un singolo timer
-function permanentlyDeleteTimer(timerId, rowElement) {
+export function permanentlyDeleteTimer(timerId, rowElement) {
     Swal.fire({
         title: 'Eliminare definitivamente?', text: 'Non potrà essere recuperato.',
         icon: 'warning', showCancelButton: true,
@@ -379,7 +381,7 @@ function permanentlyDeleteTimer(timerId, rowElement) {
 }
 
 // Elimina definitivamente tutti i timer di un cliente
-function permanentlyDeleteClientTimers(clientName, sectionElement) {
+export function permanentlyDeleteClientTimers(clientName, sectionElement) {
     db.collection('timeLogs')
         .where('uid', '==', currentUser.uid)
         .where('isDeleted', '==', true)
@@ -398,13 +400,4 @@ function permanentlyDeleteClientTimers(clientName, sectionElement) {
             console.error('Errore eliminazione cliente:', error);
         });
 }
-// === VITE MODULE: Registra globals ===
-window.deleteTimer = deleteTimer;
-window.getRbtColor = getRbtColor;
-window.initializeRecycleBinTimersEvents = initializeRecycleBinTimersEvents;
-window.loadRecycleBinTimers = loadRecycleBinTimers;
-window.permanentlyDeleteClientTimers = permanentlyDeleteClientTimers;
-window.permanentlyDeleteTimer = permanentlyDeleteTimer;
-window.restoreClientTimers = restoreClientTimers;
-window.restoreTimer = restoreTimer;
-window.undoDeleteTimer = undoDeleteTimer;
+

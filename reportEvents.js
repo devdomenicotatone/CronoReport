@@ -1,5 +1,6 @@
 // reportEvents.js
-
+import { loadClients, loadProjects, loadWorktypes, loadSavedConfigs, saveReportConfig, generatePDF, generateReportContentString, generateReportValuesArray, exportReportToGoogleSheet, createGoogleDoc, createGoogleSheet, extractDomainName, displayLogoPreview, clearLogoPreview } from './reportConfig.js';
+import { gapiInited, gisInited, handleAuthClick, maybeEnableButtons } from './firebaseConfig.js';
 // Variabili globali necessarie
 let savedConfigSelect;
 let deleteConfigBtn;
@@ -9,7 +10,7 @@ let exportGoogleDocBtn;
 let exportGoogleSheetBtn;
 
 // Funzione per inizializzare gli eventi della sezione Report
-function initializeReportEvents() {
+export function initializeReportEvents() {
     // Controlla se currentUser è disponibile
     if (!currentUser) {
         firebase.auth().onAuthStateChanged(function (user) {
@@ -26,7 +27,7 @@ function initializeReportEvents() {
 }
 
 // Funzione per caricare le tariffe orarie dei tipi di lavoro
-function loadWorktypeRates() {
+export function loadWorktypeRates() {
     return db.collection('worktypes')
         .where('uid', '==', currentUser.uid)
         .get()
@@ -43,7 +44,7 @@ function loadWorktypeRates() {
 }
 
 // Funzione per impostare la sezione Report
-function setupReportSection() {
+export function setupReportSection() {
     const reportForm = document.getElementById('report-form');
     const reportContent = document.getElementById('report-content');
     const reportHeaderDisplay = document.getElementById('report-header-display');
@@ -54,7 +55,7 @@ function setupReportSection() {
     const endDateInput = document.getElementById('end-date');
 
     const filterClientSelect = document.getElementById('filter-client');
-    const filterSiteSelect = document.getElementById('filter-site');
+    const filterProjectSelect = document.getElementById('filter-project');
     const filterWorktypeSelect = document.getElementById('filter-worktype');
 
     const generateBtn = document.getElementById('rw-generate-btn');
@@ -65,17 +66,17 @@ function setupReportSection() {
     filterClientSelect.addEventListener('change', () => {
         const selectedClientId = filterClientSelect.value;
         if (selectedClientId) {
-            loadSites(filterSiteSelect, selectedClientId);
+            loadProjects(filterProjectSelect, selectedClientId);
             loadWorktypes(filterWorktypeSelect, selectedClientId);
         } else {
-            filterSiteSelect.innerHTML = '<option value="">Tutti i Siti</option>';
+            filterProjectSelect.innerHTML = '<option value="">Tutti i Siti</option>';
             filterWorktypeSelect.innerHTML = '<option value="">Tutti i Tipi di Lavoro</option>';
         }
         tryLoadPreview();
     });
 
     // Trigger preview anche quando cambiano sito/worktype/checkbox
-    filterSiteSelect.addEventListener('change', () => tryLoadPreview());
+    filterProjectSelect.addEventListener('change', () => tryLoadPreview());
     filterWorktypeSelect.addEventListener('change', () => tryLoadPreview());
     document.getElementById('only-unreported').addEventListener('change', () => tryLoadPreview());
 
@@ -178,7 +179,7 @@ function setupReportSection() {
         const startVal = startDateInput.value;
         const endVal = endDateInput.value;
         const clientId = filterClientSelect.value;
-        const siteId = filterSiteSelect.value;
+        const projectId = filterProjectSelect.value;
         const worktypeId = filterWorktypeSelect.value;
         const onlyUnreported = document.getElementById('only-unreported').checked;
 
@@ -219,7 +220,7 @@ function setupReportSection() {
                 .where('startTime', '<=', firebase.firestore.Timestamp.fromDate(endDate));
 
             if (clientId) query = query.where('clientId', '==', clientId);
-            if (siteId) query = query.where('siteId', '==', siteId);
+            if (projectId) query = query.where('projectId', '==', projectId);
             if (worktypeId) query = query.where('worktypeId', '==', worktypeId);
             if (onlyUnreported) query = query.where('isReported', '==', false);
 
@@ -481,7 +482,7 @@ function setupReportSection() {
         }
     
         const filterClient = document.getElementById('filter-client').value;
-        const filterSite = document.getElementById('filter-site').value;
+        const filterProject = document.getElementById('filter-project').value;
         const filterWorktype = document.getElementById('filter-worktype').value;
     
         if (!filterClient) errorMessage += '• Seleziona un cliente per il filtro.\n';
@@ -502,7 +503,7 @@ function setupReportSection() {
                 reportHeader,
                 companyLogoBase64,
                 filterClient,
-                filterSite,
+                filterProject,
                 filterWorktype
             });
         }
@@ -541,7 +542,7 @@ function setupReportSection() {
             .where('startTime', '<=', firebase.firestore.Timestamp.fromDate(endDate));
     
         if (filterClient) query = query.where('clientId', '==', filterClient);
-        if (filterSite) query = query.where('siteId', '==', filterSite);
+        if (filterProject) query = query.where('projectId', '==', filterProject);
         if (filterWorktype) query = query.where('worktypeId', '==', filterWorktype);
         if (onlyUnreported) query = query.where('isReported', '==', false);
     
@@ -678,14 +679,14 @@ function setupReportSection() {
                 }
     
                 let filterClientName = '';
-                let filterSiteName = '';
+                let filterprojectName = '';
                 let filterWorktypeName = '';
     
                 if (document.getElementById('filter-client').value) {
                     filterClientName = document.getElementById('filter-client').options[document.getElementById('filter-client').selectedIndex].text;
                 }
-                if (document.getElementById('filter-site').value) {
-                    filterSiteName = document.getElementById('filter-site').options[document.getElementById('filter-site').selectedIndex].text;
+                if (document.getElementById('filter-project').value) {
+                    filterprojectName = document.getElementById('filter-project').options[document.getElementById('filter-project').selectedIndex].text;
                 }
                 if (document.getElementById('filter-worktype').value) {
                     filterWorktypeName = document.getElementById('filter-worktype').options[document.getElementById('filter-worktype').selectedIndex].text;
@@ -697,10 +698,10 @@ function setupReportSection() {
                     startDate: startDateInputVal,
                     endDate: endDateInputVal,
                     filterClient: filterClient || null,
-                    filterSite: filterSite || null,
+                    filterProject: filterProject || null,
                     filterWorktype: filterWorktype || null,
                     filterClientName: filterClientName,
-                    filterSiteName: filterSiteName,
+                    filterprojectName: filterprojectName,
                     filterWorktypeName: filterWorktypeName,
                     totalAmount: totalAmount,
                     timestamp: firebase.firestore.FieldValue.serverTimestamp(),
@@ -759,7 +760,5 @@ firebase.auth().onAuthStateChanged(function (user) {
         window.location.href = 'login.html';
     }
 });
-// === VITE MODULE: Registra globals ===
-window.initializeReportEvents = initializeReportEvents;
-window.loadWorktypeRates = loadWorktypeRates;
-window.setupReportSection = setupReportSection;
+
+
