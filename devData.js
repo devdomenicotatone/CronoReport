@@ -115,68 +115,67 @@
         };
     }
 
+    // Helper per creare timer a un'ora specifica di N giorni fa
+    function timerAt(daysBack, startHour, durationHours) {
+        const d = daysAgo(daysBack);
+        d.setHours(startHour, 0, 0, 0);
+        const end = new Date(d.getTime() + durationHours * 3600000);
+        return {
+            startTime: makeTimestamp(d),
+            endTime: makeTimestamp(end),
+            duration: Math.round(durationHours * 3600)
+        };
+    }
+
     const mockTimeLogs = [
-        {
-            id: 'timer-001', data: {
-                uid: MOCK_UID, clientId: 'client-001', clientName: 'Studio Rossi Architetti',
-                siteId: 'site-001', siteName: 'www.studiorossi.it',
-                worktypeId: 'wt-001', worktypeName: 'Sviluppo Web',
-                startTime: makeTimestamp(daysAgo(2)),
-                endTime: makeTimestamp(new Date(daysAgo(2).getTime() + 3 * 3600000)),
-                duration: 10800, isReported: false, isDeleted: false, link: 'https://studiorossi.it/nuova-pagina'
-            }
-        },
-        {
-            id: 'timer-002', data: {
-                uid: MOCK_UID, clientId: 'client-001', clientName: 'Studio Rossi Architetti',
-                siteId: 'site-002', siteName: 'blog.studiorossi.it',
-                worktypeId: 'wt-002', worktypeName: 'SEO & Marketing',
-                startTime: makeTimestamp(daysAgo(1)),
-                endTime: makeTimestamp(new Date(daysAgo(1).getTime() + 1.5 * 3600000)),
-                duration: 5400, isReported: false, isDeleted: false, link: ''
-            }
-        },
-        {
-            id: 'timer-003', data: {
-                uid: MOCK_UID, clientId: 'client-002', clientName: 'TechVision SRL',
-                siteId: 'site-003', siteName: 'app.techvision.com',
-                worktypeId: 'wt-003', worktypeName: 'Backend API',
-                startTime: makeTimestamp(daysAgo(5)),
-                endTime: makeTimestamp(new Date(daysAgo(5).getTime() + 4 * 3600000)),
-                duration: 14400, isReported: true, isDeleted: false, link: 'https://app.techvision.com/api/v2'
-            }
-        },
-        {
-            id: 'timer-004', data: {
-                uid: MOCK_UID, clientId: 'client-002', clientName: 'TechVision SRL',
-                siteId: 'site-004', siteName: 'dashboard.techvision.com',
-                worktypeId: 'wt-004', worktypeName: 'UI/UX Design',
-                startTime: makeTimestamp(daysAgo(3)),
-                endTime: makeTimestamp(new Date(daysAgo(3).getTime() + 2 * 3600000)),
-                duration: 7200, isReported: false, isDeleted: false, link: ''
-            }
-        },
-        {
-            id: 'timer-005', data: {
-                uid: MOCK_UID, clientId: 'client-003', clientName: 'Farmacia Centrale',
-                siteId: 'site-005', siteName: 'farmaciacentrale.it',
-                worktypeId: 'wt-005', worktypeName: 'Manutenzione Sito',
-                startTime: makeTimestamp(daysAgo(7)),
-                endTime: makeTimestamp(new Date(daysAgo(7).getTime() + 1 * 3600000)),
-                duration: 3600, isReported: true, isDeleted: false, link: 'https://farmaciacentrale.it'
-            }
-        },
-        {
-            id: 'timer-006', data: {
-                uid: MOCK_UID, clientId: 'client-001', clientName: 'Studio Rossi Architetti',
-                siteId: 'site-001', siteName: 'www.studiorossi.it',
-                worktypeId: 'wt-001', worktypeName: 'Sviluppo Web',
-                startTime: makeTimestamp(daysAgo(10)),
-                endTime: makeTimestamp(new Date(daysAgo(10).getTime() + 2.5 * 3600000)),
-                duration: 9000, isReported: false, isDeleted: true,
-                deletedAt: makeTimestamp(daysAgo(8)), link: ''
-            }
-        },
+        // === OGGI (0 giorni fa) ===
+        { id: 'timer-001', data: { uid: MOCK_UID, clientId: 'client-001', clientName: 'Studio Rossi Architetti', siteId: 'site-001', siteName: 'www.studiorossi.it', worktypeId: 'wt-001', worktypeName: 'Sviluppo Web', hourlyRate: 45, ...timerAt(0, 9, 3), isReported: false, isDeleted: false, link: 'https://studiorossi.it/homepage-v2' }},
+        { id: 'timer-002', data: { uid: MOCK_UID, clientId: 'client-002', clientName: 'TechVision SRL', siteId: 'site-003', siteName: 'app.techvision.com', worktypeId: 'wt-003', worktypeName: 'Backend API', hourlyRate: 55, ...timerAt(0, 14, 2), isReported: false, isDeleted: false, link: '' }},
+        // === IERI (1) ===
+        { id: 'timer-003', data: { uid: MOCK_UID, clientId: 'client-001', clientName: 'Studio Rossi Architetti', siteId: 'site-002', siteName: 'blog.studiorossi.it', worktypeId: 'wt-002', worktypeName: 'SEO & Marketing', hourlyRate: 35, ...timerAt(1, 10, 1.5), isReported: false, isDeleted: false, link: '' }},
+        { id: 'timer-004', data: { uid: MOCK_UID, clientId: 'client-002', clientName: 'TechVision SRL', siteId: 'site-004', siteName: 'dashboard.techvision.com', worktypeId: 'wt-004', worktypeName: 'UI/UX Design', hourlyRate: 40, ...timerAt(1, 14, 3.5), isReported: false, isDeleted: false, link: '' }},
+        // === 2 giorni fa ===
+        { id: 'timer-005', data: { uid: MOCK_UID, clientId: 'client-001', clientName: 'Studio Rossi Architetti', siteId: 'site-001', siteName: 'www.studiorossi.it', worktypeId: 'wt-001', worktypeName: 'Sviluppo Web', hourlyRate: 45, ...timerAt(2, 9, 4), isReported: false, isDeleted: false, link: 'https://studiorossi.it/nuova-pagina' }},
+        { id: 'timer-006', data: { uid: MOCK_UID, clientId: 'client-003', clientName: 'Farmacia Centrale', siteId: 'site-005', siteName: 'farmaciacentrale.it', worktypeId: 'wt-005', worktypeName: 'Manutenzione Sito', hourlyRate: 30, ...timerAt(2, 15, 1), isReported: false, isDeleted: false, link: '' }},
+        // === 3 giorni fa ===
+        { id: 'timer-007', data: { uid: MOCK_UID, clientId: 'client-002', clientName: 'TechVision SRL', siteId: 'site-003', siteName: 'app.techvision.com', worktypeId: 'wt-003', worktypeName: 'Backend API', hourlyRate: 55, ...timerAt(3, 9, 5), isReported: true, isDeleted: false, link: 'https://app.techvision.com/api/v2' }},
+        // === 4 giorni fa ===
+        { id: 'timer-008', data: { uid: MOCK_UID, clientId: 'client-001', clientName: 'Studio Rossi Architetti', siteId: 'site-001', siteName: 'www.studiorossi.it', worktypeId: 'wt-001', worktypeName: 'Sviluppo Web', hourlyRate: 45, ...timerAt(4, 10, 2.5), isReported: true, isDeleted: false, link: '' }},
+        { id: 'timer-009', data: { uid: MOCK_UID, clientId: 'client-003', clientName: 'Farmacia Centrale', siteId: 'site-005', siteName: 'farmaciacentrale.it', worktypeId: 'wt-005', worktypeName: 'Manutenzione Sito', hourlyRate: 30, ...timerAt(4, 14, 2), isReported: false, isDeleted: false, link: 'https://farmaciacentrale.it' }},
+        // === 5 giorni fa ===
+        { id: 'timer-010', data: { uid: MOCK_UID, clientId: 'client-002', clientName: 'TechVision SRL', siteId: 'site-004', siteName: 'dashboard.techvision.com', worktypeId: 'wt-004', worktypeName: 'UI/UX Design', hourlyRate: 40, ...timerAt(5, 9, 3), isReported: true, isDeleted: false, link: '' }},
+        // === 6 giorni fa ===
+        { id: 'timer-011', data: { uid: MOCK_UID, clientId: 'client-001', clientName: 'Studio Rossi Architetti', siteId: 'site-002', siteName: 'blog.studiorossi.it', worktypeId: 'wt-002', worktypeName: 'SEO & Marketing', hourlyRate: 35, ...timerAt(6, 11, 2), isReported: false, isDeleted: false, link: '' }},
+        { id: 'timer-012', data: { uid: MOCK_UID, clientId: 'client-002', clientName: 'TechVision SRL', siteId: 'site-003', siteName: 'app.techvision.com', worktypeId: 'wt-003', worktypeName: 'Backend API', hourlyRate: 55, ...timerAt(6, 14, 4), isReported: false, isDeleted: false, link: '' }},
+        // === 7 giorni fa ===
+        { id: 'timer-013', data: { uid: MOCK_UID, clientId: 'client-003', clientName: 'Farmacia Centrale', siteId: 'site-005', siteName: 'farmaciacentrale.it', worktypeId: 'wt-005', worktypeName: 'Manutenzione Sito', hourlyRate: 30, ...timerAt(7, 10, 1.5), isReported: true, isDeleted: false, link: '' }},
+        // === 8-14 (settimana scorsa) ===
+        { id: 'timer-014', data: { uid: MOCK_UID, clientId: 'client-001', clientName: 'Studio Rossi Architetti', siteId: 'site-001', siteName: 'www.studiorossi.it', worktypeId: 'wt-001', worktypeName: 'Sviluppo Web', hourlyRate: 45, ...timerAt(8, 9, 6), isReported: true, isDeleted: false, link: '' }},
+        { id: 'timer-015', data: { uid: MOCK_UID, clientId: 'client-002', clientName: 'TechVision SRL', siteId: 'site-003', siteName: 'app.techvision.com', worktypeId: 'wt-003', worktypeName: 'Backend API', hourlyRate: 55, ...timerAt(9, 9, 4.5), isReported: true, isDeleted: false, link: '' }},
+        { id: 'timer-016', data: { uid: MOCK_UID, clientId: 'client-001', clientName: 'Studio Rossi Architetti', siteId: 'site-002', siteName: 'blog.studiorossi.it', worktypeId: 'wt-002', worktypeName: 'SEO & Marketing', hourlyRate: 35, ...timerAt(10, 10, 2.5), isReported: false, isDeleted: false, link: '' }},
+        { id: 'timer-017', data: { uid: MOCK_UID, clientId: 'client-002', clientName: 'TechVision SRL', siteId: 'site-004', siteName: 'dashboard.techvision.com', worktypeId: 'wt-004', worktypeName: 'UI/UX Design', hourlyRate: 40, ...timerAt(11, 14, 3), isReported: false, isDeleted: false, link: '' }},
+        { id: 'timer-018', data: { uid: MOCK_UID, clientId: 'client-003', clientName: 'Farmacia Centrale', siteId: 'site-005', siteName: 'farmaciacentrale.it', worktypeId: 'wt-005', worktypeName: 'Manutenzione Sito', hourlyRate: 30, ...timerAt(12, 9, 3), isReported: true, isDeleted: false, link: '' }},
+        { id: 'timer-019', data: { uid: MOCK_UID, clientId: 'client-001', clientName: 'Studio Rossi Architetti', siteId: 'site-001', siteName: 'www.studiorossi.it', worktypeId: 'wt-001', worktypeName: 'Sviluppo Web', hourlyRate: 45, ...timerAt(13, 9, 5), isReported: true, isDeleted: false, link: '' }},
+        { id: 'timer-020', data: { uid: MOCK_UID, clientId: 'client-002', clientName: 'TechVision SRL', siteId: 'site-003', siteName: 'app.techvision.com', worktypeId: 'wt-003', worktypeName: 'Backend API', hourlyRate: 55, ...timerAt(14, 10, 3.5), isReported: true, isDeleted: false, link: '' }},
+        // === 15-30 (mese scorso) ===
+        { id: 'timer-021', data: { uid: MOCK_UID, clientId: 'client-001', clientName: 'Studio Rossi Architetti', siteId: 'site-001', siteName: 'www.studiorossi.it', worktypeId: 'wt-001', worktypeName: 'Sviluppo Web', hourlyRate: 45, ...timerAt(16, 9, 4), isReported: true, isDeleted: false, link: '' }},
+        { id: 'timer-022', data: { uid: MOCK_UID, clientId: 'client-002', clientName: 'TechVision SRL', siteId: 'site-003', siteName: 'app.techvision.com', worktypeId: 'wt-003', worktypeName: 'Backend API', hourlyRate: 55, ...timerAt(18, 10, 5), isReported: true, isDeleted: false, link: '' }},
+        { id: 'timer-023', data: { uid: MOCK_UID, clientId: 'client-003', clientName: 'Farmacia Centrale', siteId: 'site-005', siteName: 'farmaciacentrale.it', worktypeId: 'wt-005', worktypeName: 'Manutenzione Sito', hourlyRate: 30, ...timerAt(20, 14, 2), isReported: true, isDeleted: false, link: '' }},
+        { id: 'timer-024', data: { uid: MOCK_UID, clientId: 'client-001', clientName: 'Studio Rossi Architetti', siteId: 'site-002', siteName: 'blog.studiorossi.it', worktypeId: 'wt-002', worktypeName: 'SEO & Marketing', hourlyRate: 35, ...timerAt(22, 9, 3), isReported: true, isDeleted: false, link: '' }},
+        { id: 'timer-025', data: { uid: MOCK_UID, clientId: 'client-002', clientName: 'TechVision SRL', siteId: 'site-004', siteName: 'dashboard.techvision.com', worktypeId: 'wt-004', worktypeName: 'UI/UX Design', hourlyRate: 40, ...timerAt(24, 10, 4), isReported: true, isDeleted: false, link: '' }},
+        { id: 'timer-026', data: { uid: MOCK_UID, clientId: 'client-001', clientName: 'Studio Rossi Architetti', siteId: 'site-001', siteName: 'www.studiorossi.it', worktypeId: 'wt-001', worktypeName: 'Sviluppo Web', hourlyRate: 45, ...timerAt(26, 9, 3.5), isReported: true, isDeleted: false, link: '' }},
+        { id: 'timer-027', data: { uid: MOCK_UID, clientId: 'client-003', clientName: 'Farmacia Centrale', siteId: 'site-005', siteName: 'farmaciacentrale.it', worktypeId: 'wt-005', worktypeName: 'Manutenzione Sito', hourlyRate: 30, ...timerAt(28, 14, 1.5), isReported: true, isDeleted: false, link: '' }},
+        // === 31-60 (2 mesi fa) ===
+        { id: 'timer-028', data: { uid: MOCK_UID, clientId: 'client-001', clientName: 'Studio Rossi Architetti', siteId: 'site-001', siteName: 'www.studiorossi.it', worktypeId: 'wt-001', worktypeName: 'Sviluppo Web', hourlyRate: 45, ...timerAt(35, 9, 5), isReported: true, isDeleted: false, link: '' }},
+        { id: 'timer-029', data: { uid: MOCK_UID, clientId: 'client-002', clientName: 'TechVision SRL', siteId: 'site-003', siteName: 'app.techvision.com', worktypeId: 'wt-003', worktypeName: 'Backend API', hourlyRate: 55, ...timerAt(38, 10, 6), isReported: true, isDeleted: false, link: '' }},
+        { id: 'timer-030', data: { uid: MOCK_UID, clientId: 'client-003', clientName: 'Farmacia Centrale', siteId: 'site-005', siteName: 'farmaciacentrale.it', worktypeId: 'wt-005', worktypeName: 'Manutenzione Sito', hourlyRate: 30, ...timerAt(40, 9, 2), isReported: true, isDeleted: false, link: '' }},
+        { id: 'timer-031', data: { uid: MOCK_UID, clientId: 'client-001', clientName: 'Studio Rossi Architetti', siteId: 'site-002', siteName: 'blog.studiorossi.it', worktypeId: 'wt-002', worktypeName: 'SEO & Marketing', hourlyRate: 35, ...timerAt(42, 10, 2), isReported: true, isDeleted: false, link: '' }},
+        { id: 'timer-032', data: { uid: MOCK_UID, clientId: 'client-002', clientName: 'TechVision SRL', siteId: 'site-004', siteName: 'dashboard.techvision.com', worktypeId: 'wt-004', worktypeName: 'UI/UX Design', hourlyRate: 40, ...timerAt(45, 14, 3.5), isReported: true, isDeleted: false, link: '' }},
+        { id: 'timer-033', data: { uid: MOCK_UID, clientId: 'client-001', clientName: 'Studio Rossi Architetti', siteId: 'site-001', siteName: 'www.studiorossi.it', worktypeId: 'wt-001', worktypeName: 'Sviluppo Web', hourlyRate: 45, ...timerAt(50, 9, 4), isReported: true, isDeleted: false, link: '' }},
+        { id: 'timer-034', data: { uid: MOCK_UID, clientId: 'client-002', clientName: 'TechVision SRL', siteId: 'site-003', siteName: 'app.techvision.com', worktypeId: 'wt-003', worktypeName: 'Backend API', hourlyRate: 55, ...timerAt(55, 10, 3), isReported: true, isDeleted: false, link: '' }},
+        { id: 'timer-035', data: { uid: MOCK_UID, clientId: 'client-003', clientName: 'Farmacia Centrale', siteId: 'site-005', siteName: 'farmaciacentrale.it', worktypeId: 'wt-005', worktypeName: 'Manutenzione Sito', hourlyRate: 30, ...timerAt(58, 14, 1.5), isReported: true, isDeleted: false, link: '' }},
+        // === Timer eliminato (per test isDeleted) ===
+        { id: 'timer-036', data: { uid: MOCK_UID, clientId: 'client-001', clientName: 'Studio Rossi Architetti', siteId: 'site-001', siteName: 'www.studiorossi.it', worktypeId: 'wt-001', worktypeName: 'Sviluppo Web', hourlyRate: 45, ...timerAt(10, 9, 2.5), isReported: false, isDeleted: true, deletedAt: makeTimestamp(daysAgo(8)), link: '' }},
     ];
 
     const mockActiveTimers = [];

@@ -146,10 +146,10 @@ async function initializeSavedTimersEvents() {
             if (!chip) return;
             const val = chip.dataset.year;
             if (val === 'all') {
-                activeQuickYear = null;
-                activeQuickMonth = null;
+                window.activeQuickYear = null;
+                window.activeQuickMonth = null;
             } else {
-                activeQuickYear = parseInt(val);
+                window.activeQuickYear = parseInt(val);
             }
             // Reset date inputs manuali per evitare conflitti
             const dateStart = document.getElementById('filter-date-start');
@@ -168,12 +168,12 @@ async function initializeSavedTimersEvents() {
             if (!chip) return;
             const val = chip.dataset.month;
             if (val === 'all') {
-                activeQuickMonth = null;
+                window.activeQuickMonth = null;
             } else {
-                activeQuickMonth = parseInt(val);
+                window.activeQuickMonth = parseInt(val);
                 // Se non c'è un anno selezionato, usa l'anno corrente
-                if (activeQuickYear === null) {
-                    activeQuickYear = new Date().getFullYear();
+                if (window.activeQuickYear === null) {
+                    window.activeQuickYear = new Date().getFullYear();
                 }
             }
             // Reset date inputs manuali

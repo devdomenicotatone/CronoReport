@@ -1,8 +1,8 @@
 // savedTimersData.js
 
 // Quick filter state
-let activeQuickYear = new Date().getFullYear();  // default: anno corrente
-let activeQuickMonth = null; // null = tutti i mesi
+window.activeQuickYear = new Date().getFullYear();  // default: anno corrente
+window.activeQuickMonth = null; // null = tutti i mesi
 let availableMonthsByYear = {}; // { 2026: [1, 2, 3], 2025: [1, ..., 12] }
 
 const MONTH_NAMES_SHORT = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
@@ -50,14 +50,14 @@ function populateYearChips(years) {
 
     // Chip "Tutti"
     const allBtn = document.createElement('button');
-    allBtn.className = 'qf-chip qf-chip-all' + (activeQuickYear === null ? ' qf-chip-active' : '');
+    allBtn.className = 'qf-chip qf-chip-all' + (window.activeQuickYear === null ? ' qf-chip-active' : '');
     allBtn.dataset.year = 'all';
     allBtn.textContent = 'Tutti';
     container.appendChild(allBtn);
 
     years.forEach(year => {
         const btn = document.createElement('button');
-        btn.className = 'qf-chip' + (activeQuickYear === year ? ' qf-chip-active' : '');
+        btn.className = 'qf-chip' + (window.activeQuickYear === year ? ' qf-chip-active' : '');
         btn.dataset.year = year;
         btn.textContent = year;
         container.appendChild(btn);
@@ -80,14 +80,14 @@ function populateMonthChips(year) {
 
     // Chip "Tutti" per i mesi
     const allBtn = document.createElement('button');
-    allBtn.className = 'qf-chip qf-chip-all' + (activeQuickMonth === null ? ' qf-chip-active' : '');
+    allBtn.className = 'qf-chip qf-chip-all' + (window.activeQuickMonth === null ? ' qf-chip-active' : '');
     allBtn.dataset.month = 'all';
     allBtn.textContent = 'Tutti';
     container.appendChild(allBtn);
 
     months.forEach(month => {
         const btn = document.createElement('button');
-        btn.className = 'qf-chip' + (activeQuickMonth === month ? ' qf-chip-active' : '');
+        btn.className = 'qf-chip' + (window.activeQuickMonth === month ? ' qf-chip-active' : '');
         btn.dataset.month = month;
         btn.textContent = MONTH_NAMES_SHORT[month - 1];
         container.appendChild(btn);
@@ -104,27 +104,27 @@ function updateQuickFilterBar() {
     const yearChips = document.querySelectorAll('#qf-year-chips .qf-chip');
     yearChips.forEach(chip => {
         const val = chip.dataset.year;
-        const isActive = (val === 'all' && activeQuickYear === null) ||
-                         (val !== 'all' && parseInt(val) === activeQuickYear);
+        const isActive = (val === 'all' && window.activeQuickYear === null) ||
+                         (val !== 'all' && parseInt(val) === window.activeQuickYear);
         chip.classList.toggle('qf-chip-active', isActive);
     });
 
     // Mostra/nascondi mesi in base all'anno
     const section = document.getElementById('qf-month-section');
-    if (activeQuickYear === null) {
+    if (window.activeQuickYear === null) {
         // Nessun anno selezionato: nascondi mesi
         if (section) section.style.display = 'none';
     } else {
         // Anno selezionato: popola e mostra mesi con dati
-        populateMonthChips(activeQuickYear);
+        populateMonthChips(window.activeQuickYear);
     }
 
     // Aggiorna month chips active state
     const monthChips = document.querySelectorAll('#qf-month-chips .qf-chip');
     monthChips.forEach(chip => {
         const val = chip.dataset.month;
-        const isActive = (val === 'all' && activeQuickMonth === null) ||
-                         (val !== 'all' && parseInt(val) === activeQuickMonth);
+        const isActive = (val === 'all' && window.activeQuickMonth === null) ||
+                         (val !== 'all' && parseInt(val) === window.activeQuickMonth);
         chip.classList.toggle('qf-chip-active', isActive);
     });
 }
@@ -157,10 +157,10 @@ function loadSavedTimers(filters = {}) {
             endDateObj.setHours(23, 59, 59, 999);
             query = query.where('startTime', '<=', firebase.firestore.Timestamp.fromDate(endDateObj));
         }
-    } else if (activeQuickYear !== null) {
+    } else if (window.activeQuickYear !== null) {
         // Quick filter: filtra per anno (e opzionalmente mese)
-        const year = activeQuickYear;
-        const month = activeQuickMonth; // 1-12 or null
+        const year = window.activeQuickYear;
+        const month = window.activeQuickMonth; // 1-12 or null
         let startDate, endDate;
 
         if (month !== null) {

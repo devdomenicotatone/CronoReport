@@ -1,292 +1,390 @@
-// dashboard.js
+// dashboard.js — Dashboard Analitica PRO (Mobile-First)
 
-let earningsChartViewMode = 'combined';
+// ═══════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════
+let dashActivePeriod = 'month'; // today | week | month | quarter | year | custom
+let dashChartInstances = {};
+const DASH_CLIENT_COLORS = [
+    { main: '#6366f1', light: 'rgba(99,102,241,0.18)' },   // indigo
+    { main: '#10b981', light: 'rgba(16,185,129,0.18)' },   // emerald
+    { main: '#f59e0b', light: 'rgba(245,158,11,0.18)' },   // amber
+    { main: '#ef4444', light: 'rgba(239,68,68,0.18)' },    // rose
+    { main: '#06b6d4', light: 'rgba(6,182,212,0.18)' },    // cyan
+    { main: '#8b5cf6', light: 'rgba(139,92,246,0.18)' },   // violet
+    { main: '#ec4899', light: 'rgba(236,72,153,0.18)' },   // pink
+    { main: '#14b8a6', light: 'rgba(20,184,166,0.18)' },   // teal
+];
+let dashClientColorMap = {};
 
+function getDashClientColor(name) {
+    if (!dashClientColorMap[name]) {
+        const idx = Object.keys(dashClientColorMap).length;
+        dashClientColorMap[name] = DASH_CLIENT_COLORS[idx % DASH_CLIENT_COLORS.length];
+    }
+    return dashClientColorMap[name];
+}
+
+// ═══════════════════════════════════════════════
+//  TEMPLATE
+// ═══════════════════════════════════════════════
 const dashboardTemplate = `
-<div id="dashboard-section" class="max-w-6xl mx-auto px-4 py-6">
-    <div class="flex items-center gap-3 mb-8">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg">
+<div id="dashboard-section" class="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
+
+    <!-- Header -->
+    <div class="flex items-center gap-3 mb-5">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/25">
             <i class="fas fa-chart-line text-white text-lg"></i>
         </div>
-        <h2 class="text-2xl font-bold text-surface-800">Dashboard Analitica</h2>
-    </div>
-    <!-- Sezione Filtri -->
-    <div class="cr-card mb-5 overflow-hidden">
-        <div class="px-5 py-3 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white">
-            <span class="font-semibold flex items-center gap-2"><i class="fas fa-filter"></i> Filtri</span>
-        </div>
-        <div class="p-5">
-            <form id="dashboard-filter-form" class="grid grid-cols-2 md:grid-cols-4 gap-3 items-end">
-                <div>
-                    <label for="dashboard-filter-date-start" class="block text-sm font-semibold text-surface-600 mb-1">Data Inizio</label>
-                    <input type="date" id="dashboard-filter-date-start" class="cr-input">
-                </div>
-                <div>
-                    <label for="dashboard-filter-date-end" class="block text-sm font-semibold text-surface-600 mb-1">Data Fine</label>
-                    <input type="date" id="dashboard-filter-date-end" class="cr-input">
-                </div>
-                <div>
-                    <label for="dashboard-filter-client" class="block text-sm font-semibold text-surface-600 mb-1">Cliente</label>
-                    <select id="dashboard-filter-client" class="cr-input">
-                        <option value="">Tutti i Clienti</option>
-                    </select>
-                </div>
-                <div>
-                    <button id="dashboard-filter-btn" type="button" class="cr-btn w-full bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white font-semibold shadow-md">
-                        <i class="fas fa-search mr-2"></i>Filtra
-                    </button>
-                </div>
-            </form>
+        <div>
+            <h2 class="text-xl sm:text-2xl font-bold text-surface-800 tracking-tight">Dashboard Analitica</h2>
+            <p class="text-xs text-surface-400 mt-0.5 hidden sm:block">Panoramica completa della tua attività</p>
         </div>
     </div>
-    <!-- Grafici -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <!-- Tempo Lavorato -->
-        <div class="cr-card overflow-hidden">
-            <div class="px-5 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white">
-                <span class="font-semibold flex items-center gap-2"><i class="fas fa-clock"></i> Tempo Lavorato</span>
+
+    <!-- ═══ QUICK PERIOD SELECTOR ═══ -->
+    <div class="dash-period-bar mb-5" id="dash-period-bar">
+        <button class="dash-period-chip" data-period="today">Oggi</button>
+        <button class="dash-period-chip" data-period="week">Settimana</button>
+        <button class="dash-period-chip dash-period-chip-active" data-period="month">Mese</button>
+        <button class="dash-period-chip" data-period="quarter">Trimestre</button>
+        <button class="dash-period-chip" data-period="year">Anno</button>
+        <button class="dash-period-chip" data-period="all">Tutto</button>
+    </div>
+
+    <!-- ═══ KPI STRIP ═══ -->
+    <div class="dash-kpi-strip mb-5" id="dash-kpi-strip">
+        <div class="dash-kpi-card dash-kpi-hours">
+            <div class="dash-kpi-icon"><i class="fas fa-clock"></i></div>
+            <div class="dash-kpi-value" id="dash-kpi-hours">0h 00m</div>
+            <div class="dash-kpi-label">Ore Totali</div>
+        </div>
+        <div class="dash-kpi-card dash-kpi-earnings">
+            <div class="dash-kpi-icon"><i class="fas fa-euro-sign"></i></div>
+            <div class="dash-kpi-value" id="dash-kpi-earnings">€ 0</div>
+            <div class="dash-kpi-label">Guadagni</div>
+        </div>
+        <div class="dash-kpi-card dash-kpi-avg">
+            <div class="dash-kpi-icon"><i class="fas fa-chart-bar"></i></div>
+            <div class="dash-kpi-value" id="dash-kpi-avg">0h 00m</div>
+            <div class="dash-kpi-label">Media/Giorno</div>
+        </div>
+        <div class="dash-kpi-card dash-kpi-top">
+            <div class="dash-kpi-icon"><i class="fas fa-trophy"></i></div>
+            <div class="dash-kpi-value dash-kpi-value-sm" id="dash-kpi-top">—</div>
+            <div class="dash-kpi-label">Cliente Top</div>
+        </div>
+    </div>
+
+    <!-- ═══ CHARTS GRID ═══ -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
+
+        <!-- Tempo Lavorato (Stacked Bar) -->
+        <div class="dash-chart-card lg:col-span-2">
+            <div class="dash-chart-header" style="background: linear-gradient(135deg, #10b981, #059669);">
+                <span class="dash-chart-title"><i class="fas fa-layer-group"></i> Tempo Lavorato per Cliente</span>
             </div>
-            <div class="p-5">
-                <canvas id="workedTimeChart"></canvas>
+            <div class="dash-chart-body">
+                <canvas id="dashWorkedTimeChart"></canvas>
             </div>
         </div>
-        <!-- Guadagni Totali -->
-        <div class="cr-card overflow-hidden">
-            <div class="px-5 py-3 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white flex justify-between items-center">
-                <span class="font-semibold flex items-center gap-2"><i class="fas fa-euro-sign"></i> Guadagni Totali</span>
-                <div class="flex items-center gap-2">
-                    <label for="earnings-view-mode" class="text-xs text-white/80">Visualizza:</label>
-                    <select id="earnings-view-mode" class="bg-white/20 border-0 text-white text-xs rounded px-2 py-1 focus:outline-none">
-                        <option value="combined">Combinato</option>
-                        <option value="perClient">Per Cliente</option>
-                    </select>
-                </div>
+
+        <!-- Guadagni (Area Chart) -->
+        <div class="dash-chart-card">
+            <div class="dash-chart-header" style="background: linear-gradient(135deg, #06b6d4, #0891b2);">
+                <span class="dash-chart-title"><i class="fas fa-euro-sign"></i> Andamento Guadagni</span>
             </div>
-            <div class="p-5">
-                <canvas id="earningsChart"></canvas>
+            <div class="dash-chart-body">
+                <canvas id="dashEarningsChart"></canvas>
             </div>
         </div>
-        <!-- Distribuzione Tipi di Lavoro -->
-        <div class="cr-card overflow-hidden">
-            <div class="px-5 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-white">
-                <span class="font-semibold flex items-center gap-2"><i class="fas fa-chart-pie"></i> Distribuzione Tipi di Lavoro</span>
+
+        <!-- Distribuzione Tipi di Lavoro (Doughnut) -->
+        <div class="dash-chart-card">
+            <div class="dash-chart-header" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+                <span class="dash-chart-title"><i class="fas fa-chart-pie"></i> Distribuzione Lavoro</span>
             </div>
-            <div class="p-5" style="position:relative; min-height:300px;">
-                <div style="position: relative; height:100%; width:100%;">
-                    <canvas id="worktypeDistributionChart"></canvas>
-                </div>
-            </div>
-        </div>
-        <!-- Tempo Lavorato per Cliente -->
-        <div class="cr-card overflow-hidden">
-            <div class="px-5 py-3 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white">
-                <span class="font-semibold flex items-center gap-2"><i class="fas fa-user-clock"></i> Tempo Lavorato per Cliente</span>
-            </div>
-            <div class="p-5">
-                <canvas id="clientWorkedTimeChart"></canvas>
+            <div class="dash-chart-body dash-chart-body-doughnut">
+                <canvas id="dashWorktypeChart"></canvas>
             </div>
         </div>
     </div>
+
+    <!-- ═══ ROW: Classifica + Heatmap ═══ -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
+
+        <!-- Classifica Clienti -->
+        <div class="dash-chart-card">
+            <div class="dash-chart-header" style="background: linear-gradient(135deg, #6366f1, #4f46e5);">
+                <span class="dash-chart-title"><i class="fas fa-ranking-star"></i> Classifica Clienti</span>
+            </div>
+            <div class="dash-chart-body p-0" id="dash-client-ranking">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+
+        <!-- Heatmap Attività -->
+        <div class="dash-chart-card">
+            <div class="dash-chart-header" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed);">
+                <span class="dash-chart-title"><i class="fas fa-fire"></i> Mappa Attività</span>
+            </div>
+            <div class="dash-chart-body" id="dash-heatmap-container">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ SMART INSIGHTS ═══ -->
+    <div class="dash-insights-card" id="dash-insights">
+        <div class="dash-insights-header">
+            <i class="fas fa-lightbulb"></i>
+            <span>Smart Insights</span>
+        </div>
+        <div class="dash-insights-body" id="dash-insights-body">
+            <!-- Populated dynamically -->
+        </div>
+    </div>
+
 </div>
 `;
 
-// Riferimenti ai grafici
-let workedTimeChartInstance = null;
-let earningsChartInstance = null;
-let worktypeDistributionChartInstance = null;
-let clientWorkedTimeChartInstance = null;
-
-/** Funzione per formattare le ore decimali in hh:mm:ss */
-function formatHoursToHMS(decimalHours) {
-    const totalSeconds = Math.round(decimalHours * 3600);
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-
-    const hh = hours.toString().padStart(2, '0');
-    const mm = minutes.toString().padStart(2, '0');
-    const ss = seconds.toString().padStart(2, '0');
-
-    return `${hh}:${mm}:${ss}`;
-}
-
-/** Tooltip callback per ore lavorate */
-function hoursTooltipCallback(context) {
-    const rawValue = context.parsed.y; // valore in ore decimali
-    const formatted = formatHoursToHMS(rawValue);
-    return `Ore Lavorate: ${formatted}`;
-}
-
-/** Tooltip callback per ore lavorate su grafico a torta (pie chart) */
-function hoursTooltipPieCallback(context) {
-    const rawValue = context.parsed; // valore in ore decimali
-    const formatted = formatHoursToHMS(rawValue);
-    return `${context.label}: ${formatted}`;
-}
-
-/** Tooltip callback per guadagni in euro */
-function earningsTooltipCallback(context) {
-    const rawValue = context.parsed.y;
-    return `Guadagni: €${rawValue.toFixed(2)}`;
-}
-
+// ═══════════════════════════════════════════════
+//  INITIALIZATION
+// ═══════════════════════════════════════════════
 function initializeDashboardEvents() {
     const contentSection = document.getElementById('content-section');
     contentSection.innerHTML = dashboardTemplate;
 
     requestAnimationFrame(() => {
-        // Tooltips handled natively via title attribute
-
-        loadClientsForDashboardFilter();
-
-        const filterBtn = document.getElementById('dashboard-filter-btn');
-        filterBtn.addEventListener('click', () => {
-            const filters = getDashboardFilters();
-            loadDashboardData(filters);
+        // Period selector
+        const periodBar = document.getElementById('dash-period-bar');
+        periodBar.addEventListener('click', (e) => {
+            const chip = e.target.closest('.dash-period-chip');
+            if (!chip) return;
+            periodBar.querySelectorAll('.dash-period-chip').forEach(c => c.classList.remove('dash-period-chip-active'));
+            chip.classList.add('dash-period-chip-active');
+            dashActivePeriod = chip.dataset.period;
+            loadDashboardData();
         });
 
-        const earningsViewModeSelect = document.getElementById('earnings-view-mode');
-        earningsViewModeSelect.addEventListener('change', () => {
-            earningsChartViewMode = earningsViewModeSelect.value;
-            const filters = getDashboardFilters();
-            loadDashboardData(filters);
-        });
-
-        setInitialDateRangeAndLoadData();
+        // Initial load
+        loadDashboardData();
     });
 }
 
-/** Imposta l'intervallo di date iniziali e carica i dati.
- *  Default: primo giorno del mese corrente → oggi */
-function setInitialDateRangeAndLoadData() {
-    const endDateInput = document.getElementById('dashboard-filter-date-end');
-    const startDateInput = document.getElementById('dashboard-filter-date-start');
-
+// ═══════════════════════════════════════════════
+//  DATE RANGE HELPERS
+// ═══════════════════════════════════════════════
+function getDashDateRange(period) {
     const now = new Date();
-    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    let start, end;
 
-    startDateInput.value = firstDayOfMonth.toISOString().split('T')[0];
-    endDateInput.value = now.toISOString().split('T')[0];
-
-    const filters = getDashboardFilters();
-    loadDashboardData(filters);
+    switch (period) {
+        case 'today':
+            start = today;
+            end = new Date(today.getTime() + 86400000 - 1);
+            break;
+        case 'week': {
+            const dow = today.getDay() || 7; // Mon=1
+            start = new Date(today);
+            start.setDate(today.getDate() - dow + 1);
+            end = new Date(start);
+            end.setDate(start.getDate() + 6);
+            end.setHours(23, 59, 59, 999);
+            break;
+        }
+        case 'month':
+            start = new Date(now.getFullYear(), now.getMonth(), 1);
+            end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+            break;
+        case 'quarter': {
+            const qMonth = Math.floor(now.getMonth() / 3) * 3;
+            start = new Date(now.getFullYear(), qMonth, 1);
+            end = new Date(now.getFullYear(), qMonth + 3, 0, 23, 59, 59, 999);
+            break;
+        }
+        case 'year':
+            start = new Date(now.getFullYear(), 0, 1);
+            end = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+            break;
+        case 'all':
+            start = new Date(2020, 0, 1);
+            end = new Date(now.getFullYear() + 1, 0, 1);
+            break;
+        default:
+            start = new Date(now.getFullYear(), now.getMonth(), 1);
+            end = now;
+    }
+    return { start, end };
 }
 
-/** Carica i clienti per il filtro */
-function loadClientsForDashboardFilter() {
-    const clientSelect = document.getElementById('dashboard-filter-client');
-    clientSelect.innerHTML = '<option value="">Tutti i Clienti</option>';
-    db.collection('clients')
-        .where('uid', '==', currentUser.uid)
-        .orderBy('name')
-        .get()
-        .then(snapshot => {
-            snapshot.forEach(doc => {
-                const client = doc.data();
-                const opt = document.createElement('option');
-                opt.value = client.name;
-                opt.textContent = client.name;
-                clientSelect.appendChild(opt);
-            });
-        })
-        .catch(error => console.error('Errore nel caricamento clienti:', error));
-}
-
-/** Ottiene i filtri dalla UI */
-function getDashboardFilters() {
-    const startDateVal = document.getElementById('dashboard-filter-date-start').value;
-    const endDateVal = document.getElementById('dashboard-filter-date-end').value;
-    const clientName = document.getElementById('dashboard-filter-client').value;
-
-    const filters = {};
-    if (startDateVal) filters.startDate = new Date(startDateVal + 'T00:00:00');
-    if (endDateVal) filters.endDate = new Date(endDateVal + 'T23:59:59');
-    if (clientName) filters.clientName = clientName;
-
-    return filters;
-}
-
-/** Carica i dati da Firestore e aggiorna i grafici */
-async function loadDashboardData(filters) {
+// ═══════════════════════════════════════════════
+//  DATA LOADING
+// ═══════════════════════════════════════════════
+async function loadDashboardData() {
     try {
+        const { start, end } = getDashDateRange(dashActivePeriod);
+
         let query = db.collection('timeLogs')
             .where('uid', '==', currentUser.uid)
-            .where('isDeleted', '==', false);
-
-        if (filters.clientName) {
-            query = query.where('clientName', '==', filters.clientName);
-        }
-        if (filters.startDate) {
-            query = query.where('startTime', '>=', firebase.firestore.Timestamp.fromDate(filters.startDate));
-        }
-        if (filters.endDate) {
-            query = query.where('startTime', '<=', firebase.firestore.Timestamp.fromDate(filters.endDate));
-        }
-
-        query = query.orderBy('startTime', 'desc');
+            .where('isDeleted', '==', false)
+            .where('startTime', '>=', firebase.firestore.Timestamp.fromDate(start))
+            .where('startTime', '<=', firebase.firestore.Timestamp.fromDate(end))
+            .orderBy('startTime', 'desc');
 
         const snapshot = await query.get();
         const timeLogs = snapshot.docs.map(d => d.data());
 
-        // Aggiorna grafici
-        updateCharts(timeLogs, filters);
+        // Also fetch previous period for trend comparison
+        const periodMs = end.getTime() - start.getTime();
+        const prevStart = new Date(start.getTime() - periodMs);
+        const prevEnd = new Date(start.getTime() - 1);
+
+        let prevQuery = db.collection('timeLogs')
+            .where('uid', '==', currentUser.uid)
+            .where('isDeleted', '==', false)
+            .where('startTime', '>=', firebase.firestore.Timestamp.fromDate(prevStart))
+            .where('startTime', '<=', firebase.firestore.Timestamp.fromDate(prevEnd))
+            .orderBy('startTime', 'desc');
+
+        const prevSnapshot = await prevQuery.get();
+        const prevTimeLogs = prevSnapshot.docs.map(d => d.data());
+
+        // Reset color map
+        dashClientColorMap = {};
+
+        // Render everything
+        renderKPIs(timeLogs, prevTimeLogs, start, end);
+        renderWorkedTimeChart(timeLogs, start, end);
+        renderEarningsChart(timeLogs, start, end);
+        renderWorktypeChart(timeLogs);
+        renderClientRanking(timeLogs);
+        renderHeatmap(timeLogs, start, end);
+        renderInsights(timeLogs, prevTimeLogs);
+
     } catch (error) {
-        console.error('Errore nel caricamento dei dati della dashboard:', error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Errore',
-            text: 'Si è verificato un errore durante il caricamento dei dati della dashboard.',
-            confirmButtonText: 'OK'
-        });
+        console.error('Errore dashboard:', error);
     }
 }
 
-/** Aggiorna tutti i grafici */
-function updateCharts(timeLogs, filters) {
-    prepareWorkedTimeChart(timeLogs);
-    prepareEarningsChart(timeLogs, filters);
-    prepareWorktypeDistributionChart(timeLogs);
-    prepareClientWorkedTimeChart(timeLogs);
+// ═══════════════════════════════════════════════
+//  FORMAT HELPERS
+// ═══════════════════════════════════════════════
+function fmtHM(totalSeconds) {
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    return `${h}h ${m.toString().padStart(2, '0')}m`;
 }
 
-/** Crea il grafico del tempo lavorato giornaliero */
-function prepareWorkedTimeChart(timeLogs) {
-    const canvas = document.getElementById('workedTimeChart');
-    if (!canvas) return;
-    if (workedTimeChartInstance) workedTimeChartInstance.destroy();
+function fmtEuro(amount) {
+    return `€ ${amount.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
 
-    const workedTimePerDay = {};
-    timeLogs.forEach(log => {
-        const dateStr = log.startTime.toDate().toLocaleDateString('it-IT');
-        const hours = log.duration / 3600;
-        workedTimePerDay[dateStr] = (workedTimePerDay[dateStr] || 0) + hours;
+function fmtDateShort(date) {
+    return date.toLocaleDateString('it-IT', { day: '2-digit', month: 'short' });
+}
+
+// ═══════════════════════════════════════════════
+//  KPI RENDERING
+// ═══════════════════════════════════════════════
+function renderKPIs(timeLogs, prevTimeLogs, start, end) {
+    // Total hours
+    const totalSec = timeLogs.reduce((s, l) => s + (l.duration || 0), 0);
+    document.getElementById('dash-kpi-hours').textContent = fmtHM(totalSec);
+
+    // Total earnings
+    const totalEarnings = timeLogs.reduce((s, l) => {
+        const rate = l.hourlyRate || 0;
+        return s + (l.duration / 3600) * rate;
+    }, 0);
+    document.getElementById('dash-kpi-earnings').textContent = fmtEuro(totalEarnings);
+
+    // Average per worked day
+    const workedDays = new Set(timeLogs.map(l => l.startTime.toDate().toDateString())).size;
+    const avgSec = workedDays > 0 ? totalSec / workedDays : 0;
+    document.getElementById('dash-kpi-avg').textContent = fmtHM(avgSec);
+
+    // Top client
+    const clientHours = {};
+    timeLogs.forEach(l => {
+        const cn = l.clientName || 'Sconosciuto';
+        clientHours[cn] = (clientHours[cn] || 0) + (l.duration || 0);
+    });
+    const topClient = Object.entries(clientHours).sort((a, b) => b[1] - a[1])[0];
+    const topEl = document.getElementById('dash-kpi-top');
+    topEl.textContent = topClient ? topClient[0] : '—';
+
+    // Animate KPI cards
+    document.querySelectorAll('.dash-kpi-card').forEach((card, i) => {
+        card.style.animationDelay = `${i * 0.08}s`;
+        card.classList.remove('dash-kpi-animate');
+        void card.offsetWidth; // force reflow
+        card.classList.add('dash-kpi-animate');
+    });
+}
+
+// ═══════════════════════════════════════════════
+//  WORKED TIME CHART (STACKED BAR PER CLIENT)
+// ═══════════════════════════════════════════════
+function renderWorkedTimeChart(timeLogs, start, end) {
+    const canvas = document.getElementById('dashWorkedTimeChart');
+    if (!canvas) return;
+    if (dashChartInstances.workedTime) dashChartInstances.workedTime.destroy();
+
+    // Group by date and client
+    const dateClientMap = {};
+    const clientSet = new Set();
+    timeLogs.forEach(l => {
+        const dateStr = l.startTime.toDate().toLocaleDateString('it-IT', { day: '2-digit', month: 'short' });
+        const dateKey = l.startTime.toDate().toISOString().split('T')[0];
+        const cn = l.clientName || 'Sconosciuto';
+        clientSet.add(cn);
+        if (!dateClientMap[dateKey]) dateClientMap[dateKey] = { label: dateStr, clients: {} };
+        dateClientMap[dateKey].clients[cn] = (dateClientMap[dateKey].clients[cn] || 0) + l.duration / 3600;
     });
 
-    const labels = Object.keys(workedTimePerDay)
-        .sort((a,b) => new Date(a.split('/').reverse().join('-')) - new Date(b.split('/').reverse().join('-')));
-    const data = labels.map(l => workedTimePerDay[l]);
+    const sortedDates = Object.keys(dateClientMap).sort();
+    const labels = sortedDates.map(k => dateClientMap[k].label);
+    const clients = Array.from(clientSet);
 
-    workedTimeChartInstance = new Chart(canvas.getContext('2d'), {
+    const datasets = clients.map(cn => {
+        const color = getDashClientColor(cn);
+        return {
+            label: cn,
+            data: sortedDates.map(k => dateClientMap[k].clients[cn] || 0),
+            backgroundColor: color.main + 'CC',
+            borderColor: color.main,
+            borderWidth: 1,
+            borderRadius: 4,
+        };
+    });
+
+    dashChartInstances.workedTime = new Chart(canvas.getContext('2d'), {
         type: 'bar',
-        data: {
-            labels,
-            datasets: [{
-                label: 'Ore Lavorate',
-                data,
-                backgroundColor: 'rgba(40, 167, 69, 0.6)',
-                borderColor: 'rgba(40, 167, 69, 1)',
-                borderWidth: 1
-            }]
-        },
+        data: { labels, datasets },
         options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            interaction: { mode: 'index', intersect: false },
             scales: {
-                x: { title: { display: true, text: 'Data' }},
-                y: { title: { display: true, text: 'Ore' }, beginAtZero: true }
+                x: { stacked: true, grid: { display: false }, ticks: { font: { size: 11 } } },
+                y: {
+                    stacked: true,
+                    beginAtZero: true,
+                    title: { display: true, text: 'Ore', font: { size: 12, weight: 600 } },
+                    grid: { color: 'rgba(0,0,0,0.04)' }
+                }
             },
             plugins: {
+                legend: { position: 'bottom', labels: { boxWidth: 14, padding: 16, font: { size: 12 } } },
                 tooltip: {
                     callbacks: {
-                        label: hoursTooltipCallback
+                        label: (ctx) => {
+                            const h = Math.floor(ctx.parsed.y);
+                            const m = Math.round((ctx.parsed.y - h) * 60);
+                            return ` ${ctx.dataset.label}: ${h}h ${m.toString().padStart(2, '0')}m`;
+                        }
                     }
                 }
             }
@@ -294,231 +392,408 @@ function prepareWorkedTimeChart(timeLogs) {
     });
 }
 
-/** Crea il grafico dei guadagni */
-function prepareEarningsChart(timeLogs, filters) {
-    const canvas = document.getElementById('earningsChart');
+// ═══════════════════════════════════════════════
+//  EARNINGS CHART (AREA)
+// ═══════════════════════════════════════════════
+function renderEarningsChart(timeLogs, start, end) {
+    const canvas = document.getElementById('dashEarningsChart');
     if (!canvas) return;
-    if (earningsChartInstance) earningsChartInstance.destroy();
+    if (dashChartInstances.earnings) dashChartInstances.earnings.destroy();
 
-    const clientNames = new Set(timeLogs.map(l => l.clientName));
-    const getDateStr = log => log.startTime.toDate().toLocaleDateString('it-IT');
-
-    if (filters.clientName || earningsChartViewMode === 'combined' || clientNames.size === 1) {
-        // Combinato
-        const earningsPerDay = {};
-        timeLogs.forEach(log => {
-            const dateStr = getDateStr(log);
-            const hr = log.hourlyRate || 0;
-            const amount = (log.duration / 3600) * hr;
-            earningsPerDay[dateStr] = (earningsPerDay[dateStr] || 0) + amount;
-        });
-        const labels = Object.keys(earningsPerDay)
-            .sort((a,b) => new Date(a.split('/').reverse().join('-')) - new Date(b.split('/').reverse().join('-')));
-        const data = labels.map(l => earningsPerDay[l]);
-
-        earningsChartInstance = new Chart(canvas.getContext('2d'), {
-            type: 'line',
-            data: {
-                labels,
-                datasets: [{
-                    label: 'Guadagni (€)',
-                    data,
-                    backgroundColor: 'rgba(23, 162, 184, 0.6)',
-                    borderColor: 'rgba(23, 162, 184, 1)',
-                    borderWidth: 2,
-                    fill: false
-                }]
-            },
-            options: {
-                scales: {
-                    x: { title: { display: true, text: 'Data' }},
-                    y: { title: { display: true, text: 'Euro (€)' }, beginAtZero: true }
-                },
-                plugins: {
-                    tooltip: {
-                        callbacks: {
-                            label: earningsTooltipCallback
-                        }
-                    }
-                }
-            }
-        });
-    } else {
-        // Per Cliente
-        const earningsPerDayPerClient = {};
-        timeLogs.forEach(log => {
-            const dateStr = getDateStr(log);
-            const hr = log.hourlyRate || 0;
-            const amount = (log.duration / 3600) * hr;
-            if (!earningsPerDayPerClient[log.clientName]) earningsPerDayPerClient[log.clientName] = {};
-            earningsPerDayPerClient[log.clientName][dateStr] = (earningsPerDayPerClient[log.clientName][dateStr] || 0) + amount;
-        });
-
-        const allDates = new Set();
-        Object.values(earningsPerDayPerClient).forEach(clientObj => {
-            Object.keys(clientObj).forEach(d => allDates.add(d));
-        });
-        const labels = Array.from(allDates)
-            .sort((a,b) => new Date(a.split('/').reverse().join('-')) - new Date(b.split('/').reverse().join('-')));
-
-        const datasets = [];
-        const colors = ['rgba(23,162,184,1)', 'rgba(220,53,69,1)', 'rgba(255,193,7,1)', 'rgba(40,167,69,1)', 'rgba(102,16,242,1)'];
-        let cIndex = 0;
-        clientNames.forEach(cn => {
-            const color = colors[cIndex % colors.length];
-            cIndex++;
-            const data = labels.map(l => (earningsPerDayPerClient[cn][l] || 0));
-            datasets.push({
-                label: cn,
-                data,
-                backgroundColor: color.replace('1)', '0.6)'),
-                borderColor: color,
-                borderWidth: 2,
-                fill: false
-            });
-        });
-
-        earningsChartInstance = new Chart(canvas.getContext('2d'), {
-            type: 'line',
-            data: { labels, datasets },
-            options: {
-                scales: {
-                    x: { title: { display: true, text: 'Data' }},
-                    y: { title: { display: true, text: 'Euro (€)' }, beginAtZero: true }
-                },
-                plugins: {
-                    tooltip: {
-                        callbacks: {
-                            label: earningsTooltipCallback
-                        }
-                    }
-                }
-            }
-        });
-    }
-}
-
-/** Crea il grafico a torta della distribuzione dei tipi di lavoro */
-const colorPalette = [
-    '#f94144','#f3722c','#f8961e','#f9c74f',
-    '#90be6d','#43aa8b','#4d908e','#577590','#277da1',
-    '#9b5de5','#f15bb5','#fee440','#00bbf9','#00f5d4',
-    '#b5179e','#7209b7','#560bad','#480ca8','#3a0ca3',
-    '#3f37c9','#4361ee','#4895ef','#4cc9f0','#6a4c93'
-];
-
-function prepareWorktypeDistributionChart(timeLogs) {
-    const canvas = document.getElementById('worktypeDistributionChart');
-    if (!canvas) return;
-    if (worktypeDistributionChartInstance) worktypeDistributionChartInstance.destroy();
-
-    const worktypeDistribution = {};
-    timeLogs.forEach(log => {
-        const wName = log.worktypeName || 'Sconosciuto';
-        const hours = log.duration / 3600;
-        worktypeDistribution[wName] = (worktypeDistribution[wName] || 0) + hours;
+    const earningsPerDay = {};
+    timeLogs.forEach(l => {
+        const dateKey = l.startTime.toDate().toISOString().split('T')[0];
+        const dateLabel = l.startTime.toDate().toLocaleDateString('it-IT', { day: '2-digit', month: 'short' });
+        const rate = l.hourlyRate || 0;
+        const amount = (l.duration / 3600) * rate;
+        if (!earningsPerDay[dateKey]) earningsPerDay[dateKey] = { label: dateLabel, amount: 0 };
+        earningsPerDay[dateKey].amount += amount;
     });
 
-    const labels = Object.keys(worktypeDistribution);
-    const data = labels.map(l => worktypeDistribution[l]);
-    const backgroundColors = labels.map((_, i) => colorPalette[i % colorPalette.length]);
+    const sortedKeys = Object.keys(earningsPerDay).sort();
+    const labels = sortedKeys.map(k => earningsPerDay[k].label);
+    const data = sortedKeys.map(k => earningsPerDay[k].amount);
 
-    worktypeDistributionChartInstance = new Chart(canvas.getContext('2d'), {
-        type: 'pie',
+    // Cumulative
+    let cumulative = 0;
+    const cumulativeData = data.map(v => { cumulative += v; return cumulative; });
+
+    const ctx = canvas.getContext('2d');
+    const gradient = ctx.createLinearGradient(0, 0, 0, 250);
+    gradient.addColorStop(0, 'rgba(6, 182, 212, 0.35)');
+    gradient.addColorStop(1, 'rgba(6, 182, 212, 0.02)');
+
+    dashChartInstances.earnings = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [
+                {
+                    label: 'Guadagno Giornaliero',
+                    data,
+                    borderColor: '#06b6d4',
+                    backgroundColor: gradient,
+                    borderWidth: 2.5,
+                    fill: true,
+                    tension: 0.35,
+                    pointRadius: 3,
+                    pointBackgroundColor: '#06b6d4',
+                    pointHoverRadius: 6,
+                },
+                {
+                    label: 'Cumulativo',
+                    data: cumulativeData,
+                    borderColor: '#8b5cf6',
+                    borderWidth: 2,
+                    borderDash: [6, 3],
+                    fill: false,
+                    tension: 0.35,
+                    pointRadius: 0,
+                    pointHoverRadius: 5,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            scales: {
+                x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(0,0,0,0.04)' },
+                    ticks: { callback: v => `€${v}` }
+                }
+            },
+            plugins: {
+                legend: { position: 'bottom', labels: { boxWidth: 14, padding: 16, font: { size: 12 } } },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => ` ${ctx.dataset.label}: €${ctx.parsed.y.toFixed(2)}`
+                    }
+                }
+            }
+        }
+    });
+}
+
+// ═══════════════════════════════════════════════
+//  WORKTYPE CHART (DOUGHNUT)
+// ═══════════════════════════════════════════════
+function renderWorktypeChart(timeLogs) {
+    const canvas = document.getElementById('dashWorktypeChart');
+    if (!canvas) return;
+    if (dashChartInstances.worktype) dashChartInstances.worktype.destroy();
+
+    const wtHours = {};
+    timeLogs.forEach(l => {
+        const wt = l.worktypeName || 'Altro';
+        wtHours[wt] = (wtHours[wt] || 0) + l.duration / 3600;
+    });
+
+    const labels = Object.keys(wtHours);
+    const data = labels.map(l => wtHours[l]);
+    const totalHours = data.reduce((s, v) => s + v, 0);
+    const colors = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#3b82f6'];
+
+    dashChartInstances.worktype = new Chart(canvas.getContext('2d'), {
+        type: 'doughnut',
         data: {
             labels,
             datasets: [{
-                label: 'Ore Lavorate',
-                data: data,
-                backgroundColor: backgroundColors,
-                borderColor: backgroundColors,
-                borderWidth: 1
+                data,
+                backgroundColor: labels.map((_, i) => colors[i % colors.length]),
+                borderWidth: 2,
+                borderColor: '#fff',
+                hoverOffset: 8,
             }]
         },
         options: {
             responsive: true,
-            // maintainAspectRatio: true, // lascialo commentato se vuoi più elasticità
+            maintainAspectRatio: true,
+            cutout: '60%',
             plugins: {
+                legend: { position: 'bottom', labels: { boxWidth: 14, padding: 12, font: { size: 12 } } },
                 tooltip: {
                     callbacks: {
-                        label: hoursTooltipPieCallback
+                        label: (ctx) => {
+                            const h = Math.floor(ctx.parsed);
+                            const m = Math.round((ctx.parsed - h) * 60);
+                            const pct = totalHours > 0 ? ((ctx.parsed / totalHours) * 100).toFixed(1) : 0;
+                            return ` ${ctx.label}: ${h}h ${m.toString().padStart(2, '0')}m (${pct}%)`;
+                        }
                     }
-                },
-                legend: {
-                    position: 'bottom', // leggenda sotto il grafico
-                    labels: {
-                        boxWidth: 20,
-                        boxHeight: 20,
-                        padding: 10
-                    }
-                }
-            },
-            layout: {
-                padding: {
-                    top: 20,
-                    bottom: 20
                 }
             }
-        }
-    });
-}
-
-/** Crea il grafico a barre del tempo lavorato per cliente */
-function prepareClientWorkedTimeChart(timeLogs) {
-    const canvas = document.getElementById('clientWorkedTimeChart');
-    if (!canvas) return;
-    if (clientWorkedTimeChartInstance) clientWorkedTimeChartInstance.destroy();
-
-    const workedTimePerClient = {};
-    timeLogs.forEach(log => {
-        const cname = log.clientName || 'Sconosciuto';
-        const hours = log.duration / 3600;
-        workedTimePerClient[cname] = (workedTimePerClient[cname] || 0) + hours;
-    });
-
-    const labels = Object.keys(workedTimePerClient);
-    const data = labels.map(l => workedTimePerClient[l]);
-
-    clientWorkedTimeChartInstance = new Chart(canvas.getContext('2d'), {
-        type: 'bar',
-        data: {
-            labels,
-            datasets: [{
-                label: 'Ore Lavorate per Cliente',
-                data,
-                backgroundColor: 'rgba(0, 123, 255, 0.6)',
-                borderColor: 'rgba(0, 123, 255, 1)',
-                borderWidth: 1
-            }]
         },
-        options: {
-            scales: {
-                x: { title: { display: true, text: 'Cliente' }},
-                y: { title: { display: true, text: 'Ore' }, beginAtZero: true }
-            },
-            plugins: {
-                tooltip: {
-                    callbacks: {
-                        label: hoursTooltipCallback
-                    }
-                }
+        plugins: [{
+            id: 'centerText',
+            afterDraw(chart) {
+                const { ctx, chartArea } = chart;
+                const cx = (chartArea.left + chartArea.right) / 2;
+                const cy = (chartArea.top + chartArea.bottom) / 2;
+                ctx.save();
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.font = 'bold 1.3rem Inter, sans-serif';
+                ctx.fillStyle = '#1e293b';
+                ctx.fillText(fmtHM(totalHours * 3600), cx, cy - 8);
+                ctx.font = '500 0.7rem Inter, sans-serif';
+                ctx.fillStyle = '#94a3b8';
+                ctx.fillText('totali', cx, cy + 14);
+                ctx.restore();
             }
-        }
+        }]
     });
 }
-// === VITE MODULE: Registra globals ===
+
+// ═══════════════════════════════════════════════
+//  CLIENT RANKING
+// ═══════════════════════════════════════════════
+function renderClientRanking(timeLogs) {
+    const container = document.getElementById('dash-client-ranking');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const clientData = {};
+    timeLogs.forEach(l => {
+        const cn = l.clientName || 'Sconosciuto';
+        if (!clientData[cn]) clientData[cn] = { hours: 0, earnings: 0 };
+        clientData[cn].hours += l.duration / 3600;
+        clientData[cn].earnings += (l.duration / 3600) * (l.hourlyRate || 0);
+    });
+
+    const sorted = Object.entries(clientData).sort((a, b) => b[1].hours - a[1].hours);
+    const maxHours = sorted.length > 0 ? sorted[0][1].hours : 1;
+    const totalHours = sorted.reduce((s, [, v]) => s + v.hours, 0);
+
+    if (sorted.length === 0) {
+        container.innerHTML = '<div class="p-6 text-center text-surface-400 text-sm">Nessun dato disponibile</div>';
+        return;
+    }
+
+    sorted.forEach(([name, data], idx) => {
+        const color = getDashClientColor(name);
+        const pct = totalHours > 0 ? ((data.hours / totalHours) * 100).toFixed(1) : 0;
+        const barWidth = (data.hours / maxHours) * 100;
+        const h = Math.floor(data.hours);
+        const m = Math.round((data.hours - h) * 60);
+
+        const row = document.createElement('div');
+        row.className = 'dash-rank-row';
+        row.style.animationDelay = `${idx * 0.06}s`;
+        row.innerHTML = `
+            <div class="dash-rank-pos">${idx + 1}</div>
+            <div class="dash-rank-info">
+                <div class="dash-rank-name">${name}</div>
+                <div class="dash-rank-bar-track">
+                    <div class="dash-rank-bar" style="width:${barWidth}%;background:${color.main};"></div>
+                </div>
+            </div>
+            <div class="dash-rank-stats">
+                <span class="dash-rank-hours">${h}h ${m.toString().padStart(2, '0')}m</span>
+                <span class="dash-rank-euro">${fmtEuro(data.earnings)}</span>
+                <span class="dash-rank-pct">${pct}%</span>
+            </div>
+        `;
+        container.appendChild(row);
+    });
+}
+
+// ═══════════════════════════════════════════════
+//  HEATMAP
+// ═══════════════════════════════════════════════
+function renderHeatmap(timeLogs, start, end) {
+    const container = document.getElementById('dash-heatmap-container');
+    if (!container) return;
+    container.innerHTML = '';
+
+    // Build day→hours map
+    const dayMap = {};
+    timeLogs.forEach(l => {
+        const key = l.startTime.toDate().toISOString().split('T')[0];
+        dayMap[key] = (dayMap[key] || 0) + l.duration / 3600;
+    });
+
+    const maxH = Math.max(...Object.values(dayMap), 1);
+
+    // Day labels
+    const dayLabels = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
+
+    // Create header
+    const headerRow = document.createElement('div');
+    headerRow.className = 'dash-hm-header';
+    dayLabels.forEach(d => {
+        const span = document.createElement('span');
+        span.textContent = d;
+        headerRow.appendChild(span);
+    });
+    container.appendChild(headerRow);
+
+    // Build weeks between start and end
+    const gridEl = document.createElement('div');
+    gridEl.className = 'dash-hm-grid';
+
+    // Cap heatmap to max 12 weeks for readability
+    const MAX_WEEKS = 12;
+    const maxMs = MAX_WEEKS * 7 * 86400000;
+    let hmStart = new Date(start);
+    let hmEnd = new Date(end);
+    if (hmEnd.getTime() - hmStart.getTime() > maxMs) {
+        hmStart = new Date(hmEnd.getTime() - maxMs);
+    }
+
+    // Find first Monday on or before hmStart
+    const cur = new Date(hmStart);
+    const dow = cur.getDay() || 7;
+    cur.setDate(cur.getDate() - dow + 1);
+
+    while (cur <= hmEnd) {
+        for (let d = 0; d < 7; d++) {
+            const cellDate = new Date(cur);
+            cellDate.setDate(cur.getDate() + d);
+            const key = cellDate.toISOString().split('T')[0];
+            const hours = dayMap[key] || 0;
+            const intensity = hours > 0 ? Math.max(0.15, hours / maxH) : 0;
+
+            const cell = document.createElement('div');
+            cell.className = 'dash-hm-cell';
+
+            if (cellDate < hmStart || cellDate > hmEnd) {
+                cell.style.opacity = '0.15';
+                cell.style.background = '#f1f5f9';
+            } else if (hours > 0) {
+                cell.style.background = `rgba(99,102,241,${intensity})`;
+            } else {
+                cell.style.background = '#f1f5f9';
+            }
+
+            const h = Math.floor(hours);
+            const m = Math.round((hours - h) * 60);
+            cell.title = `${cellDate.toLocaleDateString('it-IT')}: ${hours > 0 ? h + 'h ' + m.toString().padStart(2, '0') + 'm' : 'Nessuna attività'}`;
+
+            gridEl.appendChild(cell);
+        }
+        cur.setDate(cur.getDate() + 7);
+    }
+
+    container.appendChild(gridEl);
+
+    // Legend
+    const legend = document.createElement('div');
+    legend.className = 'dash-hm-legend';
+    legend.innerHTML = `
+        <span class="text-xs text-surface-400">Meno</span>
+        <div class="dash-hm-cell" style="background:#f1f5f9;width:14px;height:14px;"></div>
+        <div class="dash-hm-cell" style="background:rgba(99,102,241,0.2);width:14px;height:14px;"></div>
+        <div class="dash-hm-cell" style="background:rgba(99,102,241,0.45);width:14px;height:14px;"></div>
+        <div class="dash-hm-cell" style="background:rgba(99,102,241,0.7);width:14px;height:14px;"></div>
+        <div class="dash-hm-cell" style="background:rgba(99,102,241,1);width:14px;height:14px;"></div>
+        <span class="text-xs text-surface-400">Più</span>
+    `;
+    container.appendChild(legend);
+}
+
+// ═══════════════════════════════════════════════
+//  SMART INSIGHTS
+// ═══════════════════════════════════════════════
+function renderInsights(timeLogs, prevTimeLogs) {
+    const container = document.getElementById('dash-insights-body');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const insights = [];
+
+    if (timeLogs.length === 0) {
+        container.innerHTML = '<div class="text-surface-400 text-sm p-2">Nessun dato disponibile per generare insights.</div>';
+        return;
+    }
+
+    // 1. Most productive day of the week
+    const dayHours = [0, 0, 0, 0, 0, 0, 0]; // Mon-Sun
+    const dayCounts = [0, 0, 0, 0, 0, 0, 0];
+    timeLogs.forEach(l => {
+        const dow = l.startTime.toDate().getDay();
+        const idx = dow === 0 ? 6 : dow - 1; // Mon=0 ... Sun=6
+        dayHours[idx] += l.duration / 3600;
+        dayCounts[idx]++;
+    });
+    const dayNames = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'];
+    const dayAvgs = dayHours.map((h, i) => dayCounts[i] > 0 ? h / dayCounts[i] : 0);
+    const bestDayIdx = dayAvgs.indexOf(Math.max(...dayAvgs));
+    if (dayAvgs[bestDayIdx] > 0) {
+        insights.push({
+            icon: 'fa-calendar-check',
+            color: '#10b981',
+            text: `Il tuo giorno più produttivo è il <strong>${dayNames[bestDayIdx]}</strong> (media ${fmtHM(dayAvgs[bestDayIdx] * 3600)})`
+        });
+    }
+
+    // 2. Most profitable worktype
+    const wtRates = {};
+    timeLogs.forEach(l => {
+        const wt = l.worktypeName || 'Altro';
+        const rate = l.hourlyRate || 0;
+        if (!wtRates[wt] || rate > wtRates[wt]) wtRates[wt] = rate;
+    });
+    const bestWt = Object.entries(wtRates).sort((a, b) => b[1] - a[1])[0];
+    if (bestWt && bestWt[1] > 0) {
+        insights.push({
+            icon: 'fa-gem',
+            color: '#8b5cf6',
+            text: `Il tipo di lavoro più redditizio è <strong>${bestWt[0]}</strong> (€${bestWt[1]}/h)`
+        });
+    }
+
+    // 3. Trend vs prev period
+    const totalSec = timeLogs.reduce((s, l) => s + (l.duration || 0), 0);
+    const prevTotalSec = prevTimeLogs.reduce((s, l) => s + (l.duration || 0), 0);
+    if (prevTotalSec > 0) {
+        const pctChange = ((totalSec - prevTotalSec) / prevTotalSec * 100).toFixed(0);
+        const isUp = totalSec >= prevTotalSec;
+        insights.push({
+            icon: isUp ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down',
+            color: isUp ? '#10b981' : '#ef4444',
+            text: `Hai lavorato <strong>${Math.abs(pctChange)}% ${isUp ? 'in più' : 'in meno'}</strong> rispetto al periodo precedente`
+        });
+    }
+
+    // 4. Unreported timers
+    const unreported = timeLogs.filter(l => !l.isReported);
+    if (unreported.length > 0) {
+        const unreportedEarnings = unreported.reduce((s, l) => s + (l.duration / 3600) * (l.hourlyRate || 0), 0);
+        insights.push({
+            icon: 'fa-exclamation-circle',
+            color: '#f59e0b',
+            text: `<strong>${unreported.length} timer</strong> non ancora reportati (${fmtEuro(unreportedEarnings)} pending)`
+        });
+    }
+
+    // 5. Total clients worked with
+    const clientCount = new Set(timeLogs.map(l => l.clientName)).size;
+    insights.push({
+        icon: 'fa-users',
+        color: '#6366f1',
+        text: `Hai lavorato con <strong>${clientCount} client${clientCount !== 1 ? 'i' : 'e'}</strong> in questo periodo`
+    });
+
+    // Render
+    insights.forEach((ins, i) => {
+        const div = document.createElement('div');
+        div.className = 'dash-insight-item';
+        div.style.animationDelay = `${i * 0.08}s`;
+        div.innerHTML = `
+            <div class="dash-insight-icon" style="color:${ins.color};background:${ins.color}18;">
+                <i class="fas ${ins.icon}"></i>
+            </div>
+            <div class="dash-insight-text">${ins.text}</div>
+        `;
+        container.appendChild(div);
+    });
+}
+
+// ═══════════════════════════════════════════════
+//  VITE MODULE: Registra globals
+// ═══════════════════════════════════════════════
 window.dashboardTemplate = dashboardTemplate;
-window.earningsTooltipCallback = earningsTooltipCallback;
-window.formatHoursToHMS = formatHoursToHMS;
-window.getDashboardFilters = getDashboardFilters;
-window.hoursTooltipCallback = hoursTooltipCallback;
-window.hoursTooltipPieCallback = hoursTooltipPieCallback;
 window.initializeDashboardEvents = initializeDashboardEvents;
-window.loadClientsForDashboardFilter = loadClientsForDashboardFilter;
 window.loadDashboardData = loadDashboardData;
-window.prepareClientWorkedTimeChart = prepareClientWorkedTimeChart;
-window.prepareEarningsChart = prepareEarningsChart;
-window.prepareWorkedTimeChart = prepareWorkedTimeChart;
-window.prepareWorktypeDistributionChart = prepareWorktypeDistributionChart;
-window.setInitialDateRangeAndLoadData = setInitialDateRangeAndLoadData;
-window.updateCharts = updateCharts;
