@@ -22,6 +22,7 @@ function loadTimerClientDropdown(selectElement) {
 
 function loadSites(selectElement, clientId) {
     selectElement.innerHTML = '<option value="">--Seleziona Sito--</option>';
+    return (
     db.collection('sites')
         .where('uid', '==', currentUser.uid)
         .where('clientId', '==', clientId)
@@ -36,11 +37,13 @@ function loadSites(selectElement, clientId) {
         })
         .catch(error => {
             console.error('Errore nel caricamento dei siti nel Timer:', error);
-        });
+        })
+    );
 }
 
 function loadWorktypes(selectElement, clientId) {
     selectElement.innerHTML = '<option value="">--Seleziona Tipo di Lavoro--</option>';
+    return (
     db.collection('worktypes')
         .where('uid', '==', currentUser.uid)
         .where('clientId', '==', clientId)
@@ -55,7 +58,8 @@ function loadWorktypes(selectElement, clientId) {
         })
         .catch(error => {
             console.error('Errore nel caricamento dei tipi di lavoro nel Timer:', error);
-        });
+        })
+    );
 }
 
 // === DATE/TIME PARSING & FORMATTING ===

@@ -122,17 +122,21 @@ function loadRecentTasks() {
                 chip.appendChild(labelSpan);
 
                 chip.title = `${r.clientName} · ${r.siteName} · ${r.worktypeName}`;
-                chip.addEventListener('click', () => {
+                chip.addEventListener('click', async () => {
                     const cs = document.getElementById('client-select');
+                    const ss = document.getElementById('site-select');
+                    const ws = document.getElementById('worktype-select');
+
                     cs.value = r.clientId;
-                    cs.dispatchEvent(new Event('change'));
-                    setTimeout(() => {
-                        const ss = document.getElementById('site-select');
-                        const ws = document.getElementById('worktype-select');
-                        ss.value = r.siteId;
-                        ws.value = r.worktypeId;
-                        document.getElementById('link-input').value = r.link;
-                    }, 500);
+                    // Load sites and worktypes, wait for both to finish
+                    await Promise.all([
+                        loadSites(ss, r.clientId),
+                        loadWorktypes(ws, r.clientId)
+                    ]);
+
+                    ss.value = r.siteId;
+                    ws.value = r.worktypeId;
+                    document.getElementById('link-input').value = r.link;
                 });
                 container.appendChild(chip);
             });
