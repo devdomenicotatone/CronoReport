@@ -149,26 +149,7 @@ export const timerTemplate = `
         </div>
     </div>
 
-    <!-- ═══ RIEPILOGO OGGI — compact inline bar ═══ -->
-    <div class="flex items-center gap-4 px-4 py-2.5 mb-6 bg-surface-50/80 rounded-xl border border-surface-100/60 text-sm" id="timer-today-grid">
-        <span class="text-[10px] font-bold uppercase tracking-wider text-surface-400">Oggi</span>
-        <span class="text-surface-200">|</span>
-        <span class="flex items-center gap-1.5">
-            <i class="fas fa-clock text-[10px] text-indigo-400"></i>
-            <span class="font-bold text-surface-700" id="today-stat-hours">0h 00m</span>
-        </span>
-        <span class="text-surface-200">·</span>
-        <span class="flex items-center gap-1.5">
-            <i class="fas fa-euro-sign text-[10px] text-emerald-500"></i>
-            <span class="font-bold text-surface-700" id="today-stat-amount">€ 0.00</span>
-        </span>
-        <span class="text-surface-200">·</span>
-        <span class="flex items-center gap-1.5">
-            <i class="fas fa-check-circle text-[10px] text-amber-500"></i>
-            <span class="font-bold text-surface-700" id="today-stat-count">0</span>
-            <span class="text-xs text-surface-400">task</span>
-        </span>
-    </div>
+
 
     <!-- ═══ TIMER ATTIVI ═══ -->
     <div id="active-timers">
