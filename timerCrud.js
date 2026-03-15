@@ -364,7 +364,7 @@ export function deleteTimerFromModal() {
                     if (oldCard) {
                         oldCard.parentElement.remove();
                     }
-                    updateActiveTimerCount();
+                    updateActiveTimerCount(activeTimers);
                     loadRecentTasks();
                     loadTodaySummary();
                 })
