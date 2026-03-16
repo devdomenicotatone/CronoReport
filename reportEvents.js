@@ -615,9 +615,11 @@ export function setupReportSection() {
             let totalAmount = 0;
             let count = 0;
             const allRows = [];
+            const timerIds = [];
 
             snapshot.forEach(doc => {
                 const d = doc.data();
+                timerIds.push(doc.id);
                 const durationH = d.duration / 3600;
                 const rate = worktypeRates[d.worktypeId] || d.hourlyRate || 0;
                 const amount = durationH * rate;
@@ -639,8 +641,8 @@ export function setupReportSection() {
                 });
             });
 
-            // Store for later
-            lastPreviewData = { totalHours, totalAmount, count, allRows };
+            // Store for later (including timerIds for mark-as-reported)
+            lastPreviewData = { totalHours, totalAmount, count, allRows, timerIds };
             renderWysiwygPreview(lastPreviewData);
         }).catch(error => {
             console.error('Errore anteprima:', error);
@@ -973,6 +975,8 @@ export function setupReportSection() {
                     p.taxDiscount,
                     p.activeColumns
                 );
+                // Ask to mark timers as reported after successful PDF download
+                askMarkAsReported(lastPreviewData.timerIds);
             } catch (error) {
                 console.error('Errore generazione PDF:', error);
                 Swal.fire({ icon: 'error', title: 'Errore PDF', text: error.message || 'Errore durante la generazione del PDF.' });
@@ -999,6 +1003,7 @@ export function setupReportSection() {
                 exportGoogleDocBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando...';
                 const content = generateReportContentString(lastPreviewData.allRows, p.activeColumns);
                 await createGoogleDoc(p.reportHeader, content);
+                askMarkAsReported(lastPreviewData.timerIds);
             } catch (error) {
                 console.error('Errore Google Docs:', error);
                 Swal.fire({ icon: 'error', title: 'Errore Google Docs', text: error.message || 'Errore durante la creazione del documento.' });
@@ -1025,12 +1030,46 @@ export function setupReportSection() {
                 exportGoogleSheetBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando...';
                 const values = generateReportValuesArray(lastPreviewData.allRows, p.activeColumns);
                 await createGoogleSheet(p.reportHeader, values);
+                askMarkAsReported(lastPreviewData.timerIds);
             } catch (error) {
                 console.error('Errore Google Sheets:', error);
                 Swal.fire({ icon: 'error', title: 'Errore Google Sheets', text: error.message || 'Errore durante la creazione del foglio.' });
             } finally {
                 exportGoogleSheetBtn.disabled = false;
                 exportGoogleSheetBtn.innerHTML = '<i class="fab fa-google-drive"></i> Google Sheets';
+            }
+        });
+    }
+
+    function askMarkAsReported(timerIds) {
+        if (!timerIds || timerIds.length === 0) return;
+        Swal.fire({
+            icon: 'question',
+            title: 'Contrassegnare come riportati?',
+            text: `Vuoi contrassegnare ${timerIds.length} timer inclusi nel report come già riportati?`,
+            showCancelButton: true,
+            confirmButtonText: 'Sì, contrassegna',
+            cancelButtonText: 'No, lascia invariati',
+            customClass: {
+                popup: 'cr-swal-popup',
+                title: 'cr-swal-title',
+                htmlContainer: 'cr-swal-text',
+                confirmButton: 'cr-swal-confirm',
+                cancelButton: 'cr-swal-cancel',
+                actions: 'cr-swal-actions'
+            },
+            buttonsStyling: false
+        }).then((result) => {
+            if (result.isConfirmed) {
+                markTimersAsReported(timerIds);
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Timer aggiornati',
+                    text: `${timerIds.length} timer contrassegnati come riportati.`,
+                    timer: 2000,
+                    timerProgressBar: true,
+                    showConfirmButton: false
+                });
             }
         });
     }
