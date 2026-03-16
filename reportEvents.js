@@ -80,8 +80,41 @@ export function setupReportSection() {
     // Trigger preview quando cambiano intestazione o note
     const reportHeaderInput = document.getElementById('report-header');
     const reportNotesInput = document.getElementById('report-notes');
-    if (reportHeaderInput) reportHeaderInput.addEventListener('input', () => tryLoadPreview());
-    if (reportNotesInput) reportNotesInput.addEventListener('input', () => tryLoadPreview());
+    let headerSaveTimer = null;
+    if (reportHeaderInput) reportHeaderInput.addEventListener('input', () => {
+        tryLoadPreview();
+        // Auto-save header with debounce
+        clearTimeout(headerSaveTimer);
+        headerSaveTimer = setTimeout(() => {
+            saveUserPreference(currentUser.uid, 'reportHeader', reportHeaderInput.value.trim());
+        }, 800);
+    });
+    let notesSaveTimer = null;
+    if (reportNotesInput) reportNotesInput.addEventListener('input', () => {
+        tryLoadPreview();
+        // Auto-save notes with debounce
+        clearTimeout(notesSaveTimer);
+        notesSaveTimer = setTimeout(() => {
+            saveUserPreference(currentUser.uid, 'reportNotes', reportNotesInput.value.trim());
+        }, 800);
+    });
+
+    // Restore persisted header, notes & logo
+    (async () => {
+        try {
+            const [savedHeader, savedNotes, savedLogo] = await Promise.all([
+                getUserPreference(currentUser.uid, 'reportHeader', ''),
+                getUserPreference(currentUser.uid, 'reportNotes', ''),
+                getUserPreference(currentUser.uid, 'reportLogo', '')
+            ]);
+            if (savedHeader && reportHeaderInput) reportHeaderInput.value = savedHeader;
+            if (savedNotes && reportNotesInput) reportNotesInput.value = savedNotes;
+            if (savedLogo) {
+                companyLogoBase64 = savedLogo;
+                displayLogoPreview(companyLogoBase64);
+            }
+        } catch (e) { console.warn('Ripristino preferenze report:', e); }
+    })();
 
     // === COLUMN CHIPS with PIN system ===
     const columnChipsContainer = document.getElementById('rw-column-chips');
@@ -292,6 +325,8 @@ export function setupReportSection() {
             reader.onloadend = () => {
                 companyLogoBase64 = reader.result;
                 displayLogoPreview(companyLogoBase64);
+                // Auto-save logo to Firestore
+                saveUserPreference(currentUser.uid, 'reportLogo', companyLogoBase64);
                 tryLoadPreview();
             };
             reader.readAsDataURL(file);
