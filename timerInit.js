@@ -4,6 +4,7 @@ import { loadTimerClientDropdown, loadProjects, loadWorktypes, formatDuration, u
 import { createTimerCard, startTimer, pauseTimer, stopTimer, activeTimers } from './timerCard.js';
 import { loadRecentTasks, loadTodaySummary, loadTodayLog, updateActiveTimerCount } from './timerWidgets.js';
 import { createNewTimer } from './timerCrud.js';
+import { loadClientColors } from './clientColors.js';
 
 // Variabili globali per i selettori e i timer
 let clientSelect;
@@ -197,6 +198,8 @@ export async function initializeTimerEvents() {
     activeTimers.length = 0;
     if (timerCardsContainer) timerCardsContainer.innerHTML = '';
 
+    // Pre-load client colors from Firestore, then load active timers
+    loadClientColors().then(() => {
     db.collection('timers')
         .where('uid', '==', currentUser.uid)
         .where('isActive', '==', true)
@@ -241,6 +244,7 @@ export async function initializeTimerEvents() {
         .catch(error => {
             console.error('Errore nel caricamento dei timer attivi:', error);
         });
+    }); // end loadClientColors().then()
 
     // === KEYBOARD SHORTCUTS (bind once) ===
     if (!_keyboardBound) {

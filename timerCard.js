@@ -1,6 +1,7 @@
 // timerCard.js — Card UI e Timer Lifecycle (start, pause, resume, stop)
 import { createFaviconEl, loadRecentTasks, loadTodaySummary, loadTodayLog, updateActiveTimerCount } from './timerWidgets.js';
 import { formatDuration, updateLiveAmount } from './timerHelpers.js';
+import { getClientHexColor } from './clientColors.js';
 
 // Shared state: activeTimers vive qui per evitare dipendenza circolare con timerInit/timerCrud
 export let activeTimers = [];
@@ -27,19 +28,16 @@ export function createTimerCard(timer) {
     if (timer.isPaused) card.classList.add('timer-card-paused');
     card.setAttribute('data-timer-id', timer.id);
 
-    // Accent bar — use project-based color
-    const projName = timer.projectName || '?';
-    const projColors = ['#6366f1','#8b5cf6','#ec4899','#f43f5e','#f97316','#eab308','#22c55e','#14b8a6','#06b6d4','#3b82f6'];
-    const projHash = projName.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-    const projColor = projColors[projHash % projColors.length];
-    const projColorLight = projColor + '66';
+    // Accent bar — use client color from Firestore
+    const clientColor = getClientHexColor(timer.clientName);
+    const clientColorLight = clientColor + '66';
 
     const accentBar = document.createElement('div');
     accentBar.className = 'h-1 w-full absolute top-0 left-0';
     if (timer.isPaused) {
         accentBar.style.background = '#cbd5e1';
     } else {
-        accentBar.style.background = `linear-gradient(90deg, ${projColor}, ${projColorLight}, ${projColor})`;
+        accentBar.style.background = `linear-gradient(90deg, ${clientColor}, ${clientColorLight}, ${clientColor})`;
         accentBar.style.backgroundSize = '200% 100%';
         accentBar.style.animation = 'shimmer 4s linear infinite';
     }
@@ -56,8 +54,16 @@ export function createTimerCard(timer) {
     title.className = 'text-sm font-extrabold text-surface-900 leading-tight tracking-tight truncate';
     title.textContent = timer.clientName;
 
+    const r = parseInt(clientColor.slice(1, 3), 16);
+    const g = parseInt(clientColor.slice(3, 5), 16);
+    const b = parseInt(clientColor.slice(5, 7), 16);
     const badge = document.createElement('span');
-    badge.className = 'inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-indigo-50 text-indigo-600 border border-indigo-100 whitespace-nowrap flex-shrink-0 max-w-[100px] overflow-hidden text-ellipsis';
+    badge.className = 'inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider whitespace-nowrap flex-shrink-0 max-w-[100px] overflow-hidden text-ellipsis';
+    badge.style.background = `rgba(${r}, ${g}, ${b}, 0.1)`;
+    badge.style.color = clientColor;
+    badge.style.borderColor = `rgba(${r}, ${g}, ${b}, 0.2)`;
+    badge.style.borderWidth = '1px';
+    badge.style.borderStyle = 'solid';
     badge.textContent = timer.worktypeName;
 
     header.appendChild(title);
@@ -288,7 +294,7 @@ export function createTimerCard(timer) {
         resumeBtn.style.display = 'none';
         timerDisplay.classList.add('timer-display-running');
         card.classList.remove('timer-card-paused');
-        accentBar.style.background = `linear-gradient(90deg, ${projColor}, ${projColorLight}, ${projColor})`;
+        accentBar.style.background = `linear-gradient(90deg, ${clientColor}, ${clientColorLight}, ${clientColor})`;
         accentBar.style.backgroundSize = '200% 100%';
         accentBar.style.animation = 'shimmer 4s linear infinite';
     });
