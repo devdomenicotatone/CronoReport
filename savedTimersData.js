@@ -1,5 +1,6 @@
 // savedTimersData.js
 import { CrModal } from './uiComponents.js';
+import { loadClientColors, getClientBgStyle, getClientHexColor } from './clientColors.js';
 import { createTimerRow, formatDuration, getMonthName, formatDate, formatTimeShort } from './savedTimersUI.js';
 // NOTE: showAlert (main.js), openEditSavedTimerModal (savedTimersUI.js) usati via dynamic import()
 
@@ -141,7 +142,10 @@ export function updateQuickFilterBar() {
 }
 
 // Funzione per caricare i timer salvati in base ai filtri
-export function loadSavedTimers(filters = {}) {
+export async function loadSavedTimers(filters = {}) {
+    // Ensure client colors are loaded from Firestore
+    await loadClientColors();
+
     const savedTimersList = document.getElementById('savedTimersAccordion');
     savedTimersList.innerHTML = '';
 
@@ -287,14 +291,16 @@ export function displayUnreportedAmounts(unreportedAmounts) {
     // Crea una riga per ogni cliente
     for (const clientName in unreportedAmounts) {
         const amount = unreportedAmounts[clientName];
-        const clientColor = getClientColor(clientName);
+        const clientColor = getClientBgStyle(clientName);
 
         const row = document.createElement('div');
         row.className = 'flex items-start gap-3 px-3 py-2.5 bg-white rounded-lg border border-surface-100 overflow-hidden';
 
         // Badge cliente
         const badge = document.createElement('span');
-        badge.className = `tl-badge-client ${clientColor.bg} ${clientColor.text}`;
+        badge.className = 'tl-badge-client';
+        badge.style.background = clientColor.bg;
+        badge.style.color = clientColor.text;
         badge.textContent = clientName;
 
         // Importo
@@ -501,28 +507,11 @@ export function showSetReminderModal(clientName, currentAmount) {
     };
 }
 
-// Palette colori per badge clienti
-const clientColorPalette = [
-    { bg: 'bg-indigo-100', text: 'text-indigo-700' },
-    { bg: 'bg-emerald-100', text: 'text-emerald-700' },
-    { bg: 'bg-amber-100', text: 'text-amber-700' },
-    { bg: 'bg-rose-100', text: 'text-rose-700' },
-    { bg: 'bg-cyan-100', text: 'text-cyan-700' },
-    { bg: 'bg-purple-100', text: 'text-purple-700' },
-    { bg: 'bg-pink-100', text: 'text-pink-700' },
-    { bg: 'bg-teal-100', text: 'text-teal-700' },
-    { bg: 'bg-orange-100', text: 'text-orange-700' },
-    { bg: 'bg-blue-100', text: 'text-blue-700' },
-];
-const clientColorMap = {};
-let clientColorIndex = 0;
-
+// getClientColor è ora sostituita da getClientBgStyle di clientColors.js
+// Mantenuta per retrocompatibilità interna ma reindirizza al modulo centralizzato
 export function getClientColor(clientName) {
-    if (!clientColorMap[clientName]) {
-        clientColorMap[clientName] = clientColorPalette[clientColorIndex % clientColorPalette.length];
-        clientColorIndex++;
-    }
-    return clientColorMap[clientName];
+    const style = getClientBgStyle(clientName);
+    return { bg: '', text: '', style };
 }
 
 // Funzione per visualizzare i timer raggruppati per cliente
@@ -570,7 +559,7 @@ export function displayTimers(timers) {
 
     sortedClients.forEach(clientName => {
         const clientTimers = timersByClient[clientName];
-        const color = getClientColor(clientName);
+        const color = getClientBgStyle(clientName);
 
         // Calcola totali del cliente
         let totalSeconds = 0;
@@ -590,7 +579,7 @@ export function displayTimers(timers) {
         clientHeader.className = 'tl-day-header';
         clientHeader.innerHTML = `
             <div class="flex items-center gap-3">
-                <span class="tl-badge-client ${color.bg} ${color.text}" style="font-size: 0.8rem; padding: 4px 14px;">${clientName}</span>
+                <span class="tl-badge-client" style="background:${color.bg}; color:${color.text};">${clientName}</span>
                 <span class="text-xs text-surface-400">(${clientTimers.length} timer)</span>
             </div>
             <div class="flex items-center gap-4 text-sm">

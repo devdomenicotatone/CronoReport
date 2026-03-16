@@ -12,6 +12,7 @@ import { initializeReportEvents } from './reportEvents.js';
 import { reportHistoryTemplate, initializeReportHistoryEvents } from './reportHistory.js';
 import { dashboardTemplate, initializeDashboardEvents } from './dashboard.js';
 import { CrTabs } from './uiComponents.js';
+import { invalidateColorCache } from './clientColors.js';
 
 if (DEV_MODE) {
     // Fake user per sviluppo
@@ -301,13 +302,14 @@ export async function renderUnifiedClientAccordion(filter = 'active') {
                     swatch.addEventListener('click', (ev) => {
                         ev.stopPropagation();
                         db.collection('clients').doc(clientId).update({ color: color }).then(() => {
+                            invalidateColorCache();
                             palette.remove();
                             renderUnifiedClientAccordion(_currentDmFilter);
                         });
                     });
                     palette.appendChild(swatch);
                 });
-                colorDot.parentElement.appendChild(palette);
+                colorDot.closest('.dm-client-header').appendChild(palette);
                 // Close on outside click
                 setTimeout(() => {
                     const close = (ev) => { if (!palette.contains(ev.target)) { palette.remove(); document.removeEventListener('click', close); } };

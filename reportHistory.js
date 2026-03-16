@@ -1,5 +1,6 @@
 // reportHistory.js
 import { generatePDF } from './reportConfig.js';
+import { loadClientColors, getClientBgStyle } from './clientColors.js';
 // Template per la sezione Storico Report
 export const reportHistoryTemplate = `
 <div id="report-history-section" class="max-w-6xl mx-auto px-4 py-6" style="padding-bottom: 5.5rem;">
@@ -76,26 +77,7 @@ export function initializeReportHistoryEvents() {
     let rhAvailableMonthsByYear = {};
     const RH_MONTH_NAMES = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
 
-    // Palette colori per badge clienti (riusa la stessa dei Timer Salvati)
-    const rhColorPalette = [
-        { bg: 'bg-indigo-100', text: 'text-indigo-700' },
-        { bg: 'bg-emerald-100', text: 'text-emerald-700' },
-        { bg: 'bg-amber-100', text: 'text-amber-700' },
-        { bg: 'bg-rose-100', text: 'text-rose-700' },
-        { bg: 'bg-cyan-100', text: 'text-cyan-700' },
-        { bg: 'bg-purple-100', text: 'text-purple-700' },
-        { bg: 'bg-teal-100', text: 'text-teal-700' },
-        { bg: 'bg-orange-100', text: 'text-orange-700' },
-    ];
-    const rhColorMap = {};
-    let rhColorIdx = 0;
-    function getRhColor(name) {
-        if (!rhColorMap[name]) {
-            rhColorMap[name] = rhColorPalette[rhColorIdx % rhColorPalette.length];
-            rhColorIdx++;
-        }
-        return rhColorMap[name];
-    }
+    // I colori dei clienti vengono caricati da Firestore tramite clientColors.js
 
     // === Quick Filter: Year/Month Detection ===
     function loadRhAvailableYears() {
@@ -212,8 +194,11 @@ export function initializeReportHistoryEvents() {
     /**
      * Carica lo storico dei report con layout flat per cliente
      */
-    function loadReportHistory(searchTerm = '') {
+    async function loadReportHistory(searchTerm = '') {
         reportHistoryAccordion.innerHTML = '';
+
+        // Ensure client colors are loaded
+        await loadClientColors();
 
         let query = db.collection('reports')
             .where('uid', '==', currentUser.uid);
@@ -293,7 +278,7 @@ export function initializeReportHistoryEvents() {
 
                 sortedClients.forEach(clientName => {
                     const clientReports = reportsByClient[clientName];
-                    const color = getRhColor(clientName);
+                    const color = getClientBgStyle(clientName);
 
                     // Totale importo del cliente
                     const totalAmount = clientReports.reduce((sum, r) =>
@@ -309,7 +294,7 @@ export function initializeReportHistoryEvents() {
                     header.className = 'tl-day-header';
                     header.innerHTML = `
                         <div class="flex items-center gap-3">
-                            <span class="tl-badge-client ${color.bg} ${color.text}" style="font-size: 0.8rem; padding: 4px 14px;">${clientName}</span>
+                            <span class="tl-badge-client" style="background:${color.bg}; color:${color.text};">${clientName}</span>
                             <span class="text-xs text-surface-400">(${clientReports.length} report)</span>
                         </div>
                         <div class="flex items-center gap-4 text-sm">

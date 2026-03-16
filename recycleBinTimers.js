@@ -1,27 +1,7 @@
 // recycleBinTimers.js
 import { formatTimeShort } from './savedTimersUI.js';
 import { loadSavedTimers, getCurrentFilters } from './savedTimersData.js';
-
-// Palette colori per badge (consistente con il resto)
-const rbtColorPalette = [
-    { bg: 'bg-rose-100', text: 'text-rose-700' },
-    { bg: 'bg-amber-100', text: 'text-amber-700' },
-    { bg: 'bg-indigo-100', text: 'text-indigo-700' },
-    { bg: 'bg-cyan-100', text: 'text-cyan-700' },
-    { bg: 'bg-purple-100', text: 'text-purple-700' },
-    { bg: 'bg-teal-100', text: 'text-teal-700' },
-    { bg: 'bg-orange-100', text: 'text-orange-700' },
-    { bg: 'bg-emerald-100', text: 'text-emerald-700' },
-];
-const rbtColorMap = {};
-let rbtColorIdx = 0;
-function getRbtColor(name) {
-    if (!rbtColorMap[name]) {
-        rbtColorMap[name] = rbtColorPalette[rbtColorIdx % rbtColorPalette.length];
-        rbtColorIdx++;
-    }
-    return rbtColorMap[name];
-}
+import { loadClientColors, getClientBgStyle } from './clientColors.js';
 
 // Funzione per inizializzare gli eventi della sezione Cestino Timer
 export function initializeRecycleBinTimersEvents() {
@@ -49,7 +29,8 @@ export function initializeRecycleBinTimersEvents() {
     loadRecycleBinTimers();
 }
 
-export function loadRecycleBinTimers(searchTerm = '') {
+export async function loadRecycleBinTimers(searchTerm = '') {
+    await loadClientColors();
     const recycleBinTimersDiv = document.getElementById('recycle-bin-timers');
     recycleBinTimersDiv.innerHTML = '';
 
@@ -114,7 +95,7 @@ export function loadRecycleBinTimers(searchTerm = '') {
 
             sortedClients.forEach(clientName => {
                 const clientTimers = timersByClient[clientName];
-                const color = getRbtColor(clientName);
+                const color = getClientBgStyle(clientName);
 
                 // Totale ore cliente
                 const totalSeconds = clientTimers.reduce((sum, t) => sum + (t.data.duration || 0), 0);
@@ -128,7 +109,7 @@ export function loadRecycleBinTimers(searchTerm = '') {
                 header.className = 'tl-day-header';
                 header.innerHTML = `
                     <div class="flex items-center gap-3">
-                        <span class="tl-badge-client ${color.bg} ${color.text}" style="font-size: 0.8rem; padding: 4px 14px;">${clientName}</span>
+                        <span class="tl-badge-client" style="background:${color.bg}; color:${color.text};">${clientName}</span>
                         <span class="text-xs text-surface-400">(${clientTimers.length} timer)</span>
                     </div>
                     <div class="flex items-center gap-3 text-sm">

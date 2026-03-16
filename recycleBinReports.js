@@ -48,26 +48,7 @@ export const recycleBinTemplate = `
 </div>
 `;
 
-// Palette colori per badge (stile consistente)
-const rbColorPalette = [
-    { bg: 'bg-rose-100', text: 'text-rose-700' },
-    { bg: 'bg-amber-100', text: 'text-amber-700' },
-    { bg: 'bg-indigo-100', text: 'text-indigo-700' },
-    { bg: 'bg-cyan-100', text: 'text-cyan-700' },
-    { bg: 'bg-purple-100', text: 'text-purple-700' },
-    { bg: 'bg-teal-100', text: 'text-teal-700' },
-    { bg: 'bg-orange-100', text: 'text-orange-700' },
-    { bg: 'bg-emerald-100', text: 'text-emerald-700' },
-];
-const rbColorMap = {};
-let rbColorIdx = 0;
-function getRbColor(name) {
-    if (!rbColorMap[name]) {
-        rbColorMap[name] = rbColorPalette[rbColorIdx % rbColorPalette.length];
-        rbColorIdx++;
-    }
-    return rbColorMap[name];
-}
+import { loadClientColors, getClientBgStyle } from './clientColors.js';
 
 // Funzione per inizializzare gli eventi della sezione Cestino Report
 export function initializeRecycleBinReportsEvents() {
@@ -81,9 +62,11 @@ export function initializeRecycleBinReportsEvents() {
     loadRecycleBinReports();
 }
 
-export function loadRecycleBinReports(searchTerm = '') {
+export async function loadRecycleBinReports(searchTerm = '') {
     const recycleBinReportsDiv = document.getElementById('recycle-bin-reports');
     recycleBinReportsDiv.innerHTML = '';
+
+    await loadClientColors();
 
     db.collection('reports')
         .where('uid', '==', currentUser.uid)
@@ -148,7 +131,7 @@ export function loadRecycleBinReports(searchTerm = '') {
 
             sortedClients.forEach(clientName => {
                 const clientReports = reportsByClient[clientName];
-                const color = getRbColor(clientName);
+                const color = getClientBgStyle(clientName);
 
                 // --- Client Section ---
                 const section = document.createElement('div');
@@ -159,7 +142,7 @@ export function loadRecycleBinReports(searchTerm = '') {
                 header.className = 'tl-day-header';
                 header.innerHTML = `
                     <div class="flex items-center gap-3">
-                        <span class="tl-badge-client ${color.bg} ${color.text}" style="font-size: 0.8rem; padding: 4px 14px;">${clientName}</span>
+                        <span class="tl-badge-client" style="background:${color.bg}; color:${color.text};">${clientName}</span>
                         <span class="text-xs text-surface-400">(${clientReports.length} report)</span>
                     </div>
                     <div class="flex items-center gap-3 text-sm">
