@@ -738,6 +738,8 @@ export function setupReportSection() {
             const logoSrc = companyLogoBase64;
             const tpl = getActiveTemplate();
             const accent = getAccentColor();
+            const startVal = startDateInput.value;
+            const endVal = endDateInput.value;
             // Executive: no separate KPI (data is in totals)
 
             let wysiwygHtml = `<div class="rw-wysiwyg-preview rw-tpl-${tpl}" style="--rw-accent:${accent};">`;
