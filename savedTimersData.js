@@ -17,6 +17,15 @@ export function setActiveQuickYear(val) { activeQuickYear = val; }
 export function setActiveQuickMonth(val) { activeQuickMonth = val; }
 let availableMonthsByYear = {}; // { 2026: [1, 2, 3], 2025: [1, ..., 12] }
 
+// Advanced filter state
+export let activeStatusFilter = 'all'; // 'all' | 'pending' | 'reported'
+export let activeWorktypeFilter = null; // null = tutti, oppure worktypeName
+export function setActiveStatusFilter(val) { activeStatusFilter = val; }
+export function setActiveWorktypeFilter(val) { activeWorktypeFilter = val; }
+
+// Stats delta memory (per calcolare variazione vs periodo precedente)
+let previousPeriodStats = { hours: 0, earnings: 0, count: 0 };
+
 const MONTH_NAMES_SHORT = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
 
 // Funzione per caricare gli anni e mesi disponibili e popolare i chip
@@ -816,7 +825,12 @@ export function displayTimers(timers) {
 export function updateTimelineStats(timers) {
     // Ore totali
     let totalSeconds = 0;
-    timers.forEach(t => { totalSeconds += t.data.duration || 0; });
+    let totalEarnings = 0;
+    timers.forEach(t => {
+        totalSeconds += t.data.duration || 0;
+        const rate = t.data.hourlyRate || 0;
+        totalEarnings += (t.data.duration / 3600) * rate;
+    });
     const hours = Math.floor(totalSeconds / 3600);
     const mins = Math.floor((totalSeconds % 3600) / 60);
     const statHours = document.getElementById('tl-stat-hours');
@@ -829,6 +843,85 @@ export function updateTimelineStats(timers) {
     if (statCount) {
         statCount.textContent = timers.length;
     }
+
+    // Guadagni totali
+    const statEarnings = document.getElementById('tl-stat-earnings');
+    if (statEarnings) {
+        statEarnings.textContent = `€ ${totalEarnings.toFixed(2)}`;
+    }
+
+    // Delta indicators
+    updateStatDelta('tl-stat-hours-delta', totalSeconds / 3600, previousPeriodStats.hours, 'h');
+    updateStatDelta('tl-stat-earnings-delta', totalEarnings, previousPeriodStats.earnings, '€');
+    updateStatDelta('tl-stat-count-delta', timers.length, previousPeriodStats.count, '');
+
+    // Salva stats correnti come riferimento per il prossimo ciclo di confronto
+    previousPeriodStats = {
+        hours: totalSeconds / 3600,
+        earnings: totalEarnings,
+        count: timers.length
+    };
+
+    // Popola i chip dei tipi di lavoro
+    populateWorktypeChips(timers);
+}
+
+function updateStatDelta(elementId, current, previous, unit) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    if (previous === 0) {
+        el.textContent = '';
+        el.className = 'tl-stat-delta tl-stat-delta--neutral';
+        return;
+    }
+    const diff = current - previous;
+    const pct = ((diff / previous) * 100).toFixed(0);
+    if (diff > 0) {
+        el.innerHTML = `<i class="fas fa-arrow-up" style="font-size:0.5rem;"></i> +${pct}%`;
+        el.className = 'tl-stat-delta tl-stat-delta--up';
+    } else if (diff < 0) {
+        el.innerHTML = `<i class="fas fa-arrow-down" style="font-size:0.5rem;"></i> ${pct}%`;
+        el.className = 'tl-stat-delta tl-stat-delta--down';
+    } else {
+        el.textContent = '—';
+        el.className = 'tl-stat-delta tl-stat-delta--neutral';
+    }
+}
+
+// Popola i chip dei tipi di lavoro basandosi sui timer attualmente visualizzati
+export function populateWorktypeChips(timers) {
+    const container = document.getElementById('st-worktype-chips');
+    const filtersRow = document.getElementById('st-filters-row');
+    if (!container || !filtersRow) return;
+    container.innerHTML = '';
+
+    // Raccogli tipi di lavoro unici
+    const worktypes = new Set();
+    timers.forEach(t => {
+        if (t.data.worktypeName) worktypes.add(t.data.worktypeName);
+    });
+
+    if (worktypes.size === 0) {
+        filtersRow.style.display = 'none';
+        return;
+    }
+
+    filtersRow.style.display = 'flex';
+
+    // Chip "Tutti"
+    const allChip = document.createElement('button');
+    allChip.className = 'st-filter-chip' + (activeWorktypeFilter === null ? ' st-filter-chip--active' : '');
+    allChip.dataset.filterWorktype = 'all';
+    allChip.textContent = 'Tutti';
+    container.appendChild(allChip);
+
+    worktypes.forEach(wt => {
+        const chip = document.createElement('button');
+        chip.className = 'st-filter-chip' + (activeWorktypeFilter === wt ? ' st-filter-chip--active' : '');
+        chip.dataset.filterWorktype = wt;
+        chip.textContent = wt;
+        container.appendChild(chip);
+    });
 }
 
 // Funzione per caricare i clienti nel filtro
@@ -865,3 +958,172 @@ export function getCurrentFilters() {
     };
 }
 
+// Applica filtri avanzati (status, worktype) client-side ai timer già caricati
+export function applyAdvancedFilters(timers) {
+    let filtered = timers;
+
+    // Filtro per stato
+    if (activeStatusFilter === 'pending') {
+        filtered = filtered.filter(t => !t.data.isReported);
+    } else if (activeStatusFilter === 'reported') {
+        filtered = filtered.filter(t => t.data.isReported);
+    }
+
+    // Filtro per tipo di lavoro
+    if (activeWorktypeFilter !== null) {
+        filtered = filtered.filter(t => t.data.worktypeName === activeWorktypeFilter);
+    }
+
+    return filtered;
+}
+
+// ============================================
+// Export CSV Nativo
+// ============================================
+export function exportTimersToCSV(timers) {
+    if (!timers || timers.length === 0) {
+        import('./main.js').then(m => m.showAlert('info', 'Nessun Dato', 'Non ci sono timer da esportare.'));
+        return;
+    }
+
+    const headers = ['Cliente', 'Progetto', 'Tipo Lavoro', 'Data', 'Inizio', 'Fine', 'Durata (h)', 'Tariffa (€/h)', 'Importo (€)', 'Stato', 'Link'];
+    const rows = timers.map(t => {
+        const d = t.data;
+        const startDate = d.startTime ? d.startTime.toDate() : null;
+        const endDate = d.endTime ? d.endTime.toDate() : null;
+        const durationH = (d.duration / 3600).toFixed(2);
+        const rate = d.hourlyRate || 0;
+        const amount = ((d.duration / 3600) * rate).toFixed(2);
+        return [
+            d.clientName || '',
+            d.projectName || '',
+            d.worktypeName || '',
+            startDate ? startDate.toLocaleDateString('it-IT') : '',
+            startDate ? startDate.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : '',
+            endDate ? endDate.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : '',
+            durationH,
+            rate.toFixed(2),
+            amount,
+            d.isReported ? 'Reportato' : 'Pending',
+            d.link || ''
+        ];
+    });
+
+    // BOM UTF-8 per Excel compatibilità
+    let csv = '\uFEFF' + headers.join(';') + '\n';
+    rows.forEach(row => {
+        csv += row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(';') + '\n';
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `CronoReport_Timer_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    import('./main.js').then(m => m.showAlert('success', 'CSV Esportato', `${timers.length} timer esportati con successo.`));
+}
+
+// ============================================
+// Export PDF Nativo
+// ============================================
+export function exportTimersToPDF(timers) {
+    if (!timers || timers.length === 0) {
+        import('./main.js').then(m => m.showAlert('info', 'Nessun Dato', 'Non ci sono timer da esportare.'));
+        return;
+    }
+
+    // Raggruppa per cliente
+    const byClient = {};
+    timers.forEach(t => {
+        const client = t.data.clientName || 'Sconosciuto';
+        if (!byClient[client]) byClient[client] = [];
+        byClient[client].push(t);
+    });
+
+    // Apri finestra di stampa con layout professionale
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+        import('./main.js').then(m => m.showAlert('error', 'Errore', 'Il browser ha bloccato la finestra popup. Abilita i popup per esportare in PDF.'));
+        return;
+    }
+
+    let html = `<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>CronoReport — Export Timer</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; color:#1e293b; padding:2rem; font-size:11px; }
+        h1 { font-size:1.5rem; color:#4f46e5; margin-bottom:.25rem; }
+        .subtitle { color:#64748b; font-size:.85rem; margin-bottom:1.5rem; }
+        .client-section { margin-bottom:1.5rem; page-break-inside:avoid; }
+        .client-header { background:linear-gradient(135deg,#6366f1,#4f46e5); color:#fff; padding:.5rem 1rem; border-radius:.5rem .5rem 0 0; font-weight:700; font-size:.9rem; display:flex; justify-content:space-between; }
+        table { width:100%; border-collapse:collapse; margin-bottom:.75rem; }
+        th { background:#f1f5f9; color:#64748b; font-weight:600; text-transform:uppercase; font-size:.6rem; letter-spacing:.05em; padding:.4rem .5rem; text-align:left; border-bottom:1px solid #e2e8f0; }
+        td { padding:.4rem .5rem; border-bottom:1px solid #f1f5f9; font-size:.7rem; }
+        tr:nth-child(even) { background:#fafbfc; }
+        .status-reported { color:#22c55e; font-weight:600; }
+        .status-pending { color:#f59e0b; font-weight:600; }
+        .totals { text-align:right; font-weight:700; font-size:.8rem; color:#1e293b; padding:.5rem 1rem; background:#f8fafc; border-radius:0 0 .5rem .5rem; border:1px solid #e2e8f0; }
+        .footer { margin-top:2rem; padding-top:1rem; border-top:1px solid #e2e8f0; color:#94a3b8; font-size:.7rem; text-align:center; }
+        @media print { body { padding:.5rem; } .client-section { page-break-inside:avoid; } }
+    </style>
+</head>
+<body>
+    <h1>📊 CronoReport — Storico Timer</h1>
+    <p class="subtitle">Generato il ${new Date().toLocaleDateString('it-IT', { day: '2-digit', month: 'long', year: 'numeric' })} — ${timers.length} timer</p>`;
+
+    for (const clientName of Object.keys(byClient).sort()) {
+        const clientTimers = byClient[clientName];
+        let totalSec = 0, totalEur = 0;
+        clientTimers.forEach(t => {
+            totalSec += t.data.duration || 0;
+            totalEur += ((t.data.duration / 3600) * (t.data.hourlyRate || 0));
+        });
+
+        html += `<div class="client-section">
+        <div class="client-header">
+            <span>${clientName}</span>
+            <span>${clientTimers.length} timer · ${Math.floor(totalSec/3600)}h ${Math.floor((totalSec%3600)/60).toString().padStart(2,'0')}m · € ${totalEur.toFixed(2)}</span>
+        </div>
+        <table>
+            <thead><tr><th>Data</th><th>Progetto</th><th>Tipo</th><th>Orario</th><th>Durata</th><th>Importo</th><th>Stato</th></tr></thead>
+            <tbody>`;
+
+        clientTimers.forEach(t => {
+            const d = t.data;
+            const start = d.startTime ? d.startTime.toDate() : null;
+            const end = d.endTime ? d.endTime.toDate() : null;
+            const dur = d.duration || 0;
+            const amt = ((dur / 3600) * (d.hourlyRate || 0)).toFixed(2);
+            html += `<tr>
+                <td>${start ? start.toLocaleDateString('it-IT', { day:'2-digit', month:'short' }) : '—'}</td>
+                <td>${d.projectName || '—'}</td>
+                <td>${d.worktypeName || '—'}</td>
+                <td>${start ? start.toLocaleTimeString('it-IT', {hour:'2-digit',minute:'2-digit'}) : '—'} – ${end ? end.toLocaleTimeString('it-IT', {hour:'2-digit',minute:'2-digit'}) : '—'}</td>
+                <td>${Math.floor(dur/3600)}h ${Math.floor((dur%3600)/60).toString().padStart(2,'0')}m</td>
+                <td>€ ${amt}</td>
+                <td class="${d.isReported ? 'status-reported' : 'status-pending'}">${d.isReported ? '✓ Reportato' : '⏳ Pending'}</td>
+            </tr>`;
+        });
+
+        html += `</tbody></table>
+        <div class="totals">Totale: ${Math.floor(totalSec/3600)}h ${Math.floor((totalSec%3600)/60).toString().padStart(2,'0')}m — € ${totalEur.toFixed(2)}</div>
+        </div>`;
+    }
+
+    html += `<div class="footer">CronoReport — ${new Date().getFullYear()} | Generato automaticamente</div>
+</body></html>`;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.onload = () => {
+        printWindow.print();
+    };
+}

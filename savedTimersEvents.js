@@ -1,6 +1,6 @@
 // savedTimersEvents.js
 import { gapiInited, gisInited, handleAuthClick, maybeEnableButtons } from './firebaseConfig.js';
-import { loadSavedTimers, getCurrentFilters, loadAvailableYears, loadClientsForFilter, updateQuickFilterBar, activeQuickYear, activeQuickMonth, populateMonthChips, displayTimers, setActiveQuickYear, setActiveQuickMonth, displayUnreportedAmounts, displayedTimers } from './savedTimersData.js';
+import { loadSavedTimers, getCurrentFilters, loadAvailableYears, loadClientsForFilter, updateQuickFilterBar, activeQuickYear, activeQuickMonth, populateMonthChips, displayTimers, setActiveQuickYear, setActiveQuickMonth, displayUnreportedAmounts, displayedTimers, activeStatusFilter, activeWorktypeFilter, setActiveStatusFilter, setActiveWorktypeFilter, applyAdvancedFilters, exportTimersToCSV, exportTimersToPDF } from './savedTimersData.js';
 import { attachSavedTimersListeners, deleteTimerById, formatDuration, saveEditedSavedTimer, getMonthName, formatDateTime } from './savedTimersUI.js';
 
 // Variabili globali
@@ -129,6 +129,158 @@ export async function initializeSavedTimersEvents() {
         });
     }
 
+    // === Export CSV / PDF nativi ===
+    const exportCsvBtn = document.getElementById('export-csv-btn');
+    const exportPdfBtn = document.getElementById('export-pdf-btn');
+
+    if (exportCsvBtn) {
+        exportCsvBtn.addEventListener('click', () => {
+            const filtered = applyAdvancedFilters(displayedTimers);
+            exportTimersToCSV(filtered);
+        });
+    }
+
+    if (exportPdfBtn) {
+        exportPdfBtn.addEventListener('click', () => {
+            const filtered = applyAdvancedFilters(displayedTimers);
+            exportTimersToPDF(filtered);
+        });
+    }
+
+    // === Floating Contextual Action Bar ===
+    const actionBar = document.getElementById('st-action-bar');
+    const selectedCountEl = document.getElementById('st-selected-count');
+
+    // Delegated checkbox listener — aggiorna action bar
+    if (savedTimersList) {
+        savedTimersList.addEventListener('change', (e) => {
+            if (e.target.classList.contains('timer-checkbox')) {
+                updateActionBar();
+            }
+        });
+    }
+
+    function updateActionBar() {
+        const checked = document.querySelectorAll('.timer-checkbox:checked');
+        const count = checked.length;
+        if (selectedCountEl) selectedCountEl.textContent = count;
+        if (actionBar) {
+            actionBar.classList.toggle('st-action-bar--visible', count > 0);
+        }
+    }
+
+    // Deseleziona tutti
+    const deselectBtn = document.getElementById('st-action-deselect');
+    if (deselectBtn) {
+        deselectBtn.addEventListener('click', () => {
+            document.querySelectorAll('.timer-checkbox:checked').forEach(cb => { cb.checked = false; });
+            updateActionBar();
+        });
+    }
+
+    // Segna come Reportati
+    const markReportedBtn = document.getElementById('st-action-mark-reported');
+    if (markReportedBtn) {
+        markReportedBtn.addEventListener('click', () => {
+            const ids = getSelectedTimerIds();
+            if (ids.length === 0) return;
+            markTimersReportedStatus(ids, true);
+        });
+    }
+
+    // Segna come Non Reportati (Pending)
+    const markUnreportedBtn = document.getElementById('st-action-mark-unreported');
+    if (markUnreportedBtn) {
+        markUnreportedBtn.addEventListener('click', () => {
+            const ids = getSelectedTimerIds();
+            if (ids.length === 0) return;
+            markTimersReportedStatus(ids, false);
+        });
+    }
+
+    // Elimina selezionati
+    const deleteSelectedBtn = document.getElementById('st-action-delete');
+    if (deleteSelectedBtn) {
+        deleteSelectedBtn.addEventListener('click', () => {
+            const ids = getSelectedTimerIds();
+            if (ids.length === 0) return;
+            Swal.fire({
+                title: 'Sei sicuro?',
+                text: `Vuoi eliminare ${ids.length} timer selezionati?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sì, elimina!',
+                cancelButtonText: 'Annulla'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    bulkDeleteTimers(ids);
+                }
+            });
+        });
+    }
+
+    // Esporta selezionati
+    const exportSelectedBtn = document.getElementById('st-action-export');
+    if (exportSelectedBtn) {
+        exportSelectedBtn.addEventListener('click', () => {
+            const ids = getSelectedTimerIds();
+            if (ids.length === 0) return;
+            const selectedTimers = displayedTimers.filter(t => ids.includes(t.id));
+            // Mostra opzioni export
+            Swal.fire({
+                title: 'Esporta Selezionati',
+                text: `Esporta ${ids.length} timer selezionati come:`,
+                showDenyButton: true,
+                confirmButtonText: '📄 CSV',
+                denyButtonText: '📑 PDF',
+                denyButtonColor: '#ef4444',
+                confirmButtonColor: '#6366f1',
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    exportTimersToCSV(selectedTimers);
+                } else if (result.isDenied) {
+                    exportTimersToPDF(selectedTimers);
+                }
+            });
+        });
+    }
+
+    // === Status Filter Chips ===
+    const filtersRow = document.getElementById('st-filters-row');
+    if (filtersRow) {
+        filtersRow.addEventListener('click', (e) => {
+            const statusChip = e.target.closest('[data-filter-status]');
+            const worktypeChip = e.target.closest('[data-filter-worktype]');
+
+            if (statusChip) {
+                const val = statusChip.dataset.filterStatus;
+                setActiveStatusFilter(val);
+                // Aggiorna visual dei chip
+                filtersRow.querySelectorAll('[data-filter-status]').forEach(c => {
+                    c.classList.toggle('st-filter-chip--active', c.dataset.filterStatus === val);
+                });
+                reapplyFiltersAndDisplay();
+            }
+
+            if (worktypeChip) {
+                const val = worktypeChip.dataset.filterWorktype;
+                setActiveWorktypeFilter(val === 'all' ? null : val);
+                // Aggiorna visual dei chip
+                const worktypeContainer = document.getElementById('st-worktype-chips');
+                if (worktypeContainer) {
+                    worktypeContainer.querySelectorAll('[data-filter-worktype]').forEach(c => {
+                        const isActive = (val === 'all' && c.dataset.filterWorktype === 'all') ||
+                                         c.dataset.filterWorktype === val;
+                        c.classList.toggle('st-filter-chip--active', isActive);
+                    });
+                }
+                reapplyFiltersAndDisplay();
+            }
+        });
+    }
+
     console.log("Carico tutti i timer salvati...");
     await loadSavedTimers(); // Assicurati che i timer e il DOM siano pronti
 
@@ -235,6 +387,62 @@ export async function initializeSavedTimersEvents() {
     }
 
     console.log("Fine initializeSavedTimersEvents");
+}
+
+// === Helper Functions ===
+
+function getSelectedTimerIds() {
+    return Array.from(document.querySelectorAll('.timer-checkbox:checked')).map(cb => cb.value);
+}
+
+function markTimersReportedStatus(timerIds, isReported) {
+    const batch = db.batch();
+    timerIds.forEach(id => {
+        batch.update(db.collection('timeLogs').doc(id), { isReported });
+    });
+    batch.commit().then(() => {
+        lastOperation = { action: 'unmark', timerIds };
+        import('./main.js').then(m => m.showAlert('success', 'Aggiornato', `${timerIds.length} timer aggiornati.`));
+        loadSavedTimers(getCurrentFilters());
+    }).catch(err => {
+        console.error('Errore bulk update:', err);
+        import('./main.js').then(m => m.showAlert('error', 'Errore', 'Si è verificato un errore.'));
+    });
+}
+
+function bulkDeleteTimers(timerIds) {
+    const batch = db.batch();
+    timerIds.forEach(id => {
+        batch.update(db.collection('timeLogs').doc(id), {
+            isDeleted: true,
+            deletedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+    });
+    batch.commit().then(() => {
+        lastOperation = { action: 'bulkDelete', timerIds };
+        import('./main.js').then(m => m.showAlert('success', 'Eliminati', `${timerIds.length} timer spostati nel cestino.`));
+        loadSavedTimers(getCurrentFilters());
+    }).catch(err => {
+        console.error('Errore bulk delete:', err);
+        import('./main.js').then(m => m.showAlert('error', 'Errore', 'Si è verificato un errore.'));
+    });
+}
+
+function reapplyFiltersAndDisplay() {
+    const filtered = applyAdvancedFilters(displayedTimers);
+    displayTimers(filtered);
+
+    // Ricalcola importi non riscossi per i filtrati
+    const unreportedAmounts = {};
+    filtered.forEach(t => {
+        const d = t.data;
+        if (!d.isReported) {
+            const clientName = d.clientName || 'Sconosciuto';
+            const amt = (d.duration / 3600) * (d.hourlyRate || 0);
+            unreportedAmounts[clientName] = (unreportedAmounts[clientName] || 0) + amt;
+        }
+    });
+    displayUnreportedAmounts(unreportedAmounts);
 }
 
 

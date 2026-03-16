@@ -23,17 +23,23 @@ export const savedTimersTemplate = `
             <button id="undo-action-btn" class="cr-btn cr-btn-sm bg-surface-100 hover:bg-surface-200 text-surface-600" title="Annulla ultima operazione">
                 <i class="fas fa-undo"></i>
             </button>
-            <button id="export-google-doc-btn" class="cr-btn cr-btn-sm bg-indigo-500 hover:bg-indigo-600 text-white" title="Esporta in Google Docs">
-                <i class="fab fa-google-drive"></i><span class="hidden sm:inline ml-1">Docs</span>
+            <button id="export-csv-btn" class="st-export-btn" title="Esporta CSV">
+                <i class="fas fa-file-csv text-emerald-500"></i><span class="hidden sm:inline">CSV</span>
             </button>
-            <button id="export-google-sheet-btn" class="cr-btn cr-btn-sm bg-emerald-500 hover:bg-emerald-600 text-white" title="Esporta in Google Sheets">
-                <i class="fas fa-table"></i><span class="hidden sm:inline ml-1">Sheets</span>
+            <button id="export-pdf-btn" class="st-export-btn" title="Esporta PDF">
+                <i class="fas fa-file-pdf text-rose-500"></i><span class="hidden sm:inline">PDF</span>
+            </button>
+            <button id="export-google-doc-btn" class="st-export-btn" title="Esporta in Google Docs">
+                <i class="fab fa-google-drive text-indigo-500"></i><span class="hidden sm:inline">Docs</span>
+            </button>
+            <button id="export-google-sheet-btn" class="st-export-btn" title="Esporta in Google Sheets">
+                <i class="fas fa-table text-emerald-600"></i><span class="hidden sm:inline">Sheets</span>
             </button>
         </div>
     </div>
 
     <!-- Stats Cards -->
-    <div id="tl-stats-bar" class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
+    <div id="tl-stats-bar" class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
         <div class="tl-stats-card">
             <div class="flex items-center gap-2.5">
                 <div class="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center">
@@ -47,29 +53,43 @@ export const savedTimersTemplate = `
         </div>
         <div class="tl-stats-card">
             <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center">
+                    <i class="fas fa-wallet text-emerald-500"></i>
+                </div>
+                <div>
+                    <div class="text-xs font-medium text-surface-400 uppercase tracking-wide">Guadagni</div>
+                    <div id="tl-stat-earnings" class="text-lg font-bold text-emerald-600">€ 0.00</div>
+                    <div id="tl-stat-earnings-delta" class="tl-stat-delta tl-stat-delta--neutral"></div>
+                </div>
+            </div>
+        </div>
+        <div class="tl-stats-card">
+            <div class="flex items-center gap-2.5">
                 <div class="w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center">
                     <i class="fas fa-clock text-indigo-500"></i>
                 </div>
                 <div>
                     <div class="text-xs font-medium text-surface-400 uppercase tracking-wide">Ore Totali</div>
                     <div id="tl-stat-hours" class="text-lg font-bold text-surface-800">00:00</div>
+                    <div id="tl-stat-hours-delta" class="tl-stat-delta tl-stat-delta--neutral"></div>
                 </div>
             </div>
         </div>
         <div class="tl-stats-card">
             <div class="flex items-center gap-2.5">
-                <div class="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center">
-                    <i class="fas fa-layer-group text-emerald-500"></i>
+                <div class="w-9 h-9 rounded-lg bg-purple-50 flex items-center justify-center">
+                    <i class="fas fa-layer-group text-purple-500"></i>
                 </div>
                 <div>
                     <div class="text-xs font-medium text-surface-400 uppercase tracking-wide">Timer</div>
                     <div id="tl-stat-count" class="text-lg font-bold text-surface-800">0</div>
+                    <div id="tl-stat-count-delta" class="tl-stat-delta tl-stat-delta--neutral"></div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Toolbar Compatta: Cerca + Cliente + Azioni -->
+    <!-- Toolbar Compatta: Cerca + Cliente + Filtri -->
     <div class="cr-card mb-5 overflow-hidden">
         <div class="p-3 sm:p-4">
             <div class="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center flex-wrap">
@@ -83,8 +103,8 @@ export const savedTimersTemplate = `
                         <option value="">Tutti i Clienti</option>
                     </select>
                 </div>
-                <!-- Azioni -->
-                <div class="flex gap-2 flex-shrink-0 min-w-0">
+                <!-- Azioni (legacy, nascosto: sostituito dalla action bar contestuale) -->
+                <div class="flex gap-2 flex-shrink-0 min-w-0" style="display:none;">
                     <select id="unmark-action-select" class="cr-select text-sm min-w-0 max-w-[180px]">
                         <option value="">⚙ Azione...</option>
                         <option value="unmark-all">Segna Tutti Non Reportati</option>
@@ -95,6 +115,13 @@ export const savedTimersTemplate = `
                         <i class="fas fa-check"></i>
                     </button>
                 </div>
+            </div>
+            <!-- Filtro Stato -->
+            <div id="st-filters-row" class="st-filters-row">
+                <span class="st-filter-label">Stato</span>
+                <button class="st-filter-chip st-filter-chip--active" data-filter-status="all">Tutti</button>
+                <button class="st-filter-chip" data-filter-status="pending"><i class="fas fa-clock text-amber-400" style="font-size:0.625rem;"></i> Pending</button>
+                <button class="st-filter-chip" data-filter-status="reported"><i class="fas fa-check-circle text-emerald-400" style="font-size:0.625rem;"></i> Reportati</button>
             </div>
         </div>
     </div>
@@ -127,6 +154,26 @@ export const savedTimersTemplate = `
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Floating Contextual Action Bar -->
+    <div id="st-action-bar" class="st-action-bar">
+        <div class="st-action-bar__count"><span id="st-selected-count">0</span> selezionati</div>
+        <button class="st-action-bar__btn st-action-bar__btn--success" id="st-action-mark-reported" title="Segna come Reportati">
+            <i class="fas fa-check-circle"></i> Reportati
+        </button>
+        <button class="st-action-bar__btn" id="st-action-mark-unreported" title="Segna come Non Reportati">
+            <i class="fas fa-clock"></i> Pending
+        </button>
+        <button class="st-action-bar__btn st-action-bar__btn--danger" id="st-action-delete" title="Elimina selezionati">
+            <i class="fas fa-trash-alt"></i> Elimina
+        </button>
+        <button class="st-action-bar__btn st-action-bar__btn--primary" id="st-action-export" title="Esporta selezionati">
+            <i class="fas fa-download"></i> Esporta
+        </button>
+        <button class="st-action-bar__close" id="st-action-deselect" title="Deseleziona tutti">
+            <i class="fas fa-times"></i>
+        </button>
     </div>
 </div>
 
