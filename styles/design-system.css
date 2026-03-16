@@ -1,0 +1,388 @@
+@layer components {
+
+    /* ============================================
+   Card System (used in templates)
+   ============================================ */
+    .cr-card {
+        background: white;
+        border-radius: 1rem;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
+        transition: box-shadow 0.2s ease, transform 0.2s ease;
+    }
+
+    .cr-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
+    }
+
+    .cr-card-header {
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid #f1f5f9;
+        font-weight: 600;
+        font-size: 0.9375rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .cr-card-body {
+        padding: 1.25rem;
+    }
+
+    /* ============================================
+   Button System
+   ============================================ */
+    .cr-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 0.625rem 1.25rem;
+        border-radius: 0.75rem;
+        font-weight: 600;
+        font-size: 0.875rem;
+        transition: all 0.2s ease;
+        cursor: pointer;
+        border: none;
+        line-height: 1;
+    }
+
+    .cr-btn-primary {
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+        color: white;
+        box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
+    }
+
+    .cr-btn-primary:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 16px rgba(99, 102, 241, 0.35);
+    }
+
+    .cr-btn-success {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+    }
+
+    .cr-btn-success:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 16px rgba(16, 185, 129, 0.35);
+    }
+
+    .cr-btn-danger {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        color: white;
+        box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25);
+    }
+
+    .cr-btn-danger:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 16px rgba(239, 68, 68, 0.35);
+    }
+
+    .cr-btn-outline {
+        background: transparent;
+        color: #475569;
+        border: 1.5px solid #e2e8f0;
+    }
+
+    .cr-btn-outline:hover {
+        background: #f8fafc;
+        border-color: #cbd5e1;
+    }
+
+    .cr-btn-sm {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.8125rem;
+        border-radius: 0.5rem;
+    }
+
+    .cr-btn-block {
+        width: 100%;
+    }
+
+    /* ============================================
+   Form System
+   ============================================ */
+    .cr-input,
+    .cr-select {
+        width: 100%;
+        padding: 0.625rem 0.875rem;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 0.75rem;
+        font-size: 0.875rem;
+        font-family: inherit;
+        color: #1e293b;
+        background: white;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        -webkit-appearance: none;
+        appearance: none;
+    }
+
+    .cr-input:focus,
+    .cr-select:focus {
+        outline: none;
+        border-color: #6366f1;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+
+    .cr-input::placeholder {
+        color: #94a3b8;
+    }
+
+    .cr-label {
+        display: block;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: #475569;
+        margin-bottom: 0.375rem;
+    }
+
+    .cr-form-group {
+        margin-bottom: 1rem;
+    }
+
+    /* Select arrow */
+    .cr-select {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' fill='%2394a3b8' viewBox='0 0 20 20'%3E%3Cpath d='M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 0.75rem center;
+        background-size: 1.25rem;
+        padding-right: 2.5rem;
+    }
+
+    /* ============================================
+   SweetAlert2 Custom Theme
+   ============================================ */
+    .cr-swal-popup {
+        border-radius: 1.25rem !important;
+        font-family: 'Inter', system-ui, sans-serif !important;
+        padding: 2rem !important;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15) !important;
+    }
+
+    .cr-swal-title {
+        font-size: 1.25rem !important;
+        font-weight: 700 !important;
+        color: #1e293b !important;
+    }
+
+    .cr-swal-text {
+        font-size: 0.9375rem !important;
+        color: #64748b !important;
+    }
+
+    .cr-swal-confirm {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.625rem 1.5rem;
+        border-radius: 0.75rem;
+        font-weight: 600;
+        font-size: 0.875rem;
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+        color: white;
+        border: none;
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
+        transition: all 0.2s ease;
+    }
+
+    .cr-swal-confirm:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 16px rgba(99, 102, 241, 0.35);
+    }
+
+    .cr-swal-cancel {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.625rem 1.5rem;
+        border-radius: 0.75rem;
+        font-weight: 600;
+        font-size: 0.875rem;
+        background: transparent;
+        color: #64748b;
+        border: 1.5px solid #e2e8f0;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .cr-swal-cancel:hover {
+        background: #f8fafc;
+        border-color: #cbd5e1;
+    }
+
+    .cr-swal-actions {
+        gap: 0.75rem !important;
+    }
+
+    /* ============================================
+   Flatpickr Custom Theme 
+   ============================================ */
+    .flatpickr-calendar {
+        border-radius: 1rem !important;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12) !important;
+        border: 1px solid #e2e8f0 !important;
+        font-family: 'Inter', system-ui, sans-serif !important;
+    }
+
+    .flatpickr-day.selected,
+    .flatpickr-day.selected:hover {
+        background: #6366f1 !important;
+        border-color: #6366f1 !important;
+    }
+
+    .flatpickr-day:hover {
+        background: #eef2ff !important;
+        border-color: #eef2ff !important;
+    }
+
+    .flatpickr-months .flatpickr-prev-month:hover svg,
+    .flatpickr-months .flatpickr-next-month:hover svg {
+        fill: #6366f1 !important;
+    }
+
+    /* ============================================
+   Timer Display
+   ============================================ */
+    .timer-display {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 2rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        color: #1e293b;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .timer-display-sm {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 1.25rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+    }
+
+    /* ============================================
+   Section Headers
+   ============================================ */
+    .section-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .section-header h2 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #0f172a;
+        letter-spacing: -0.02em;
+    }
+
+    .section-header i {
+        color: #6366f1;
+        font-size: 1.25rem;
+    }
+
+    /* ============================================
+   Badge System
+   ============================================ */
+    .cr-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.25rem 0.625rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        line-height: 1;
+    }
+
+    .cr-badge-primary {
+        background: #eef2ff;
+        color: #4f46e5;
+    }
+
+    .cr-badge-success {
+        background: #ecfdf5;
+        color: #059669;
+    }
+
+    .cr-badge-warning {
+        background: #fffbeb;
+        color: #d97706;
+    }
+
+    .cr-badge-danger {
+        background: #fef2f2;
+        color: #dc2626;
+    }
+
+    /* ============================================
+   List Items
+   ============================================ */
+    .cr-list-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #f1f5f9;
+        transition: background 0.15s ease;
+    }
+
+    .cr-list-item:hover {
+        background: #f8fafc;
+    }
+
+    .cr-list-item:last-child {
+        border-bottom: none;
+    }
+
+    /* ============================================
+   Safe Area for iPhone notch
+   ============================================ */
+    .safe-area-bottom {
+        padding-bottom: env(safe-area-inset-bottom, 0);
+    }
+
+    /* ============================================
+   Content Section margin for mobile bottom nav
+   ============================================ */
+    #content-section {
+        margin-bottom: 0;
+    }
+
+    /* ============================================
+   Animations
+   ============================================ */
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+
+        to {
+            opacity: 1;
+        }
+    }
+
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(16px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .animate-fade-in {
+        animation: fadeIn 0.4s ease-out;
+    }
+
+    .animate-slide-up {
+        animation: slideUp 0.4s ease-out;
+    }
+
+}

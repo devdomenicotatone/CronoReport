@@ -1,0 +1,69 @@
+@layer base {
+
+    /* ============================================
+   Global Styles
+   ============================================ */
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    html {
+        scroll-behavior: smooth;
+        -webkit-text-size-adjust: 100%;
+        overflow-x: hidden;
+        max-width: 100vw;
+    }
+
+    body {
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        overflow-x: hidden;
+        overflow-y: scroll;
+        max-width: 100vw;
+        width: 100%;
+    }
+
+    /* ============================================
+   Custom Scrollbar
+   ============================================ */
+    ::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 999px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+    }
+
+    /* ============================================
+   Focus States (Accessibility)
+   ============================================ */
+    *:focus-visible {
+        outline: 2px solid #6366f1;
+        outline-offset: 2px;
+        border-radius: 4px;
+    }
+
+    /* ============================================
+   Icon Spacing Override
+   ============================================ */
+    i.fas,
+    i.far,
+    i.fab {
+        margin-right: 0;
+    }
+
+}
+
+/* end @layer base */

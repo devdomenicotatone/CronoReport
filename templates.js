@@ -38,6 +38,13 @@ export const dataManagementTemplate = `
         </div>
     </div>
 
+    <!-- ═══ FILTRI RAPIDI ═══ -->
+    <div class="flex items-center gap-2 mb-4" id="dm-filters">
+        <button class="dm-filter-chip active" data-filter="active">Attivi</button>
+        <button class="dm-filter-chip" data-filter="all">Tutti</button>
+        <button class="dm-filter-chip" data-filter="archived">Archiviati</button>
+    </div>
+
     <!-- ═══ SEARCH + ADD CLIENT ═══ -->
     <div class="cr-card mb-5 overflow-hidden">
         <div class="p-4 flex flex-col sm:flex-row gap-3">
@@ -135,19 +142,20 @@ export const timerTemplate = `
                     </div>
                 </div>
             </div>
+
+            <!-- Scelte Recenti — integrata nella Start Bar -->
+            <div id="timer-recents-section" class="pt-3 border-t border-surface-100/50 mt-4 animate-fade-in" style="display:none;">
+                <div class="flex items-center gap-2 mb-2">
+                    <i class="fas fa-history text-surface-400 text-xs"></i>
+                    <span class="text-xs font-bold text-surface-500 uppercase tracking-wider">Scelte Recenti</span>
+                </div>
+                <div class="timer-recents" id="timer-recents-chips">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- ═══ RECENTI ═══ -->
-    <div id="timer-recents-section" class="mb-6 animate-fade-in" style="display:none;">
-        <div class="flex items-center gap-2 mb-2 pl-1">
-            <i class="fas fa-history text-surface-400 text-xs"></i>
-            <span class="text-xs font-bold text-surface-500 uppercase tracking-wider">Scelte Recenti</span>
-        </div>
-        <div class="timer-recents" id="timer-recents-chips">
-            <!-- Populated dynamically -->
-        </div>
-    </div>
 
 
 

@@ -65,7 +65,7 @@ export const dashboardTemplate = `
         <div class="dash-kpi-card dash-kpi-hours">
             <div class="dash-kpi-icon"><i class="fas fa-clock"></i></div>
             <div class="dash-kpi-value" id="dash-kpi-hours">0h 00m</div>
-            <div class="dash-kpi-label">Ore Totali</div>
+            <div class="dash-kpi-label">Durata Totale</div>
         </div>
         <div class="dash-kpi-card dash-kpi-earnings">
             <div class="dash-kpi-icon"><i class="fas fa-euro-sign"></i></div>
@@ -457,7 +457,7 @@ function renderWorkedTimeChart(vm) {
                 y: {
                     stacked: true,
                     beginAtZero: true,
-                    title: { display: true, text: 'Ore', font: { size: 12, weight: 600 } },
+                    title: { display: true, text: 'Durata', font: { size: 12, weight: 600 } },
                     grid: { color: 'rgba(0,0,0,0.04)' }
                 }
             },

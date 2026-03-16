@@ -134,6 +134,13 @@ export function loadSection(section) {
 /**
  * Funzione per inizializzare gli eventi della Gestione Dati (Ultra Pro)
  */
+let _currentDmFilter = 'active';
+
+const DM_COLORS = [
+    '#6366f1', '#8b5cf6', '#ec4899', '#ef4444', '#f97316', '#f59e0b',
+    '#10b981', '#14b8a6', '#06b6d4', '#3b82f6', '#6b7280', '#1e293b'
+];
+
 export function initializeDataManagementEvents() {
     const addClientBtn = document.getElementById('add-client-btn');
     const newClientName = document.getElementById('new-client-name');
@@ -149,10 +156,14 @@ export function initializeDataManagementEvents() {
         db.collection('clients').add({
             name: name,
             uid: currentUser.uid,
+            color: DM_COLORS[Math.floor(Math.random() * DM_COLORS.length)],
+            isArchived: false,
+            sortOrder: Date.now(),
+            notes: '',
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         }).then(() => {
             newClientName.value = '';
-            renderUnifiedClientAccordion();
+            renderUnifiedClientAccordion(_currentDmFilter);
             showAlert('success', 'Cliente aggiunto!', `Il cliente "${name}" è stato aggiunto.`);
         }).catch(error => {
             console.error('Errore:', error);
@@ -171,8 +182,21 @@ export function initializeDataManagementEvents() {
         });
     }
 
+    // Filter chips
+    const filtersContainer = document.getElementById('dm-filters');
+    if (filtersContainer) {
+        filtersContainer.addEventListener('click', (e) => {
+            const chip = e.target.closest('.dm-filter-chip');
+            if (!chip) return;
+            filtersContainer.querySelectorAll('.dm-filter-chip').forEach(c => c.classList.remove('active'));
+            chip.classList.add('active');
+            _currentDmFilter = chip.dataset.filter;
+            renderUnifiedClientAccordion(_currentDmFilter);
+        });
+    }
+
     // Initial render
-    renderUnifiedClientAccordion();
+    renderUnifiedClientAccordion(_currentDmFilter);
 }
 
 /**
@@ -185,7 +209,7 @@ export function showAlert(icon, title, text) {
 /**
  * Render the unified client accordion with projects and worktypes nested
  */
-export async function renderUnifiedClientAccordion() {
+export async function renderUnifiedClientAccordion(filter = 'active') {
     const container = document.getElementById('dm-client-accordion');
     if (!container) return;
     container.innerHTML = '';
@@ -198,11 +222,30 @@ export async function renderUnifiedClientAccordion() {
             .orderBy('name')
             .get();
 
-        totalClients = clientSnap.size;
+        // Filter by archived status
+        let clientDocs = clientSnap.docs;
+        if (filter === 'active') {
+            clientDocs = clientDocs.filter(d => !d.data().isArchived);
+        } else if (filter === 'archived') {
+            clientDocs = clientDocs.filter(d => d.data().isArchived === true);
+        }
+        // 'all' = no filter
 
-        for (const clientDoc of clientSnap.docs) {
+        // Sort by sortOrder (if available), then name
+        clientDocs.sort((a, b) => {
+            const sa = a.data().sortOrder || 0;
+            const sb = b.data().sortOrder || 0;
+            if (sa !== sb) return sa - sb;
+            return (a.data().name || '').localeCompare(b.data().name || '');
+        });
+
+        totalClients = clientDocs.length;
+
+        for (const clientDoc of clientDocs) {
             const clientData = clientDoc.data();
             const clientId = clientDoc.id;
+            const clientColor = clientData.color || '#6366f1';
+            const isArchived = clientData.isArchived || false;
 
             // Fetch projects + worktypes in parallel
             const [projectsSnap, worktypesSnap] = await Promise.all([
@@ -216,22 +259,71 @@ export async function renderUnifiedClientAccordion() {
             // === BUILD CARD ===
             const card = document.createElement('div');
             card.className = 'dm-client-card';
+            card.draggable = true;
+            card.dataset.clientId = clientId;
+            card.style.borderLeftColor = clientColor;
+            if (isArchived) card.style.opacity = '0.6';
 
             // Header
             const header = document.createElement('div');
             header.className = 'dm-client-header';
             header.innerHTML = `
-                <div class="flex items-center gap-2">
-                    <i class="fas fa-user-circle text-indigo-400"></i>
+                <div class="flex items-center gap-2 flex-1 min-w-0">
+                    <i class="fas fa-grip-vertical dm-drag-handle text-surface-300 cursor-grab text-xs" title="Trascina per riordinare"></i>
+                    <div class="dm-color-dot" style="background:${clientColor};" title="Clicca per cambiare colore"></div>
                     <input class="dm-editable font-semibold" value="${clientData.name}" data-id="${clientId}" data-collection="clients" data-field="name" />
                 </div>
                 <div class="flex items-center gap-2">
                     <span class="dm-badge dm-badge-teal">${projectsSnap.size} progetti</span>
                     <span class="dm-badge dm-badge-amber">${worktypesSnap.size} tipi</span>
-                    <button class="p-1 text-rose-400 hover:text-rose-600 transition" title="Elimina cliente"><i class="fas fa-trash-alt text-xs"></i></button>
+                    ${isArchived
+                        ? `<button class="dm-action-btn dm-delete-hover" title="Ripristina"><i class="fas fa-undo text-xs text-emerald-500"></i></button>`
+                        : `<button class="dm-action-btn dm-delete-hover" title="Archivia"><i class="fas fa-archive text-xs text-amber-500"></i></button>`
+                    }
+                    <button class="dm-action-btn dm-delete-hover" title="Elimina cliente"><i class="fas fa-trash-alt text-xs text-rose-400"></i></button>
                     <i class="fas fa-chevron-down chevron"></i>
                 </div>
             `;
+
+            // Color dot click → palette
+            const colorDot = header.querySelector('.dm-color-dot');
+            colorDot.addEventListener('click', (e) => {
+                e.stopPropagation();
+                // Remove existing palette
+                document.querySelectorAll('.dm-color-palette').forEach(p => p.remove());
+                const palette = document.createElement('div');
+                palette.className = 'dm-color-palette';
+                DM_COLORS.forEach(color => {
+                    const swatch = document.createElement('div');
+                    swatch.className = 'dm-color-swatch';
+                    swatch.style.background = color;
+                    if (color === clientColor) swatch.classList.add('active');
+                    swatch.addEventListener('click', (ev) => {
+                        ev.stopPropagation();
+                        db.collection('clients').doc(clientId).update({ color: color }).then(() => {
+                            palette.remove();
+                            renderUnifiedClientAccordion(_currentDmFilter);
+                        });
+                    });
+                    palette.appendChild(swatch);
+                });
+                colorDot.parentElement.appendChild(palette);
+                // Close on outside click
+                setTimeout(() => {
+                    const close = (ev) => { if (!palette.contains(ev.target)) { palette.remove(); document.removeEventListener('click', close); } };
+                    document.addEventListener('click', close);
+                }, 10);
+            });
+
+            // Archive/Restore button
+            const archiveBtn = header.querySelector(`button[title="${isArchived ? 'Ripristina' : 'Archivia'}"]`);
+            archiveBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                db.collection('clients').doc(clientId).update({ isArchived: !isArchived }).then(() => {
+                    renderUnifiedClientAccordion(_currentDmFilter);
+                    Swal.fire({ icon: 'success', title: isArchived ? 'Ripristinato!' : 'Archiviato!', text: `"${clientData.name}" ${isArchived ? 'ripristinato' : 'archiviato'}.`, timer: 1500, showConfirmButton: false });
+                });
+            });
 
             // Delete client
             const delBtn = header.querySelector('button[title="Elimina cliente"]');
@@ -249,7 +341,7 @@ export async function renderUnifiedClientAccordion() {
                 }).then(result => {
                     if (result.isConfirmed) {
                         db.collection('clients').doc(clientId).delete().then(() => {
-                            renderUnifiedClientAccordion();
+                            renderUnifiedClientAccordion(_currentDmFilter);
                             Swal.fire('Eliminato!', 'Il cliente è stato eliminato.', 'success');
                         });
                     }
@@ -264,6 +356,35 @@ export async function renderUnifiedClientAccordion() {
                 if (newName && newName !== clientData.name) {
                     db.collection('clients').doc(clientId).update({ name: newName });
                 }
+            });
+
+            // === DRAG & DROP ===
+            card.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('text/plain', clientId);
+                card.classList.add('dm-dragging');
+            });
+            card.addEventListener('dragend', () => card.classList.remove('dm-dragging'));
+            card.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                const dragging = container.querySelector('.dm-dragging');
+                if (dragging && dragging !== card) {
+                    const rect = card.getBoundingClientRect();
+                    const midY = rect.top + rect.height / 2;
+                    if (e.clientY < midY) {
+                        container.insertBefore(dragging, card);
+                    } else {
+                        container.insertBefore(dragging, card.nextSibling);
+                    }
+                }
+            });
+            card.addEventListener('drop', (e) => {
+                e.preventDefault();
+                // Save new order
+                const cards = container.querySelectorAll('.dm-client-card');
+                cards.forEach((c, i) => {
+                    const id = c.dataset.clientId;
+                    if (id) db.collection('clients').doc(id).update({ sortOrder: i });
+                });
             });
 
             // Toggle body
@@ -289,12 +410,11 @@ export async function renderUnifiedClientAccordion() {
                     row.innerHTML = `
                         <input class="dm-editable flex-1" value="${projectData.name}" data-id="${projectDoc.id}" data-collection="projects" data-field="name" placeholder="Nome progetto" />
                         <input class="dm-editable dm-url-input" value="${projectData.url || ''}" data-id="${projectDoc.id}" data-collection="projects" data-field="url" placeholder="🔗 URL progetto..." />
-                        <button class="delete-btn" title="Elimina progetto"><i class="fas fa-times"></i></button>
+                        <button class="delete-btn dm-delete-hover" title="Elimina progetto"><i class="fas fa-times"></i></button>
                     `;
                     row.querySelector('.delete-btn').addEventListener('click', () => {
-                        db.collection('projects').doc(projectDoc.id).delete().then(() => renderUnifiedClientAccordion());
+                        db.collection('projects').doc(projectDoc.id).delete().then(() => renderUnifiedClientAccordion(_currentDmFilter));
                     });
-                    // Inline edit for both name and url
                     row.querySelectorAll('.dm-editable').forEach(inp => {
                         inp.addEventListener('blur', (e) => {
                             const field = e.target.dataset.field;
@@ -320,7 +440,7 @@ export async function renderUnifiedClientAccordion() {
                 if (!name) return;
                 db.collection('projects').add({
                     name, url, uid: currentUser.uid, clientId, createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                }).then(() => renderUnifiedClientAccordion());
+                }).then(() => renderUnifiedClientAccordion(_currentDmFilter));
             });
             projectsSection.appendChild(addProjectRow);
 
@@ -340,12 +460,11 @@ export async function renderUnifiedClientAccordion() {
                         <input class="dm-editable flex-1" value="${wtData.name}" data-id="${wtDoc.id}" data-collection="worktypes" data-field="name" />
                         <input class="dm-editable" type="number" value="${wtData.hourlyRate || 0}" style="width:60px;text-align:right;" data-id="${wtDoc.id}" data-collection="worktypes" data-field="hourlyRate" />
                         <span class="text-xs text-surface-400 mr-1">€/h</span>
-                        <button class="delete-btn" title="Elimina tipo"><i class="fas fa-times"></i></button>
+                        <button class="delete-btn dm-delete-hover" title="Elimina tipo"><i class="fas fa-times"></i></button>
                     `;
                     row.querySelector('.delete-btn').addEventListener('click', () => {
-                        db.collection('worktypes').doc(wtDoc.id).delete().then(() => renderUnifiedClientAccordion());
+                        db.collection('worktypes').doc(wtDoc.id).delete().then(() => renderUnifiedClientAccordion(_currentDmFilter));
                     });
-                    // Inline edit name
                     row.querySelectorAll('.dm-editable').forEach(inp => {
                         inp.addEventListener('blur', () => {
                             const field = inp.dataset.field;
@@ -376,13 +495,30 @@ export async function renderUnifiedClientAccordion() {
                 db.collection('worktypes').add({
                     name, hourlyRate: rate, uid: currentUser.uid, clientId,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                }).then(() => renderUnifiedClientAccordion());
+                }).then(() => renderUnifiedClientAccordion(_currentDmFilter));
             });
             wtSection.appendChild(addWtRow);
+
+            // === NOTES SECTION ===
+            const notesSection = document.createElement('div');
+            notesSection.className = 'dm-sub-section';
+            notesSection.innerHTML = `<div class="dm-sub-section-title"><i class="fas fa-sticky-note"></i> Note</div>`;
+            const notesTextarea = document.createElement('textarea');
+            notesTextarea.className = 'dm-notes-textarea';
+            notesTextarea.placeholder = 'Aggiungi note... (contatti, scadenze, ecc.)';
+            notesTextarea.value = clientData.notes || '';
+            notesTextarea.addEventListener('blur', () => {
+                const val = notesTextarea.value.trim();
+                if (val !== (clientData.notes || '')) {
+                    db.collection('clients').doc(clientId).update({ notes: val });
+                }
+            });
+            notesSection.appendChild(notesTextarea);
 
             // Assemble
             body.appendChild(projectsSection);
             body.appendChild(wtSection);
+            body.appendChild(notesSection);
             card.appendChild(header);
             card.appendChild(body);
             container.appendChild(card);

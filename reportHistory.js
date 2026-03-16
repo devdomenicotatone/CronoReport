@@ -27,6 +27,17 @@ export const reportHistoryTemplate = `
         </div>
     </div>
 
+    <!-- Bozze salvate -->
+    <div id="rh-drafts-section" style="display:none;">
+        <div class="flex items-center gap-2 mb-3">
+            <div class="w-7 h-7 rounded-lg bg-amber-100 flex items-center justify-center">
+                <i class="fas fa-bookmark text-amber-600 text-xs"></i>
+            </div>
+            <h3 class="text-sm font-bold text-surface-700">Bozze Salvate</h3>
+        </div>
+        <div id="rh-drafts-list" class="space-y-2 mb-6"></div>
+    </div>
+
     <!-- Report list -->
     <div id="reportHistoryAccordion"></div>
 
@@ -568,13 +579,111 @@ export function initializeReportHistoryEvents() {
         });
     }
 
-    // Carica lo storico + anni disponibili all'avvio
+    // === DRAFTS ===
+    function loadDrafts() {
+        const section = document.getElementById('rh-drafts-section');
+        const list = document.getElementById('rh-drafts-list');
+        if (!section || !list) return;
+
+        db.collection('reportDrafts')
+            .where('uid', '==', currentUser.uid)
+            .where('isDeleted', '==', false)
+            .orderBy('timestamp', 'desc')
+            .limit(10)
+            .get()
+            .then(snapshot => {
+                if (snapshot.empty) {
+                    section.style.display = 'none';
+                    return;
+                }
+                section.style.display = 'block';
+                list.innerHTML = '';
+
+                snapshot.forEach(doc => {
+                    const d = doc.data();
+                    const row = document.createElement('div');
+                    row.className = 'tl-timer-row';
+                    row.innerHTML = `
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2">
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700">
+                                    <i class="fas fa-bookmark text-[0.6rem]"></i> Bozza
+                                </span>
+                                <span class="text-sm font-medium text-surface-700 truncate">${d.reportHeader || 'Bozza'}</span>
+                                <span class="flex-1"></span>
+                                <span class="text-xs text-surface-400">${d.filterClientName || ''}</span>
+                            </div>
+                            <div class="flex items-center gap-3 mt-1">
+                                <span class="text-xs text-surface-400">${d.startDate || '—'} → ${d.endDate || '—'}</span>
+                                <span class="text-xs text-surface-300">${d.template ? '• ' + d.template.charAt(0).toUpperCase() + d.template.slice(1) : ''}</span>
+                                <span class="flex-1"></span>
+                                <button class="rh-resume-draft-btn text-xs text-indigo-500 hover:text-indigo-700 transition-colors flex items-center gap-1" title="Riprendi bozza">
+                                    <i class="fas fa-play"></i> Riprendi
+                                </button>
+                                <button class="rh-delete-draft-btn tl-edit-btn ml-1" title="Elimina bozza">
+                                    <i class="fas fa-trash-alt text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+
+                    // Resume draft event
+                    row.querySelector('.rh-resume-draft-btn').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        // Dispatch event to Report section
+                        window.dispatchEvent(new CustomEvent('loadDraft', { detail: { ...d, docId: doc.id } }));
+                        // Navigate to Report
+                        const reportLink = document.querySelector('[data-section="report"]');
+                        if (reportLink) reportLink.click();
+                        Swal.fire({
+                            icon: 'info',
+                            title: 'Bozza caricata',
+                            text: 'La configurazione è stata ripristinata nella sezione Report.',
+                            confirmButtonText: 'OK',
+                            timer: 2000,
+                            timerProgressBar: true
+                        });
+                    });
+
+                    // Delete draft
+                    row.querySelector('.rh-delete-draft-btn').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        Swal.fire({
+                            title: 'Eliminare questa bozza?',
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonColor: '#d33',
+                            cancelButtonColor: '#6c757d',
+                            confirmButtonText: 'Sì, elimina!',
+                            cancelButtonText: 'Annulla'
+                        }).then(result => {
+                            if (result.isConfirmed) {
+                                db.collection('reportDrafts').doc(doc.id).update({ isDeleted: true })
+                                    .then(() => {
+                                        loadDrafts();
+                                        Swal.fire({ icon: 'success', title: 'Eliminata!', timer: 1500, timerProgressBar: true, showConfirmButton: false });
+                                    });
+                            }
+                        });
+                    });
+
+                    list.appendChild(row);
+                });
+            })
+            .catch(error => {
+                console.error('Errore caricamento bozze:', error);
+            });
+    }
+
+    // Carica lo storico + anni disponibili + bozze all'avvio
     loadRhAvailableYears();
     loadReportHistory();
+    loadDrafts();
 
     // Evento refresh
     refreshReportHistoryBtn.addEventListener('click', () => {
         loadReportHistory(searchReportInput.value.trim());
+        loadDrafts();
     });
 
     // Evento ricerca

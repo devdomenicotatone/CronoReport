@@ -15,50 +15,15 @@ export const reportTemplate = `
     </div>
     <form id="report-form">
 
-        <!-- ═══ SEZIONE 1: Configurazione ═══ -->
+        <!-- ═══ CARD 1: Dati & Filtri ═══ -->
         <div class="cr-card mb-5 overflow-hidden">
             <div class="px-5 py-3 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white">
-                <span class="font-semibold flex items-center gap-2"><i class="fas fa-cog"></i> Configurazione</span>
-            </div>
-            <div class="p-5">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label for="saved-config-select" class="block text-sm font-semibold text-surface-600 mb-1">Configurazione Salvata</label>
-                        <div class="flex gap-2">
-                            <select id="saved-config-select" class="cr-input flex-1">
-                                <option value="">-- Seleziona una configurazione --</option>
-                            </select>
-                            <button type="button" id="delete-config-btn" class="cr-btn text-rose-400 hover:text-rose-600 hover:bg-rose-50" style="display: none;">
-                                <i class="fas fa-trash-alt"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div>
-                        <label for="report-header" class="block text-sm font-semibold text-surface-600 mb-1">Intestazione del Report</label>
-                        <input type="text" id="report-header" class="cr-input" placeholder="Inserisci l'intestazione del report">
-                    </div>
-                    <div>
-                        <label for="company-logo" class="block text-sm font-semibold text-surface-600 mb-1">Logo Aziendale</label>
-                        <input type="file" id="company-logo" class="cr-input text-sm file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-indigo-50 file:text-indigo-600 file:font-medium hover:file:bg-indigo-100" accept="image/*">
-                        <div id="logo-preview-container" class="mt-2"></div>
-                    </div>
-                    <div>
-                        <label for="config-name" class="block text-sm font-semibold text-surface-600 mb-1">Nome Configurazione (per salvare)</label>
-                        <input type="text" id="config-name" class="cr-input" placeholder="Inserisci un nome per questa configurazione">
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ═══ SEZIONE 2: Periodo & Filtri ═══ -->
-        <div class="cr-card mb-5 overflow-hidden">
-            <div class="px-5 py-3 bg-gradient-to-r from-violet-500 to-purple-600 text-white">
-                <span class="font-semibold flex items-center gap-2"><i class="fas fa-calendar-alt"></i> Periodo & Filtri</span>
+                <span class="font-semibold flex items-center gap-2"><i class="fas fa-filter"></i> Dati & Filtri</span>
             </div>
             <div class="p-5 space-y-4">
-                <!-- Chip periodo rapido -->
+                <!-- Periodo chips -->
                 <div>
-                    <label class="block text-sm font-semibold text-surface-600 mb-2">Periodo Rapido</label>
+                    <label class="block text-sm font-semibold text-surface-600 mb-2">Periodo</label>
                     <div class="rw-period-chips" id="rw-period-chips">
                         <button type="button" class="rw-period-chip" data-period="this-month"><i class="fas fa-calendar-day"></i> Questo Mese</button>
                         <button type="button" class="rw-period-chip" data-period="last-month"><i class="fas fa-calendar-minus"></i> Mese Scorso</button>
@@ -66,7 +31,6 @@ export const reportTemplate = `
                         <button type="button" class="rw-period-chip" data-period="this-year"><i class="fas fa-calendar"></i> Anno Corrente</button>
                         <button type="button" class="rw-period-chip" data-period="custom"><i class="fas fa-sliders-h"></i> Personalizzato</button>
                     </div>
-                    <!-- Date range (visibile solo con "Personalizzato") -->
                     <div class="rw-date-range" id="rw-date-range">
                         <input type="date" id="start-date" class="cr-input flex-1">
                         <span class="rw-date-sep">→</span>
@@ -74,7 +38,7 @@ export const reportTemplate = `
                     </div>
                 </div>
 
-                <!-- Filtri -->
+                <!-- Filtri Client/Project/Worktype -->
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                         <label for="filter-client" class="block text-sm font-semibold text-surface-600 mb-1">Cliente</label>
@@ -94,42 +58,170 @@ export const reportTemplate = `
                     </div>
                 </div>
 
-                <!-- Opzioni -->
-                <div class="flex flex-wrap gap-6">
+                <!-- Raggruppa + Solo non reportati -->
+                <div class="flex flex-wrap items-center gap-4">
                     <div class="flex items-center gap-2">
-                        <input type="checkbox" id="only-unreported" class="w-4 h-4 text-indigo-600 rounded border-surface-300 focus:ring-indigo-500" checked>
-                        <label for="only-unreported" class="text-sm text-surface-600">Solo timer non reportati</label>
+                        <label for="rw-group-by" class="text-sm font-semibold text-surface-600">Raggruppa</label>
+                        <select id="rw-group-by" class="cr-input w-auto text-sm py-1.5 px-3">
+                            <option value="none">Nessuno</option>
+                            <option value="date">Data</option>
+                            <option value="worktype">Tipo di Lavoro</option>
+                            <option value="project">Progetto</option>
+                        </select>
                     </div>
                     <div class="flex items-center gap-2">
-                        <input type="checkbox" id="include-hourly-rate" class="w-4 h-4 text-indigo-600 rounded border-surface-300 focus:ring-indigo-500">
-                        <label for="include-hourly-rate" class="text-sm text-surface-600">Includi Tariffa Oraria</label>
+                        <input type="checkbox" id="only-unreported" class="w-4 h-4 text-indigo-600 rounded border-surface-300 focus:ring-indigo-500" checked>
+                        <label for="only-unreported" class="text-sm text-surface-600">Solo non reportati</label>
+                    </div>
+                    <div class="ml-auto">
+                        <button type="submit" id="rw-generate-btn" class="cr-btn bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white font-semibold shadow-md px-6 py-2.5 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                            <i class="fas fa-search mr-2"></i>Carica Dati
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- ═══ SEZIONE 3: Anteprima & Genera ═══ -->
+        <!-- ═══ CARD 2: Anteprima & Stile ═══ -->
         <div class="cr-card mb-5 overflow-hidden">
             <div class="px-5 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white">
-                <span class="font-semibold flex items-center gap-2"><i class="fas fa-eye"></i> Anteprima</span>
+                <span class="font-semibold flex items-center gap-2"><i class="fas fa-eye"></i> Anteprima & Stile</span>
             </div>
+
+            <!-- ── TOOLBAR ── -->
+            <div class="rw-toolbar" id="rw-toolbar">
+                <!-- Row 1: Template + Accent + actions -->
+                <div class="rw-toolbar-row">
+                    <!-- Segmented control template -->
+                    <div class="rw-segmented" id="rw-template-cards">
+                        <button type="button" class="rw-seg-btn active" data-template="minimal" title="Minimal"><i class="fas fa-minus"></i></button>
+                        <button type="button" class="rw-seg-btn" data-template="detailed" title="Dettagliato"><i class="fas fa-list-alt"></i></button>
+                        <button type="button" class="rw-seg-btn" data-template="executive" title="Executive"><i class="fas fa-crown"></i></button>
+                    </div>
+
+                    <!-- Divider -->
+                    <div class="rw-toolbar-divider"></div>
+
+                    <!-- Accent color dots -->
+                    <div class="rw-accent-row" id="rw-accent-picker">
+                        <button type="button" class="rw-accent-dot active" data-color="#6366f1" style="background:#6366f1;" title="Indaco"></button>
+                        <button type="button" class="rw-accent-dot" data-color="#8b5cf6" style="background:#8b5cf6;" title="Viola"></button>
+                        <button type="button" class="rw-accent-dot" data-color="#3b82f6" style="background:#3b82f6;" title="Blu"></button>
+                        <button type="button" class="rw-accent-dot" data-color="#06b6d4" style="background:#06b6d4;" title="Ciano"></button>
+                        <button type="button" class="rw-accent-dot" data-color="#10b981" style="background:#10b981;" title="Smeraldo"></button>
+                        <button type="button" class="rw-accent-dot" data-color="#f59e0b" style="background:#f59e0b;" title="Ambra"></button>
+                        <button type="button" class="rw-accent-dot" data-color="#ef4444" style="background:#ef4444;" title="Rosso"></button>
+                        <button type="button" class="rw-accent-dot" data-color="#1e293b" style="background:#1e293b;" title="Scuro"></button>
+                        <div class="rw-accent-custom">
+                            <input type="color" id="rw-accent-custom-input" value="#6366f1" class="rw-accent-color-input" title="Colore personalizzato">
+                        </div>
+                    </div>
+
+                    <!-- Divider -->
+                    <div class="rw-toolbar-divider"></div>
+
+                    <!-- Action buttons -->
+                    <div class="rw-toolbar-actions">
+                        <button type="button" class="rw-toolbar-btn" id="rw-toggle-notes" title="Note / Memo">
+                            <i class="fas fa-sticky-note"></i>
+                        </button>
+                        <button type="button" class="rw-toolbar-btn" id="rw-toggle-tax" title="Tax & Sconto">
+                            <i class="fas fa-receipt"></i>
+                        </button>
+                        <button type="button" class="rw-toolbar-btn" id="rw-toggle-presets" title="Preset Configurazioni">
+                            <i class="fas fa-bookmark"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Row 2: Column chips -->
+                <div class="rw-toolbar-row rw-toolbar-row-compact">
+                    <span class="rw-toolbar-label">Colonne</span>
+                    <div class="flex flex-wrap gap-1.5" id="rw-column-chips">
+                        <button type="button" class="rw-column-chip active" data-col="date"><span class="rw-chip-label">📅 Data</span><span class="rw-chip-pin" title="Predefinito"><i class="fas fa-thumbtack"></i></span></button>
+                        <button type="button" class="rw-column-chip active" data-col="worktype"><span class="rw-chip-label">🔧 Tipo</span><span class="rw-chip-pin" title="Predefinito"><i class="fas fa-thumbtack"></i></span></button>
+                        <button type="button" class="rw-column-chip" data-col="project"><span class="rw-chip-label">📁 Progetto</span><span class="rw-chip-pin" title="Predefinito"><i class="fas fa-thumbtack"></i></span></button>
+                        <button type="button" class="rw-column-chip" data-col="link"><span class="rw-chip-label">🔗 Link</span><span class="rw-chip-pin" title="Predefinito"><i class="fas fa-thumbtack"></i></span></button>
+                        <button type="button" class="rw-column-chip" data-col="note"><span class="rw-chip-label">📝 Note</span><span class="rw-chip-pin" title="Predefinito"><i class="fas fa-thumbtack"></i></span></button>
+                        <button type="button" class="rw-column-chip active" data-col="duration"><span class="rw-chip-label">⏱ Durata</span><span class="rw-chip-pin" title="Predefinito"><i class="fas fa-thumbtack"></i></span></button>
+                        <button type="button" class="rw-column-chip" data-col="rate"><span class="rw-chip-label">💶 Tariffa</span><span class="rw-chip-pin" title="Predefinito"><i class="fas fa-thumbtack"></i></span></button>
+                        <button type="button" class="rw-column-chip active" data-col="amount"><span class="rw-chip-label">💰 Importo</span><span class="rw-chip-pin" title="Predefinito"><i class="fas fa-thumbtack"></i></span></button>
+                    </div>
+                </div>
+
+                <!-- Expandable: Notes panel -->
+                <div class="rw-toolbar-expand" id="rw-notes-panel" style="display:none;">
+                    <textarea id="report-notes" class="cr-input w-full text-sm" rows="2" placeholder="Note aggiuntive per il report (condizioni, scadenze, istruzioni di pagamento…)"></textarea>
+                </div>
+
+                <!-- Expandable: Tax & Sconto panel -->
+                <div class="rw-toolbar-expand" id="rw-tax-panel" style="display:none;">
+                    <div class="grid grid-cols-2 gap-3">
+                        <!-- IVA -->
+                        <div class="rw-tax-box">
+                            <div class="flex items-center gap-2 mb-2">
+                                <i class="fas fa-percentage text-surface-400 text-xs"></i>
+                                <span class="text-xs font-semibold text-surface-500 uppercase tracking-wider">IVA</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="flex gap-1" id="rw-iva-chips">
+                                    <button type="button" class="rw-iva-chip active" data-iva="0">0%</button>
+                                    <button type="button" class="rw-iva-chip" data-iva="4">4%</button>
+                                    <button type="button" class="rw-iva-chip" data-iva="10">10%</button>
+                                    <button type="button" class="rw-iva-chip" data-iva="22">22%</button>
+                                </div>
+                                <input type="number" id="rw-iva-custom" class="cr-input w-16 text-center text-sm" min="0" max="100" step="0.5" placeholder="%" value="0">
+                            </div>
+                        </div>
+                        <!-- Sconto -->
+                        <div class="rw-tax-box">
+                            <div class="flex items-center gap-2 mb-2">
+                                <i class="fas fa-tag text-surface-400 text-xs"></i>
+                                <span class="text-xs font-semibold text-surface-500 uppercase tracking-wider">Sconto</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <input type="number" id="rw-discount-value" class="cr-input w-20 text-center text-sm" min="0" step="0.5" placeholder="0" value="0">
+                                <div class="rw-discount-toggle" id="rw-discount-toggle">
+                                    <button type="button" class="rw-disc-btn active" data-type="percent">%</button>
+                                    <button type="button" class="rw-disc-btn" data-type="fixed">€</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Expandable: Presets panel -->
+                <div class="rw-toolbar-expand" id="rw-presets-panel" style="display:none;">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="text-xs font-semibold text-surface-500 uppercase tracking-wider">Preset</span>
+                        <select id="saved-config-select" class="cr-input text-sm py-1.5 flex-1 max-w-xs">
+                            <option value="">-- Seleziona configurazione --</option>
+                        </select>
+                        <button type="button" id="delete-config-btn" class="rw-toolbar-btn text-rose-400 hover:text-rose-600" style="display: none;" title="Elimina preset">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                        <div class="rw-toolbar-divider"></div>
+                        <input type="text" id="config-name" class="cr-input text-sm py-1.5 flex-1 max-w-xs" placeholder="Nome nuovo preset…">
+                        <button type="button" id="rw-save-config-btn" class="rw-toolbar-btn text-indigo-500 hover:text-indigo-700" title="Salva preset">
+                            <i class="fas fa-save"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── PREVIEW AREA ── -->
             <div class="p-5 space-y-4">
-                <!-- KPI Stat Cards -->
-                <div class="rw-stats-grid" id="rw-stats-grid">
-                    <div class="rw-stat-card stat-hours">
-                        <div class="rw-stat-icon"><i class="fas fa-clock"></i></div>
-                        <div class="rw-stat-label">Ore Totali</div>
-                        <div class="rw-stat-value" id="rw-stat-hours">—</div>
+                <!-- Inline header: logo + intestazione -->
+                <div class="rw-preview-header" id="rw-preview-header">
+                    <div class="rw-preview-logo-area" id="rw-logo-area" title="Clicca per caricare un logo">
+                        <input type="file" id="company-logo" accept="image/*" class="hidden">
+                        <div id="logo-preview-container" class="rw-logo-placeholder">
+                            <i class="fas fa-image text-surface-300 text-xl"></i>
+                            <span class="text-[10px] text-surface-400">Logo</span>
+                        </div>
                     </div>
-                    <div class="rw-stat-card stat-amount">
-                        <div class="rw-stat-icon"><i class="fas fa-euro-sign"></i></div>
-                        <div class="rw-stat-label">Importo Totale</div>
-                        <div class="rw-stat-value" id="rw-stat-amount">—</div>
-                    </div>
-                    <div class="rw-stat-card stat-count">
-                        <div class="rw-stat-icon"><i class="fas fa-layer-group"></i></div>
-                        <div class="rw-stat-label">Timer</div>
-                        <div class="rw-stat-value" id="rw-stat-count">—</div>
+                    <div class="flex-1">
+                        <input type="text" id="report-header" class="rw-inline-header-input" placeholder="Intestazione del Report" value="">
                     </div>
                 </div>
 
@@ -137,71 +229,33 @@ export const reportTemplate = `
                 <div id="rw-preview-container">
                     <div class="rw-empty-preview">
                         <i class="fas fa-search"></i>
-                        <p>Seleziona periodo e cliente per vedere l'anteprima</p>
+                        <p>Seleziona periodo e cliente, poi clicca <strong>Carica Dati</strong></p>
                     </div>
                 </div>
 
-                <!-- Pulsante Genera -->
-                <div class="flex justify-end pt-2">
-                    <button type="submit" id="rw-generate-btn" class="cr-btn bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white font-semibold shadow-md px-6 py-2.5 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-                        <i class="fas fa-file-alt mr-2"></i>Genera Report
+                <!-- Export buttons (visibili dopo generazione) -->
+                <div id="rw-export-buttons" class="flex flex-wrap justify-center gap-3 pt-3 pb-1" style="display:none;">
+                    <button type="button" id="download-pdf-btn" class="cr-btn bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold shadow-md px-5 py-2.5">
+                        <i class="fas fa-file-pdf mr-2"></i>Scarica PDF
+                    </button>
+                    <button type="button" id="export-google-doc-btn" class="cr-btn bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold shadow-md px-5 py-2.5">
+                        <i class="fab fa-google-drive mr-2"></i>Google Docs
+                    </button>
+                    <button type="button" id="export-google-sheet-btn" class="cr-btn bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold shadow-md px-5 py-2.5">
+                        <i class="fab fa-google-drive mr-2"></i>Google Sheets
+                    </button>
+                </div>
+
+                <!-- Salva bozza -->
+                <div class="flex justify-end gap-3 pt-2">
+                    <button type="button" id="rw-save-draft-btn" class="cr-btn bg-surface-100 hover:bg-surface-200 text-surface-600 font-semibold px-5 py-2.5 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                        <i class="fas fa-bookmark mr-2"></i>Salva Bozza
                     </button>
                 </div>
             </div>
         </div>
 
     </form>
-</div>
-
-<!-- Modal per visualizzare il report -->
-<div class="modal fade" id="reportModal" tabindex="-1" role="dialog" aria-labelledby="reportModalLabel" aria-hidden="true" style="display:none;">
-  <div class="fixed inset-0 bg-black/50 flex items-start justify-center pt-4 sm:pt-10 px-0 sm:px-4 z-50">
-    <div class="bg-white sm:rounded-xl shadow-2xl w-full sm:max-w-5xl max-h-[100vh] sm:max-h-[85vh] overflow-y-auto">
-      <div class="px-5 py-3 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white flex justify-between items-center rounded-t-xl sticky top-0 z-10">
-        <span class="font-semibold flex items-center gap-2" id="reportModalLabel"><i class="fas fa-file-alt"></i> Report Generato</span>
-        <button type="button" class="text-white/80 hover:text-white text-xl" data-cr-dismiss="modal" aria-label="Chiudi">
-          <i class="fas fa-times"></i>
-        </button>
-      </div>
-      <div class="p-5">
-        <div id="report-content" style="display: none;">
-            <div id="report-header-display" class="text-center mb-4"></div>
-            <table class="w-full text-sm border-collapse">
-                <thead class="bg-surface-800 text-white text-xs uppercase"></thead>
-                <tbody id="report-table-body" class="divide-y divide-surface-100"></tbody>
-            </table>
-            <table class="text-sm border-collapse mt-4 ml-auto" style="max-width: 300px;">
-                <thead class="bg-surface-800 text-white text-xs uppercase">
-                    <tr>
-                        <th colspan="2" class="text-center">Riepilogo Totali</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><strong>Totale Ore</strong></td>
-                        <td><span id="total-hours">0.00</span> h</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Totale Importo</strong></td>
-                        <td>€ <span id="total-amount">0.00</span></td>
-                    </tr>
-                </tbody>
-            </table>
-            <div class="text-center">
-                <button id="download-pdf-btn" class="cr-btn bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold shadow-md mr-2">
-                    <i class="fas fa-file-pdf mr-2"></i>Scarica PDF
-                </button>
-                <button id="export-google-doc-btn" class="cr-btn bg-gradient-to-r from-indigo-500 to-indigo-600 text-white font-semibold shadow-md mr-2">
-                    <i class="fab fa-google-drive mr-2"></i>Google Docs
-                </button>
-                <button id="export-google-sheet-btn" class="cr-btn bg-gradient-to-r from-indigo-500 to-indigo-600 text-white font-semibold shadow-md">
-                    <i class="fab fa-google-drive mr-2"></i>Google Sheets
-                </button>
-            </div>
-        </div>
-      </div>
-    </div>
-  </div>
 </div>
 `;
 
@@ -398,21 +452,36 @@ export async function applySavedConfig(configId) {
     }
 }
 
-// Funzione per generare PDF — Template Ultra Pro
-export function generatePDF(reportHeader, reportData, totalHours, totalAmount, companyLogoBase64, reportFileName, includeHourlyRate) {
+// Funzione per generare PDF — Template Ultra Pro con stili dinamici
+export function generatePDF(reportHeader, reportData, totalHours, totalAmount, companyLogoBase64, reportFileName, includeHourlyRate, template = 'minimal', accentHex = '#6366f1', taxDiscount = null, activeColumns = null) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('p', 'mm', 'a4'); // Portrait A4
+
+    // === Hex to RGB ===
+    function hexToRgb(hex) {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return [r, g, b];
+    }
+    function lightenRgb(rgb, factor = 0.9) {
+        return rgb.map(c => Math.round(c + (255 - c) * factor));
+    }
+
+    const primary = hexToRgb(accentHex);
+    const primaryLight = lightenRgb(primary, 0.92);
 
     // === CONFIG CENTRALIZZATA ===
     const cfg = {
         colors: {
-            primary: [79, 70, 229],      // Indigo 600
-            primaryLight: [238, 242, 255], // Indigo 50
+            primary: primary,
+            primaryLight: primaryLight,
             dark: [30, 41, 59],           // Slate 800
             medium: [100, 116, 139],      // Slate 500
             light: [241, 245, 249],       // Slate 100
             white: [255, 255, 255],
-            accent: [16, 185, 129],       // Emerald 500
+            accent: [16, 185, 129],       // Emerald 500 (per importi)
+            discount: [16, 185, 129],     // Verde sconto
         },
         page: {
             width: doc.internal.pageSize.getWidth(),   // 210
@@ -423,9 +492,9 @@ export function generatePDF(reportHeader, reportData, totalHours, totalAmount, c
             marginBottom: 25, // Spazio per footer
         },
         font: {
-            titleSize: 14,
+            titleSize: template === 'executive' ? 16 : 14,
             subtitleSize: 10,
-            bodySize: 9,
+            bodySize: template === 'minimal' ? 8 : 9,
             smallSize: 7,
         }
     };
@@ -441,9 +510,10 @@ export function generatePDF(reportHeader, reportData, totalHours, totalAmount, c
     }
 
     function drawHeader(doc) {
-        // Linea accent in alto
+        // Linea accent in alto (più spessa per executive)
+        const lineH = template === 'executive' ? 4 : template === 'minimal' ? 2 : 3;
         doc.setFillColor(...cfg.colors.primary);
-        doc.rect(0, 0, cfg.page.width, 3, 'F');
+        doc.rect(0, 0, cfg.page.width, lineH, 'F');
 
         // Titolo report
         doc.setFont('helvetica', 'bold');
@@ -458,65 +528,128 @@ export function generatePDF(reportHeader, reportData, totalHours, totalAmount, c
         doc.setTextColor(...cfg.colors.medium);
         doc.text(`Generato il ${today}`, cfg.page.marginLeft, 21);
 
-        // Linea separatrice sottile
+        // Linea separatrice
         doc.setDrawColor(...cfg.colors.primary);
-        doc.setLineWidth(0.5);
+        doc.setLineWidth(template === 'executive' ? 0.8 : 0.5);
         doc.line(cfg.page.marginLeft, 25, cfg.page.width - cfg.page.marginRight, 25);
     }
 
     function drawFooter(doc, pageNum) {
         const y = cfg.page.height - 10;
-        // Linea separatrice
         doc.setDrawColor(...cfg.colors.light);
         doc.setLineWidth(0.3);
         doc.line(cfg.page.marginLeft, y - 5, cfg.page.width - cfg.page.marginRight, y - 5);
 
-        // CronoReport branding
         doc.setFontSize(cfg.font.smallSize);
         doc.setTextColor(...cfg.colors.medium);
         doc.setFont('helvetica', 'italic');
         doc.text('CronoReport', cfg.page.marginLeft, y);
 
-        // Numero pagina (placeholder — aggiornato dopo)
         doc.setFont('helvetica', 'normal');
         doc.text(`Pagina ${pageNum}`, cfg.page.width - cfg.page.marginRight, y, { align: 'right' });
     }
 
-    // === COSTRUZIONE TABELLA ===
-    const tableColumn = ["Data", "Tipo di Lavoro"];
-    if (includeHourlyRate) tableColumn.push("Tariffa (€/h)");
-    tableColumn.push("Link", "Ore", "Importo (€)");
+    // === COSTRUZIONE TABELLA DINAMICA ===
+    const colMap = {
+        date: { header: 'Data', value: item => item.date },
+        worktype: { header: 'Tipo di Lavoro', value: item => item.workType },
+        project: { header: 'Progetto', value: item => item.project || '—' },
+        rate: { header: 'Tariffa (€/h)', value: item => `€ ${(item.rate || 0).toFixed(2)}` },
+        link: { header: 'Link', value: item => item.link || '' },
+        note: { header: 'Note', value: item => item.note || '-' },
+        duration: { header: 'Durata', value: item => item.hours || '' },
+        amount: { header: 'Importo (€)', value: item => `€ ${(item.amount || 0).toFixed(2)}` },
+    };
 
-    const linkColumnIndex = includeHourlyRate ? 3 : 2;
+    // Fallback default columns if none provided
+    const cols = activeColumns && activeColumns.length > 0
+        ? activeColumns
+        : ['date', 'worktype', ...(includeHourlyRate ? ['rate'] : []), 'link', 'duration', 'amount'];
+
+    const tableColumn = cols.map(c => colMap[c]?.header || c);
+    const linkColumnIndex = cols.indexOf('link');
 
     const tableRows = [];
     reportData.forEach(item => {
-        const rowData = [item.date, item.workType];
-        if (includeHourlyRate) rowData.push(item.hourlyRate);
-        rowData.push('', item.timeWorked, `€ ${item.amount}`);
+        const rowData = cols.map(c => colMap[c]?.value(item) || '');
         tableRows.push(rowData);
     });
 
     // === Prima pagina: Logo + Header ===
     let tableStartY = cfg.page.marginTop;
 
+    // Executive KPI summary prima della tabella
+    if (template === 'executive') {
+        tableStartY = cfg.page.marginTop + 18;
+    }
+
     if (companyLogoBase64) {
         const img = new Image();
         img.src = companyLogoBase64;
-        img.onload = function() {
+        img.onload = function () {
             drawHeader(doc);
             const logoH = 12;
             const logoW = (img.width * logoH) / img.height;
             doc.addImage(companyLogoBase64, 'PNG', cfg.page.width - cfg.page.marginRight - logoW, 8, logoW, logoH);
+            if (template === 'executive') drawKpiCards(doc, cfg.page.marginTop);
             buildTable(tableStartY);
         };
     } else {
         drawHeader(doc);
+        if (template === 'executive') drawKpiCards(doc, cfg.page.marginTop);
         buildTable(tableStartY);
     }
 
+    // Executive KPI cards
+    function drawKpiCards(doc, y) {
+        const cardW = (contentWidth - 8) / 3;
+        const cardH = 12;
+        const formattedHours = formatHoursToHMS(totalHours);
+        const count = reportData.length;
+
+        const kpis = [
+            { label: 'TIMER', value: `${count}` },
+            { label: 'DURATA TOTALE', value: formattedHours },
+            { label: 'IMPORTO TOTALE', value: `€ ${totalAmount.toFixed(2)}` },
+        ];
+
+        kpis.forEach((kpi, i) => {
+            const x = cfg.page.marginLeft + i * (cardW + 4);
+            doc.setFillColor(...cfg.colors.primaryLight);
+            doc.setDrawColor(...cfg.colors.primary);
+            doc.setLineWidth(0.3);
+            doc.roundedRect(x, y, cardW, cardH, 1.5, 1.5, 'FD');
+
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(11);
+            doc.setTextColor(...cfg.colors.primary);
+            doc.text(kpi.value, x + cardW / 2, y + 5.5, { align: 'center' });
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(6);
+            doc.setTextColor(...cfg.colors.medium);
+            doc.text(kpi.label, x + cardW / 2, y + 10, { align: 'center' });
+        });
+    }
+
     function buildTable(startY) {
-        // Tabella principale
+        // Stili tabella basati sul template
+        const headStyles = {
+            fillColor: cfg.colors.primary,
+            textColor: cfg.colors.white,
+            fontStyle: 'bold',
+            fontSize: 8,
+            halign: 'left',
+        };
+
+        const alternateStyles = template === 'minimal'
+            ? { fillColor: cfg.colors.white } // Minimal: no alternate
+            : { fillColor: cfg.colors.primaryLight };
+
+        const bodyStyles = template === 'executive'
+            ? { lineWidth: 0.5, lineColor: cfg.colors.light }
+            : { lineWidth: 0.3, lineColor: cfg.colors.light };
+
         doc.autoTable({
             head: [tableColumn],
             body: tableRows,
@@ -524,34 +657,25 @@ export function generatePDF(reportHeader, reportData, totalHours, totalAmount, c
             margin: { left: cfg.page.marginLeft, right: cfg.page.marginRight, top: cfg.page.marginTop, bottom: cfg.page.marginBottom },
             styles: {
                 fontSize: cfg.font.bodySize,
-                cellPadding: 3,
+                cellPadding: template === 'executive' ? 4 : 3,
                 overflow: 'linebreak',
-                lineColor: cfg.colors.light,
-                lineWidth: 0.3,
+                lineColor: bodyStyles.lineColor,
+                lineWidth: bodyStyles.lineWidth,
                 textColor: cfg.colors.dark,
             },
-            headStyles: {
-                fillColor: cfg.colors.primary,
-                textColor: cfg.colors.white,
-                fontStyle: 'bold',
-                fontSize: 8,
-                halign: 'left',
-            },
-            alternateRowStyles: {
-                fillColor: cfg.colors.primaryLight,
-            },
+            headStyles: headStyles,
+            alternateRowStyles: alternateStyles,
             columnStyles: {},
-            // Hook: link ipertestuali nel PDF
-            didParseCell: function(data) {
+            didParseCell: function (data) {
                 if (data.section === 'body' && data.column.index === linkColumnIndex) {
                     data.cell.text = '';
                 }
             },
-            didDrawCell: function(data) {
+            didDrawCell: function (data) {
                 if (data.section === 'body' && data.column.index === linkColumnIndex) {
                     const link = reportData[data.row.index]?.link;
                     if (link) {
-                        doc.setTextColor(79, 70, 229); // Indigo
+                        doc.setTextColor(...cfg.colors.primary);
                         doc.setFontSize(8);
                         const linkText = extractDomainName(link);
                         const xPos = data.cell.x + data.cell.padding('left');
@@ -562,8 +686,7 @@ export function generatePDF(reportHeader, reportData, totalHours, totalAmount, c
                     }
                 }
             },
-            // Hook: header/footer su ogni nuova pagina
-            didDrawPage: function(data) {
+            didDrawPage: function (data) {
                 if (data.pageNumber > 1) {
                     drawHeader(doc);
                 }
@@ -574,17 +697,37 @@ export function generatePDF(reportHeader, reportData, totalHours, totalAmount, c
         const lastAutoTable = doc.lastAutoTable;
         let currentY = lastAutoTable ? lastAutoTable.finalY + 10 : startY + 10;
 
-        // Controlla se c'è spazio, altrimenti nuova pagina
-        if (currentY + 40 > cfg.page.height - cfg.page.marginBottom) {
+        // Calcoli fiscali
+        const td = taxDiscount || { iva: 0, discountValue: 0, discountType: 'percent' };
+        const subtotal = totalAmount;
+        let discountAmt = 0;
+        if (td.discountValue > 0) {
+            discountAmt = td.discountType === 'percent' ? subtotal * (td.discountValue / 100) : td.discountValue;
+        }
+        const afterDiscount = Math.max(0, subtotal - discountAmt);
+        const ivaAmt = afterDiscount * (td.iva / 100);
+        const grandTotal = afterDiscount + ivaAmt;
+        const hasTaxOrDiscount = td.iva > 0 || td.discountValue > 0;
+
+        // Altezza box dinamica
+        let boxRows = 2; // Ore + Importo base
+        if (hasTaxOrDiscount) {
+            boxRows = 2; // Timer + Ore
+            if (discountAmt > 0) boxRows += 2; // Subtotale + Sconto
+            if (td.iva > 0) boxRows += 2; // Imponibile + IVA
+            boxRows += 1; // Totale finale
+        }
+        const boxHeight = 8 + (boxRows * 8) + 4;
+        const boxWidth = 100;
+
+        if (currentY + boxHeight > cfg.page.height - cfg.page.marginBottom) {
             doc.addPage();
             drawHeader(doc);
             currentY = cfg.page.marginTop;
         }
 
-        const boxWidth = 90;
         const boxX = cfg.page.width - cfg.page.marginRight - boxWidth;
         const boxY = currentY;
-        const boxHeight = 32;
 
         // Box sfondo
         doc.setFillColor(...cfg.colors.light);
@@ -595,7 +738,6 @@ export function generatePDF(reportHeader, reportData, totalHours, totalAmount, c
         // Titolo riepilogo
         doc.setFillColor(...cfg.colors.primary);
         doc.roundedRect(boxX, boxY, boxWidth, 8, 2, 2, 'F');
-        // Rettangolo per coprire angoli arrotondati inferiori del titolo
         doc.rect(boxX, boxY + 5, boxWidth, 3, 'F');
 
         doc.setFont('helvetica', 'bold');
@@ -604,24 +746,57 @@ export function generatePDF(reportHeader, reportData, totalHours, totalAmount, c
         doc.text('RIEPILOGO TOTALI', boxX + boxWidth / 2, boxY + 5.5, { align: 'center' });
 
         // Contenuto riepilogo
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
-        doc.setTextColor(...cfg.colors.dark);
-
         const formattedHours = formatHoursToHMS(totalHours);
+        let rowY = boxY + 16;
+        const leftX = boxX + 5;
+        const rightX = boxX + boxWidth - 5;
 
-        doc.setFont('helvetica', 'bold');
-        doc.text('Totale Ore:', boxX + 5, boxY + 16);
-        doc.setFont('helvetica', 'normal');
-        doc.text(formattedHours, boxX + boxWidth - 5, boxY + 16, { align: 'right' });
+        function drawRow(label, value, opts = {}) {
+            doc.setFont('helvetica', opts.bold ? 'bold' : 'normal');
+            doc.setFontSize(opts.size || 9);
+            doc.setTextColor(...(opts.labelColor || cfg.colors.dark));
+            doc.text(label, leftX, rowY);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(...(opts.valueColor || cfg.colors.dark));
+            doc.text(value, rightX, rowY, { align: 'right' });
+            rowY += 8;
+        }
 
-        doc.setFont('helvetica', 'bold');
-        doc.text('Totale Importo:', boxX + 5, boxY + 24);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(...cfg.colors.accent);
-        doc.text(`€ ${totalAmount.toFixed(2)}`, boxX + boxWidth - 5, boxY + 24, { align: 'right' });
+        if (hasTaxOrDiscount) {
+            // Timer + Ore
+            drawRow('Timer:', `${reportData.length}`, { bold: true });
+            drawRow('Totale Durata:', formattedHours, { bold: true });
 
-        // === NUMERI DI PAGINA (X di Y) — Loop finale ===
+            // Divider
+            doc.setDrawColor(...cfg.colors.medium);
+            doc.setLineWidth(0.2);
+            doc.line(leftX, rowY - 4, rightX, rowY - 4);
+
+            // Subtotale
+            drawRow('Subtotale:', `€ ${subtotal.toFixed(2)}`, { bold: true });
+
+            if (discountAmt > 0) {
+                const discLabel = td.discountType === 'percent' ? `Sconto (${td.discountValue}%):` : 'Sconto:';
+                drawRow(discLabel, `- € ${discountAmt.toFixed(2)}`, { valueColor: cfg.colors.discount });
+            }
+            if (td.iva > 0) {
+                drawRow('Imponibile:', `€ ${afterDiscount.toFixed(2)}`);
+                drawRow(`IVA (${td.iva}%):`, `+ € ${ivaAmt.toFixed(2)}`);
+            }
+
+            // Divider
+            doc.setDrawColor(...cfg.colors.medium);
+            doc.setLineWidth(0.2);
+            doc.line(leftX, rowY - 4, rightX, rowY - 4);
+
+            // Grand total
+            drawRow('TOTALE:', `€ ${grandTotal.toFixed(2)}`, { bold: true, size: 10, valueColor: cfg.colors.primary });
+        } else {
+            drawRow('Totale Durata:', formattedHours, { bold: true });
+            drawRow('Totale Importo:', `€ ${totalAmount.toFixed(2)}`, { bold: true, valueColor: cfg.colors.primary });
+        }
+
+        // === NUMERI DI PAGINA (X di Y) ===
         const totalPages = doc.internal.getNumberOfPages();
         for (let i = 1; i <= totalPages; i++) {
             doc.setPage(i);
