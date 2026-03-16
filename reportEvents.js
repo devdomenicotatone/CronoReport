@@ -60,22 +60,46 @@ export function setupReportSection() {
     // Carica i clienti
     loadClients(filterClientSelect);
 
+    // Helper per abilitare/disabilitare i period chips
+    function enablePeriodChips() {
+        periodChipsContainer.classList.remove('disabled');
+        periodChipsContainer.querySelectorAll('.rw-period-chip').forEach(chip => {
+            chip.disabled = false;
+        });
+    }
+
+    function disablePeriodChips() {
+        periodChipsContainer.classList.add('disabled');
+        periodChipsContainer.querySelectorAll('.rw-period-chip').forEach(chip => {
+            chip.disabled = true;
+            chip.classList.remove('rw-period-chip-active');
+        });
+    }
+
     filterClientSelect.addEventListener('change', () => {
         const selectedClientId = filterClientSelect.value;
         if (selectedClientId) {
             loadProjects(filterProjectSelect, selectedClientId);
             loadWorktypes(filterWorktypeSelect, selectedClientId);
+            enablePeriodChips();
+            // Auto-calcola il range date dai timer non reportati di questo cliente
+            setAutoDateRange(selectedClientId);
         } else {
             filterProjectSelect.innerHTML = '<option value="">Tutti i Progetti</option>';
             filterWorktypeSelect.innerHTML = '<option value="">Tutti i Tipi di Lavoro</option>';
+            // Reset date e preview
+            startDateInput.value = '';
+            endDateInput.value = '';
+            activePeriod = null;
+            updatePeriodChipsUI();
+            disablePeriodChips();
+            tryLoadPreview();
         }
-        tryLoadPreview();
     });
 
     // Trigger preview anche quando cambiano progetto/worktype/checkbox
     filterProjectSelect.addEventListener('change', () => tryLoadPreview());
     filterWorktypeSelect.addEventListener('change', () => tryLoadPreview());
-    document.getElementById('only-unreported').addEventListener('change', () => tryLoadPreview());
 
     // Trigger preview quando cambiano intestazione o note
     const reportHeaderInput = document.getElementById('report-header');
@@ -500,8 +524,8 @@ export function setupReportSection() {
         periodChipsContainer.querySelectorAll('.rw-period-chip').forEach(chip => {
             chip.classList.toggle('rw-period-chip-active', chip.dataset.period === activePeriod);
         });
-        // Show/hide date range for custom
-        if (activePeriod === 'custom') {
+        // Show date range for custom AND auto (so user sees the auto-calculated dates)
+        if (activePeriod === 'custom' || activePeriod === 'auto') {
             dateRangeContainer.classList.add('visible');
         } else {
             dateRangeContainer.classList.remove('visible');
@@ -514,7 +538,13 @@ export function setupReportSection() {
         activePeriod = chip.dataset.period;
         updatePeriodChipsUI();
 
-        if (activePeriod !== 'custom') {
+        if (activePeriod === 'auto') {
+            // Ricalcola range dai timer non reportati del cliente selezionato
+            const selectedClientId = filterClientSelect.value;
+            if (selectedClientId) {
+                setAutoDateRange(selectedClientId);
+            }
+        } else if (activePeriod !== 'custom') {
             setPeriodDates(activePeriod);
             tryLoadPreview();
         }
@@ -536,8 +566,8 @@ export function setupReportSection() {
         tryLoadPreview();
     });
 
-    // Auto-set dates from unreported timers fallback
-    setAutoDateRange();
+    // Le date vengono auto-calcolate solo dopo la selezione di un cliente
+    // (setAutoDateRange viene chiamata nel listener filterClientSelect.change)
 
     // === LIVE PREVIEW ===
     let previewDebounceTimer = null;
@@ -566,7 +596,6 @@ export function setupReportSection() {
         const clientId = filterClientSelect.value;
         const projectId = filterProjectSelect.value;
         const worktypeId = filterWorktypeSelect.value;
-        const onlyUnreported = document.getElementById('only-unreported').checked;
         const groupBy = groupBySelect.value;
         const activeCols = getActiveColumns();
 
@@ -607,7 +636,7 @@ export function setupReportSection() {
             if (clientId) query = query.where('clientId', '==', clientId);
             if (projectId) query = query.where('projectId', '==', projectId);
             if (worktypeId) query = query.where('worktypeId', '==', worktypeId);
-            if (onlyUnreported) query = query.where('isReported', '==', false);
+            query = query.where('isReported', '==', false);
 
             return query.orderBy('startTime', 'asc').get();
         }).then(snapshot => {
@@ -725,7 +754,7 @@ export function setupReportSection() {
             // Render cell value
             function cellVal(row, col) {
                 switch (col) {
-                    case 'date': return row.dateShort;
+                    case 'date': return row.date;
                     case 'worktype': return row.workType;
                     case 'project': return row.project;
                     case 'link': return row.link ? `<a href="${row.link}" target="_blank" class="text-indigo-500 hover:underline text-xs">${row.link.replace(/https?:\/\/(www\.)?/, '').substring(0, 30)}…</a>` : '—';
@@ -743,13 +772,16 @@ export function setupReportSection() {
                 if (group.label) {
                     tbody += `<tr class="rw-group-header"><td colspan="${activeCols.length}">${group.label}</td></tr>`;
                 }
+                let rowIdx = 0;
                 group.rows.forEach(row => {
-                    tbody += '<tr>';
+                    const zebraClass = rowIdx % 2 === 1 ? ' class="rw-row-alt"' : '';
+                    tbody += `<tr${zebraClass}>`;
                     activeCols.forEach(col => {
                         const align = (col === 'amount' || col === 'rate') ? ' style="text-align:right; font-weight:600;"' : '';
                         tbody += `<td${align}>${cellVal(row, col)}</td>`;
                     });
                     tbody += '</tr>';
+                    rowIdx++;
                 });
                 // Sub-total per group
                 if (group.label && groups.length > 1) {
@@ -784,12 +816,12 @@ export function setupReportSection() {
             wysiwygHtml += `<div class="rw-accent-line" style="height:${tpl === 'executive' ? '5px' : tpl === 'minimal' ? '2px' : '3px'}; background:${accent};"></div>`;
             // Header
             wysiwygHtml += `<div class="rw-wysiwyg-header">`;
-            if (logoSrc) wysiwygHtml += `<img src="${logoSrc}" alt="Logo" class="rw-wysiwyg-logo">`;
             wysiwygHtml += `<div>
                 <div class="rw-wysiwyg-title">${reportHeader}</div>
-                <div class="rw-wysiwyg-meta">${clientName} · ${new Date(startVal).toLocaleDateString('it-IT')} — ${new Date(endVal).toLocaleDateString('it-IT')}</div>
-                <div class="rw-wysiwyg-date" style="font-size:0.7rem;color:#94a3b8;margin-top:2px;">Generato il ${new Date().toLocaleDateString('it-IT', { day: '2-digit', month: 'long', year: 'numeric' })}</div>
-            </div></div>`;
+                <div class="rw-wysiwyg-meta">${clientName} · ${new Date(startVal).toLocaleDateString('it-IT')} — ${new Date(endVal).toLocaleDateString('it-IT')} · ${count} timer</div>
+            </div>`;
+            if (logoSrc) wysiwygHtml += `<img src="${logoSrc}" alt="Logo" class="rw-wysiwyg-logo" style="margin-left:auto;">`;
+            wysiwygHtml += `</div>`;
             wysiwygHtml += `<hr style="border-color:${accent};margin:0.5rem 0;">`;
 
             const totalSec = Math.floor(totalHours * 3600);
@@ -857,7 +889,7 @@ export function setupReportSection() {
             }
             // Footer branding
             wysiwygHtml += `<div class="rw-wysiwyg-footer" style="display:flex;justify-content:space-between;font-size:7px;color:#64748b;font-style:italic;padding-top:0.75rem;margin-top:1rem;border-top:0.3px solid #f1f5f9;">
-                <span>CronoReport</span>
+                <span style="font-style:italic;">Generato il ${new Date().toLocaleDateString('it-IT', { day: '2-digit', month: 'long', year: 'numeric' })}</span>
                 <span>Pagina 1 di 1</span>
             </div>`;
             wysiwygHtml += `</div>`;
@@ -938,15 +970,21 @@ export function setupReportSection() {
 
     // === EXPORT BUTTONS ===
     function getReportParams() {
+        const clientName = filterClientSelect.options[filterClientSelect.selectedIndex]?.text || '';
+        const startVal = startDateInput.value;
+        const endVal = endDateInput.value;
+        const count = lastPreviewData?.count || 0;
+        const metaLine = clientName ? `${clientName} \u00b7 ${new Date(startVal).toLocaleDateString('it-IT')} \u2014 ${new Date(endVal).toLocaleDateString('it-IT')} \u00b7 ${count} timer` : null;
         return {
             template: activeTemplate,
-            accentColor: document.querySelector('.rw-accent-dot.active')?.dataset?.color || '#6366f1',
+            accentColor: getAccentColor(),
             reportHeader: document.getElementById('report-header')?.value?.trim() || 'Report',
             companyLogoBase64: companyLogoBase64 || '',
             reportNotes: document.getElementById('report-notes')?.value?.trim() || '',
             taxDiscount: getTaxDiscount(),
             activeColumns: getActiveColumns(),
-            includeHourlyRate: getActiveColumns().includes('rate')
+            includeHourlyRate: getActiveColumns().includes('rate'),
+            metaInfo: metaLine
         };
     }
 
@@ -973,8 +1011,11 @@ export function setupReportSection() {
                     p.template,
                     p.accentColor,
                     p.taxDiscount,
-                    p.activeColumns
+                    p.activeColumns,
+                    p.metaInfo
                 );
+                // Salva nello storico report
+                saveReportToHistory(p, clientName, fileName, lastPreviewData);
                 // Ask to mark timers as reported after successful PDF download
                 askMarkAsReported(lastPreviewData.timerIds);
             } catch (error) {
@@ -1003,6 +1044,9 @@ export function setupReportSection() {
                 exportGoogleDocBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando...';
                 const content = generateReportContentString(lastPreviewData.allRows, p.activeColumns);
                 await createGoogleDoc(p.reportHeader, content);
+                const clientNameDoc = filterClientSelect.options[filterClientSelect.selectedIndex]?.text || 'Report';
+                const fileNameDoc = `Report_${clientNameDoc}_${startDateInput.value}_${endDateInput.value}`;
+                saveReportToHistory(p, clientNameDoc, fileNameDoc, lastPreviewData);
                 askMarkAsReported(lastPreviewData.timerIds);
             } catch (error) {
                 console.error('Errore Google Docs:', error);
@@ -1030,6 +1074,9 @@ export function setupReportSection() {
                 exportGoogleSheetBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando...';
                 const values = generateReportValuesArray(lastPreviewData.allRows, p.activeColumns);
                 await createGoogleSheet(p.reportHeader, values);
+                const clientNameSheet = filterClientSelect.options[filterClientSelect.selectedIndex]?.text || 'Report';
+                const fileNameSheet = `Report_${clientNameSheet}_${startDateInput.value}_${endDateInput.value}`;
+                saveReportToHistory(p, clientNameSheet, fileNameSheet, lastPreviewData);
                 askMarkAsReported(lastPreviewData.timerIds);
             } catch (error) {
                 console.error('Errore Google Sheets:', error);
@@ -1039,6 +1086,43 @@ export function setupReportSection() {
                 exportGoogleSheetBtn.innerHTML = '<i class="fab fa-google-drive"></i> Google Sheets';
             }
         });
+    }
+
+    function saveReportToHistory(params, clientName, fileName, previewData) {
+        const filterClient = filterClientSelect.value;
+        const filterProject = filterProjectSelect.value;
+        const filterWorktype = filterWorktypeSelect.value;
+
+        const projectName = filterProjectSelect.options[filterProjectSelect.selectedIndex]?.text || '';
+        const worktypeName = filterWorktypeSelect.options[filterWorktypeSelect.selectedIndex]?.text || '';
+
+        const reportDetails = {
+            uid: currentUser.uid,
+            reportHeader: params.reportHeader,
+            startDate: startDateInput.value,
+            endDate: endDateInput.value,
+            filterClient: filterClient || null,
+            filterProject: filterProject || null,
+            filterWorktype: filterWorktype || null,
+            filterClientName: clientName,
+            filterprojectName: projectName,
+            filterWorktypeName: worktypeName,
+            totalAmount: previewData.totalAmount,
+            totalHours: previewData.totalHours,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+            companyLogoBase64: params.companyLogoBase64 || '',
+            reportName: fileName,
+            reportDataArray: previewData.allRows,
+            includeHourlyRate: params.includeHourlyRate
+        };
+
+        db.collection('reports').add(reportDetails)
+            .then(() => {
+                console.log('Report salvato nello storico.');
+            })
+            .catch(error => {
+                console.error('Errore nel salvataggio del report nello storico:', error);
+            });
     }
 
     function askMarkAsReported(timerIds) {
@@ -1084,10 +1168,13 @@ export function setupReportSection() {
         });
     }
 
-    function setAutoDateRange() {
+    function setAutoDateRange(clientId) {
+        if (!clientId) return;
         db.collection('timeLogs')
             .where('uid', '==', currentUser.uid)
+            .where('clientId', '==', clientId)
             .where('isReported', '==', false)
+            .where('isDeleted', '==', false)
             .orderBy('startTime', 'asc')
             .get()
             .then(snapshot => {
@@ -1096,7 +1183,17 @@ export function setupReportSection() {
                     const lastTimer = snapshot.docs[snapshot.docs.length - 1].data();
                     startDateInput.value = new Date(firstTimer.startTime.seconds * 1000).toISOString().split('T')[0];
                     endDateInput.value = new Date(lastTimer.startTime.seconds * 1000).toISOString().split('T')[0];
+                    // Attiva il chip "Non reportati" e mostra le date
+                    activePeriod = 'auto';
+                    updatePeriodChipsUI();
+                } else {
+                    // Nessun timer non reportato per questo cliente: reset date
+                    startDateInput.value = '';
+                    endDateInput.value = '';
+                    activePeriod = null;
+                    updatePeriodChipsUI();
                 }
+                tryLoadPreview();
             })
             .catch(error => {
                 console.error('Errore nel recupero dei timer non reportati:', error);
@@ -1125,7 +1222,6 @@ export function setupReportSection() {
         const endDateInputVal = document.getElementById('end-date').value;
         const configName = document.getElementById('config-name').value.trim();
     
-        const onlyUnreported = document.getElementById('only-unreported').checked;
         const activeCols = getActiveColumns();
         const groupBy = groupBySelect.value;
         const reportNotes = document.getElementById('report-notes').value.trim();
@@ -1187,7 +1283,7 @@ export function setupReportSection() {
         if (filterClient) query = query.where('clientId', '==', filterClient);
         if (filterProject) query = query.where('projectId', '==', filterProject);
         if (filterWorktype) query = query.where('worktypeId', '==', filterWorktype);
-        if (onlyUnreported) query = query.where('isReported', '==', false);
+        query = query.where('isReported', '==', false);
     
         query.orderBy('startTime', 'asc')
             .get()
@@ -1268,8 +1364,10 @@ export function setupReportSection() {
                 }
 
                 // Bind export buttons
+                const clientNameLegacy = document.getElementById('filter-client').options[document.getElementById('filter-client').selectedIndex]?.text || '';
+                const legacyMetaInfo = clientNameLegacy ? `${clientNameLegacy} \u00b7 ${new Date(startDateInputVal).toLocaleDateString('it-IT')} — ${new Date(endDateInputVal).toLocaleDateString('it-IT')} \u00b7 ${reportData.length} timer` : null;
                 downloadPdfBtn.onclick = () => {
-                    generatePDF(reportHeader, reportData, totalHours, totalAmount, companyLogoBase64, sanitizedReportFileName, includeHourlyRate, getActiveTemplate(), getAccentColor(), getTaxDiscount(), getActiveColumns());
+                    generatePDF(reportHeader, reportData, totalHours, totalAmount, companyLogoBase64, sanitizedReportFileName, includeHourlyRate, getActiveTemplate(), getAccentColor(), getTaxDiscount(), getActiveColumns(), legacyMetaInfo);
                     askMarkAsReported();
                 };
                 

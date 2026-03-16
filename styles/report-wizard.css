@@ -57,6 +57,16 @@
         opacity: 0.8;
     }
 
+    /* Disabled state (before client selection) */
+    .rw-period-chips.disabled {
+        opacity: 0.45;
+        pointer-events: none;
+    }
+
+    .rw-period-chip:disabled {
+        cursor: not-allowed;
+    }
+
     /* Date range inline (for custom period) */
     .rw-date-range {
         display: flex;
@@ -202,6 +212,10 @@
 
     .rw-preview-table tbody tr:last-child td {
         border-bottom: none;
+    }
+
+    .rw-preview-table tbody tr.rw-row-alt td {
+        background: #f8fafc;
     }
 
     /* Section collapse toggle */

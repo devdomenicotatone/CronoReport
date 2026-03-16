@@ -586,6 +586,7 @@ export function displayTimers(timers) {
         // Client Header
         const clientHeader = document.createElement('div');
         clientHeader.className = 'tl-day-header';
+        clientHeader.style.borderLeftColor = getClientHexColor(clientName);
         clientHeader.innerHTML = `
             <div class="flex items-center gap-3">
                 <span class="tl-badge-client" style="background:${color.bg}; color:${color.text};">${clientName}</span>
@@ -632,11 +633,11 @@ export function displayTimers(timers) {
 
             // --- Month Section ---
             const monthSection = document.createElement('div');
-            monthSection.className = 'mb-2';
+            monthSection.className = 'tl-month-section';
 
             // Month Header (collapsibile)
             const monthHeader = document.createElement('div');
-            monthHeader.className = 'flex items-center gap-3 px-4 py-2 cursor-pointer hover:bg-surface-50 rounded-lg transition-colors';
+            monthHeader.className = 'tl-month-header';
             monthHeader.innerHTML = `
                 <i class="fas fa-chevron-${isCurrentMonth || monthIdx === 0 ? 'down' : 'right'} text-xs text-surface-400 month-chevron transition-transform"></i>
                 <span class="text-sm font-semibold text-surface-600">${monthName}</span>
@@ -647,7 +648,7 @@ export function displayTimers(timers) {
 
             // Month Body
             const monthBody = document.createElement('div');
-            monthBody.className = 'space-y-1';
+            monthBody.className = 'tl-month-body';
             // Solo primo mese espanso, gli altri compressi
             const startExpanded = monthIdx === 0;
             monthBody.style.display = startExpanded ? 'block' : 'none';

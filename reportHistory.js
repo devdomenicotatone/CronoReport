@@ -1,6 +1,6 @@
 // reportHistory.js
 import { generatePDF } from './reportConfig.js';
-import { loadClientColors, getClientBgStyle } from './clientColors.js';
+import { loadClientColors, getClientBgStyle, getClientHexColor } from './clientColors.js';
 // Template per la sezione Storico Report
 export const reportHistoryTemplate = `
 <div id="report-history-section" class="max-w-6xl mx-auto px-4 py-6" style="padding-bottom: 5.5rem;">
@@ -292,6 +292,7 @@ export function initializeReportHistoryEvents() {
                     // Client Header
                     const header = document.createElement('div');
                     header.className = 'tl-day-header';
+                    header.style.borderLeftColor = getClientHexColor(clientName);
                     header.innerHTML = `
                         <div class="flex items-center gap-3">
                             <span class="tl-badge-client" style="background:${color.bg}; color:${color.text};">${clientName}</span>
@@ -327,11 +328,74 @@ export function initializeReportHistoryEvents() {
 
                     section.appendChild(header);
 
-                    // Report Rows
-                    const list = document.createElement('div');
-                    list.className = 'space-y-1';
+                    // === Sub-raggruppa per mese ===
+                    const monthNames = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+                                        'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
 
-                    clientReports.forEach(report => {
+                    // Ordina report per data creazione (decrescente)
+                    clientReports.sort((a, b) => {
+                        const dateA = a.data.createdAt ? a.data.createdAt.seconds : 0;
+                        const dateB = b.data.createdAt ? b.data.createdAt.seconds : 0;
+                        return dateB - dateA;
+                    });
+
+                    const reportsByMonth = {};
+                    clientReports.forEach(r => {
+                        let d;
+                        if (r.data.createdAt && r.data.createdAt.toDate) {
+                            d = r.data.createdAt.toDate();
+                        } else {
+                            d = new Date(); // fallback
+                        }
+                        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                        if (!reportsByMonth[key]) reportsByMonth[key] = [];
+                        reportsByMonth[key].push(r);
+                    });
+
+                    const sortedMonths = Object.keys(reportsByMonth).sort((a, b) => b.localeCompare(a));
+
+                    sortedMonths.forEach((monthKey, monthIdx) => {
+                        const monthReports = reportsByMonth[monthKey];
+                        const [year, month] = monthKey.split('-');
+                        const monthName = `${monthNames[parseInt(month) - 1]} ${year}`;
+
+                        // Totale importo del mese
+                        const monthTotal = monthReports.reduce((sum, r) =>
+                            sum + (parseFloat(r.data.totalAmount) || 0), 0);
+
+                        // --- Month Section ---
+                        const monthSection = document.createElement('div');
+                        monthSection.className = 'tl-month-section';
+
+                        // Month Header
+                        const monthHeader = document.createElement('div');
+                        monthHeader.className = 'tl-month-header';
+                        monthHeader.innerHTML = `
+                            <i class="fas fa-chevron-${monthIdx === 0 ? 'down' : 'right'} text-xs text-surface-400 month-chevron transition-transform"></i>
+                            <span class="text-sm font-semibold text-surface-600">${monthName}</span>
+                            <span class="text-xs text-surface-400">${monthReports.length} report</span>
+                            <span class="flex-1"></span>
+                            <span class="text-xs font-mono text-emerald-600 font-semibold">€ ${monthTotal.toFixed(2)}</span>
+                        `;
+
+                        // Month Body
+                        const monthBody = document.createElement('div');
+                        monthBody.className = 'tl-month-body';
+                        const startExpanded = monthIdx === 0;
+                        monthBody.style.display = startExpanded ? 'block' : 'none';
+
+                        // Toggle mese
+                        monthHeader.addEventListener('click', () => {
+                            const isOpen = monthBody.style.display !== 'none';
+                            monthBody.style.display = isOpen ? 'none' : 'block';
+                            const chevron = monthHeader.querySelector('.month-chevron');
+                            if (chevron) {
+                                chevron.classList.toggle('fa-chevron-down', !isOpen);
+                                chevron.classList.toggle('fa-chevron-right', isOpen);
+                            }
+                        });
+
+                        monthReports.forEach(report => {
                         const r = report.data;
                         const row = document.createElement('div');
                         row.className = 'tl-timer-row';
@@ -456,10 +520,14 @@ export function initializeReportHistoryEvents() {
                         content.appendChild(mainRow);
                         content.appendChild(detailRow);
                         row.appendChild(content);
-                        list.appendChild(row);
+                        monthBody.appendChild(row);
                     });
 
-                    section.appendChild(list);
+                        monthSection.appendChild(monthHeader);
+                        monthSection.appendChild(monthBody);
+                        section.appendChild(monthSection);
+                    });
+
                     reportHistoryAccordion.appendChild(section);
                 });
             })

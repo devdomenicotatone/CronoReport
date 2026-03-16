@@ -21,23 +21,6 @@ export const reportTemplate = `
                 <span class="font-semibold flex items-center gap-2"><i class="fas fa-filter"></i> Dati & Filtri</span>
             </div>
             <div class="p-5 space-y-4">
-                <!-- Periodo chips -->
-                <div>
-                    <label class="block text-sm font-semibold text-surface-600 mb-2">Periodo</label>
-                    <div class="rw-period-chips" id="rw-period-chips">
-                        <button type="button" class="rw-period-chip" data-period="this-month"><i class="fas fa-calendar-day"></i> Questo Mese</button>
-                        <button type="button" class="rw-period-chip" data-period="last-month"><i class="fas fa-calendar-minus"></i> Mese Scorso</button>
-                        <button type="button" class="rw-period-chip" data-period="last-3-months"><i class="fas fa-calendar-week"></i> Ultimi 3 Mesi</button>
-                        <button type="button" class="rw-period-chip" data-period="this-year"><i class="fas fa-calendar"></i> Anno Corrente</button>
-                        <button type="button" class="rw-period-chip" data-period="custom"><i class="fas fa-sliders-h"></i> Personalizzato</button>
-                    </div>
-                    <div class="rw-date-range" id="rw-date-range">
-                        <input type="date" id="start-date" class="cr-input flex-1">
-                        <span class="rw-date-sep">→</span>
-                        <input type="date" id="end-date" class="cr-input flex-1">
-                    </div>
-                </div>
-
                 <!-- Filtri Client/Project/Worktype -->
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
@@ -58,7 +41,25 @@ export const reportTemplate = `
                     </div>
                 </div>
 
-                <!-- Raggruppa + Solo non reportati -->
+                <!-- Periodo chips -->
+                <div>
+                    <label class="block text-sm font-semibold text-surface-600 mb-2">Periodo</label>
+                    <div class="rw-period-chips disabled" id="rw-period-chips">
+                        <button type="button" class="rw-period-chip" data-period="auto" disabled><i class="fas fa-magic"></i> Auto</button>
+                        <button type="button" class="rw-period-chip" data-period="this-month" disabled><i class="fas fa-calendar-day"></i> Questo Mese</button>
+                        <button type="button" class="rw-period-chip" data-period="last-month" disabled><i class="fas fa-calendar-minus"></i> Mese Scorso</button>
+                        <button type="button" class="rw-period-chip" data-period="last-3-months" disabled><i class="fas fa-calendar-week"></i> Ultimi 3 Mesi</button>
+                        <button type="button" class="rw-period-chip" data-period="this-year" disabled><i class="fas fa-calendar"></i> Anno Corrente</button>
+                        <button type="button" class="rw-period-chip" data-period="custom" disabled><i class="fas fa-sliders-h"></i> Personalizzato</button>
+                    </div>
+                    <div class="rw-date-range" id="rw-date-range">
+                        <input type="date" id="start-date" class="cr-input flex-1">
+                        <span class="rw-date-sep">→</span>
+                        <input type="date" id="end-date" class="cr-input flex-1">
+                    </div>
+                </div>
+
+                <!-- Raggruppa + Genera -->
                 <div class="flex flex-wrap items-center gap-4">
                     <div class="flex items-center gap-2">
                         <label for="rw-group-by" class="text-sm font-semibold text-surface-600">Raggruppa</label>
@@ -68,10 +69,6 @@ export const reportTemplate = `
                             <option value="worktype">Tipo di Lavoro</option>
                             <option value="project">Progetto</option>
                         </select>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <input type="checkbox" id="only-unreported" class="w-4 h-4 text-indigo-600 rounded border-surface-300 focus:ring-indigo-500" checked>
-                        <label for="only-unreported" class="text-sm text-surface-600">Solo non reportati</label>
                     </div>
                     <div class="ml-auto">
                         <button type="submit" id="rw-generate-btn" class="cr-btn bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white font-semibold shadow-md px-6 py-2.5 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
@@ -453,7 +450,7 @@ export async function applySavedConfig(configId) {
 }
 
 // Funzione per generare PDF — Template Ultra Pro con stili dinamici
-export function generatePDF(reportHeader, reportData, totalHours, totalAmount, companyLogoBase64, reportFileName, includeHourlyRate, template = 'minimal', accentHex = '#6366f1', taxDiscount = null, activeColumns = null) {
+export function generatePDF(reportHeader, reportData, totalHours, totalAmount, companyLogoBase64, reportFileName, includeHourlyRate, template = 'minimal', accentHex = '#6366f1', taxDiscount = null, activeColumns = null, metaInfo = null) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('p', 'mm', 'a4'); // Portrait A4
 
@@ -489,7 +486,7 @@ export function generatePDF(reportHeader, reportData, totalHours, totalAmount, c
             marginLeft: 15,
             marginRight: 15,
             marginTop: 35,    // Spazio per header
-            marginBottom: 25, // Spazio per footer
+            marginBottom: 20, // Spazio per footer (standard ISO/DIN)
         },
         font: {
             titleSize: template === 'executive' ? 16 : 14,
@@ -521,17 +518,19 @@ export function generatePDF(reportHeader, reportData, totalHours, totalAmount, c
         doc.setTextColor(...cfg.colors.dark);
         doc.text(reportHeader, cfg.page.marginLeft, 15);
 
-        // Data generazione
-        const today = new Date().toLocaleDateString('it-IT', { day: '2-digit', month: 'long', year: 'numeric' });
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(cfg.font.smallSize);
-        doc.setTextColor(...cfg.colors.medium);
-        doc.text(`Generato il ${today}`, cfg.page.marginLeft, 21);
+        // Meta info: cliente · date range · N timer
+        if (metaInfo) {
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8);
+            doc.setTextColor(...cfg.colors.medium);
+            doc.text(metaInfo, cfg.page.marginLeft, 20);
+        }
 
         // Linea separatrice
+        const lineY = metaInfo ? 24 : 20;
         doc.setDrawColor(...cfg.colors.primary);
         doc.setLineWidth(template === 'executive' ? 0.8 : 0.5);
-        doc.line(cfg.page.marginLeft, 25, cfg.page.width - cfg.page.marginRight, 25);
+        doc.line(cfg.page.marginLeft, lineY, cfg.page.width - cfg.page.marginRight, lineY);
     }
 
     function drawFooter(doc, pageNum) {
@@ -540,10 +539,12 @@ export function generatePDF(reportHeader, reportData, totalHours, totalAmount, c
         doc.setLineWidth(0.3);
         doc.line(cfg.page.marginLeft, y - 5, cfg.page.width - cfg.page.marginRight, y - 5);
 
+        // Data generazione a sinistra
+        const today = new Date().toLocaleDateString('it-IT', { day: '2-digit', month: 'long', year: 'numeric' });
         doc.setFontSize(cfg.font.smallSize);
         doc.setTextColor(...cfg.colors.medium);
         doc.setFont('helvetica', 'italic');
-        doc.text('CronoReport', cfg.page.marginLeft, y);
+        doc.text(`Generato il ${today}`, cfg.page.marginLeft, y);
 
         doc.setFont('helvetica', 'normal');
         doc.text(`Pagina ${pageNum}`, cfg.page.width - cfg.page.marginRight, y, { align: 'right' });
@@ -552,13 +553,13 @@ export function generatePDF(reportHeader, reportData, totalHours, totalAmount, c
     // === COSTRUZIONE TABELLA DINAMICA ===
     const colMap = {
         date: { header: 'Data', value: item => item.date },
-        worktype: { header: 'Tipo di Lavoro', value: item => item.workType },
+        worktype: { header: 'Tipo', value: item => item.workType },
         project: { header: 'Progetto', value: item => item.project || '—' },
-        rate: { header: 'Tariffa (€/h)', value: item => `€ ${(item.rate || 0).toFixed(2)}` },
+        rate: { header: 'Tariffa', value: item => `€ ${(item.rate || 0).toFixed(2)}` },
         link: { header: 'Link', value: item => item.link || '' },
         note: { header: 'Note', value: item => item.note || '-' },
         duration: { header: 'Durata', value: item => item.hours || '' },
-        amount: { header: 'Importo (€)', value: item => `€ ${(item.amount || 0).toFixed(2)}` },
+        amount: { header: 'Importo', value: item => `€ ${(item.amount || 0).toFixed(2)}` },
     };
 
     // Fallback default columns if none provided
@@ -576,27 +577,38 @@ export function generatePDF(reportHeader, reportData, totalHours, totalAmount, c
     });
 
     // === Prima pagina: Logo + Header ===
-    let tableStartY = cfg.page.marginTop;
+    let tableStartY = metaInfo ? cfg.page.marginTop : cfg.page.marginTop - 4;
 
     // Executive KPI summary prima della tabella
     if (template === 'executive') {
-        tableStartY = cfg.page.marginTop + 18;
+        tableStartY = cfg.page.marginTop + 18 + (metaInfo ? 0 : -4);
+    }
+
+    // Cache logo info for drawing on every page
+    let cachedLogoW = 0;
+    let cachedLogoH = 0;
+
+    function drawLogo(doc) {
+        if (companyLogoBase64 && cachedLogoW > 0) {
+            doc.addImage(companyLogoBase64, 'PNG', cfg.page.width - cfg.page.marginRight - cachedLogoW, 8, cachedLogoW, cachedLogoH);
+        }
     }
 
     if (companyLogoBase64) {
         const img = new Image();
         img.src = companyLogoBase64;
         img.onload = function () {
+            // Logo a destra (standard report/invoice)
+            cachedLogoH = 12;
+            cachedLogoW = (img.width * cachedLogoH) / img.height;
             drawHeader(doc);
-            const logoH = 12;
-            const logoW = (img.width * logoH) / img.height;
-            doc.addImage(companyLogoBase64, 'PNG', cfg.page.width - cfg.page.marginRight - logoW, 8, logoW, logoH);
-            if (template === 'executive') drawKpiCards(doc, cfg.page.marginTop);
+            drawLogo(doc);
+            if (template === 'executive') drawKpiCards(doc, cfg.page.marginTop + (metaInfo ? 0 : -4));
             buildTable(tableStartY);
         };
     } else {
         drawHeader(doc);
-        if (template === 'executive') drawKpiCards(doc, cfg.page.marginTop);
+        if (template === 'executive') drawKpiCards(doc, cfg.page.marginTop + (metaInfo ? 0 : -4));
         buildTable(tableStartY);
     }
 
