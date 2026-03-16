@@ -133,11 +133,11 @@ export const timerTemplate = `
                     <div class="flex flex-col sm:flex-row gap-4 mt-3 bg-surface-50/50 p-4 rounded-xl border border-surface-100">
                         <div class="flex-1">
                             <label for="manual-start-time" class="block text-xs font-bold text-surface-600 mb-1.5">Inizio (Opzionale)</label>
-                            <input type="text" id="manual-start-time" class="cr-input text-sm bg-white" placeholder="DD/MM/YYYY HH:mm:ss" />
+                            <input type="datetime-local" id="manual-start-time" class="cr-input text-sm bg-white" />
                         </div>
                         <div class="flex-1">
                             <label for="manual-end-time" class="block text-xs font-bold text-surface-600 mb-1.5">Fine (Opzionale)</label>
-                            <input type="text" id="manual-end-time" class="cr-input text-sm bg-white" placeholder="DD/MM/YYYY HH:mm:ss" />
+                            <input type="datetime-local" id="manual-end-time" class="cr-input text-sm bg-white" />
                         </div>
                     </div>
                 </div>

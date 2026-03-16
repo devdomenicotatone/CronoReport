@@ -49,21 +49,6 @@ export async function initializeTimerEvents() {
         startTimerBtn = document.getElementById('start-timer-btn');
         timerCardsContainer = document.getElementById('timer-cards');
 
-        const manualStartTimePicker = flatpickr(manualStartTimeInput, {
-            enableTime: true,
-            enableSeconds: true,
-            time_24hr: true,
-            dateFormat: "d/m/Y H:i:S",
-            locale: "it"
-        });
-
-        const manualEndTimePicker = flatpickr(manualEndTimeInput, {
-            enableTime: true,
-            enableSeconds: true,
-            time_24hr: true,
-            dateFormat: "d/m/Y H:i:S",
-            locale: "it"
-        });
 
         loadTimerClientDropdown(clientSelect);
 
@@ -186,15 +171,6 @@ export async function initializeTimerEvents() {
             }
         });
 
-        // Re-init flatpickr for manual time inputs
-        flatpickr(manualStartTimeInput, {
-            enableTime: true, enableSeconds: true, time_24hr: true,
-            dateFormat: "d/m/Y H:i:S", locale: "it"
-        });
-        flatpickr(manualEndTimeInput, {
-            enableTime: true, enableSeconds: true, time_24hr: true,
-            dateFormat: "d/m/Y H:i:S", locale: "it"
-        });
 
         // Re-bind manual toggle
         const manualToggle = document.getElementById('timer-manual-toggle');

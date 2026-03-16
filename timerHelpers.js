@@ -65,27 +65,34 @@ export function loadWorktypes(selectElement, clientId) {
 // === DATE/TIME PARSING & FORMATTING ===
 
 export function parseLocalDateTime(s) {
+    if (!s) return null;
+    // Native datetime-local format: "YYYY-MM-DDTHH:mm" or "YYYY-MM-DDTHH:mm:ss"
+    if (s.includes('T')) {
+        const d = new Date(s);
+        return isNaN(d.getTime()) ? null : d;
+    }
+    // Legacy Flatpickr format: "DD/MM/YYYY HH:mm:ss"
     const [datePart, timePart] = s.split(' ');
     if (!datePart || !timePart) return null;
     const [day, month, year] = datePart.split('/').map(Number);
     const [hour, minute, second] = timePart.split(':').map(Number);
     if (
         isNaN(day) || isNaN(month) || isNaN(year) ||
-        isNaN(hour) || isNaN(minute) || isNaN(second)
+        isNaN(hour) || isNaN(minute)
     ) {
         return null;
     }
-    return new Date(year, month - 1, day, hour, minute, second);
+    return new Date(year, month - 1, day, hour, minute, second || 0);
 }
 
 export function formatLocalDateTime(date) {
-    const dd = String(date.getDate()).padStart(2,'0');
-    const mm = String(date.getMonth()+1).padStart(2,'0');
     const yyyy = date.getFullYear();
+    const mm = String(date.getMonth()+1).padStart(2,'0');
+    const dd = String(date.getDate()).padStart(2,'0');
     const hh = String(date.getHours()).padStart(2,'0');
     const min = String(date.getMinutes()).padStart(2,'0');
-    const ss = String(date.getSeconds()).padStart(2,'0');
-    return `${dd}/${mm}/${yyyy} ${hh}:${min}:${ss}`;
+    // datetime-local format: YYYY-MM-DDTHH:mm
+    return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
 }
 
 // === DURATION FORMATTING ===

@@ -194,11 +194,11 @@ export const savedTimersTemplate = `
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label for="edit-saved-start-time" class="cr-label">Data/Ora Inizio</label>
-              <input type="text" id="edit-saved-start-time" class="cr-input" placeholder="DD/MM/YYYY HH:mm:ss">
+              <input type="datetime-local" id="edit-saved-start-time" class="cr-input">
             </div>
             <div>
               <label for="edit-saved-end-time" class="cr-label">Data/Ora Fine</label>
-              <input type="text" id="edit-saved-end-time" class="cr-input" placeholder="DD/MM/YYYY HH:mm:ss">
+              <input type="datetime-local" id="edit-saved-end-time" class="cr-input">
             </div>
           </div>
         </form>
@@ -535,22 +535,6 @@ export async function openEditSavedTimerModal(timerId) {
         document.getElementById('edit-saved-end-time').value = '';
     }
 
-    // Inizializza flatpickr per i campi data/ora della modale
-    flatpickr('#edit-saved-start-time', {
-        enableTime: true,
-        enableSeconds: true,
-        time_24hr: true,
-        dateFormat: "d/m/Y H:i:S",
-        locale: "it"
-    });
-
-    flatpickr('#edit-saved-end-time', {
-        enableTime: true,
-        enableSeconds: true,
-        time_24hr: true,
-        dateFormat: "d/m/Y H:i:S",
-        locale: "it"
-    });
 
     // Aggiungiamo un event listener per il cambio del cliente
     clientSelect.addEventListener('change', () => {
