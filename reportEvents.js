@@ -150,7 +150,8 @@ export function setupReportSection() {
             // Toggle active state (on/off)
             chip.classList.toggle('active');
         }
-        tryLoadPreview();
+        // Re-render from cache without Firestore re-query, and preserve scroll
+        rerenderPreview();
     });
 
     function getActiveColumns() {
@@ -515,6 +516,15 @@ export function setupReportSection() {
         }, 300);
     }
 
+    // Re-render preview from cached data (no Firestore query), preserving scroll
+    function rerenderPreview() {
+        if (!lastPreviewData) return; // Nothing cached yet
+        const scrollEl = document.scrollingElement || document.documentElement;
+        const scrollY = scrollEl.scrollTop;
+        renderWysiwygPreview(lastPreviewData);
+        requestAnimationFrame(() => { scrollEl.scrollTop = scrollY; });
+    }
+
     function loadPreview() {
         const startVal = startDateInput.value;
         const endVal = endDateInput.value;
@@ -596,6 +606,23 @@ export function setupReportSection() {
 
             // Store for later
             lastPreviewData = { totalHours, totalAmount, count, allRows };
+            renderWysiwygPreview(lastPreviewData);
+        }).catch(error => {
+            console.error('Errore anteprima:', error);
+            document.getElementById('rw-preview-container').innerHTML = `
+                <div class="rw-empty-preview">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p>Errore nel caricamento dell'anteprima</p>
+                </div>
+            `;
+            if (generateBtn) generateBtn.disabled = true;
+        });
+    }
+
+    function renderWysiwygPreview(data) {
+            const { totalHours, totalAmount, count, allRows } = data;
+            const groupBy = groupBySelect.value;
+            const activeCols = getActiveColumns();
 
             // === Build WYSIWYG preview ===
             const container = document.getElementById('rw-preview-container');
@@ -800,16 +827,6 @@ export function setupReportSection() {
             if (generateBtn) generateBtn.disabled = false;
             if (saveDraftBtn) saveDraftBtn.disabled = false;
             if (exportButtonsContainer) exportButtonsContainer.style.display = 'flex';
-        }).catch(error => {
-            console.error('Errore anteprima:', error);
-            document.getElementById('rw-preview-container').innerHTML = `
-                <div class="rw-empty-preview">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <p>Errore nel caricamento dell'anteprima</p>
-                </div>
-            `;
-            if (generateBtn) generateBtn.disabled = true;
-        });
     }
 
     // === CONFIG MANAGEMENT ===
