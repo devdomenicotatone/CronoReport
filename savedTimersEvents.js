@@ -1,7 +1,7 @@
 // savedTimersEvents.js
 import { gapiInited, gisInited, handleAuthClick, maybeEnableButtons } from './firebaseConfig.js';
 import { loadSavedTimers, getCurrentFilters, loadAvailableYears, loadClientsForFilter, updateQuickFilterBar, activeQuickYear, activeQuickMonth, populateMonthChips, displayTimers, setActiveQuickYear, setActiveQuickMonth, displayUnreportedAmounts, displayedTimers, activeStatusFilter, activeWorktypeFilter, setActiveStatusFilter, setActiveWorktypeFilter, applyAdvancedFilters, exportTimersToCSV, exportTimersToPDF } from './savedTimersData.js';
-import { attachSavedTimersListeners, deleteTimerById, formatDuration, saveEditedSavedTimer, getMonthName, formatDateTime } from './savedTimersUI.js';
+import { attachSavedTimersListeners, deleteTimerById, formatDuration, getMonthName, formatDateTime } from './savedTimersUI.js';
 
 // Variabili globali
 let lastOperation = null;
@@ -337,53 +337,6 @@ export async function initializeSavedTimersEvents() {
             updateQuickFilterBar();
             loadSavedTimers(getCurrentFilters());
         });
-    }
-
-    // QUI aggiungiamo i listener ai pulsanti all'interno della modale, dopo che i timer sono caricati e il DOM è pronto
-    const saveEditedBtn = document.getElementById('save-edited-saved-timer-btn');
-    if (saveEditedBtn) {
-        console.log("Aggiungo eventListener a #save-edited-saved-timer-btn");
-        saveEditedBtn.addEventListener('click', () => {
-            console.log("Cliccato bottone Salva Modifiche timer salvato");
-            saveEditedSavedTimer();
-        });
-    } else {
-        console.warn("Non ho trovato il pulsante #save-edited-saved-timer-btn nel DOM al termine di initializeSavedTimersEvents");
-    }
-
-    // Aggiungiamo il listener per il pulsante "Elimina Timer" allo stesso modo
-    const deleteSavedTimerBtn = document.getElementById('delete-saved-timer-btn');
-    if (deleteSavedTimerBtn) {
-        console.log("Aggiungo eventListener a #delete-saved-timer-btn");
-        deleteSavedTimerBtn.addEventListener('click', () => {
-            const timerId = document.getElementById('edit-saved-timer-id').value.trim();
-            if (!timerId) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Errore',
-                    text: 'Impossibile trovare il timer da eliminare.',
-                    confirmButtonText: 'OK'
-                });
-                return;
-            }
-
-            Swal.fire({
-                title: 'Sei sicuro?',
-                text: 'Vuoi eliminare questo timer? Sarà spostato nel cestino.',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Sì, elimina!',
-                cancelButtonText: 'Annulla'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    deleteTimerById(timerId);
-                }
-            });
-        });
-    } else {
-        console.warn("Non ho trovato il pulsante #delete-saved-timer-btn nel DOM al termine di initializeSavedTimersEvents");
     }
 
     console.log("Fine initializeSavedTimersEvents");

@@ -2,7 +2,7 @@
 import { CrModal } from './uiComponents.js';
 import { loadClientColors, getClientBgStyle, getClientHexColor } from './clientColors.js';
 import { createTimerRow, formatDuration, getMonthName, formatDate, formatTimeShort } from './savedTimersUI.js';
-// NOTE: showAlert (main.js), openEditSavedTimerModal (savedTimersUI.js) usati via dynamic import()
+// NOTE: showAlert (main.js) usato via dynamic import()
 
 // Shared state: displayedTimers ora vive qui per evitare dipendenza circolare con savedTimersEvents.js
 export let displayedTimers = [];
@@ -671,6 +671,7 @@ export function displayTimers(timers) {
                 const logData = timerObj.data;
                 const row = document.createElement('div');
                 row.className = 'tl-timer-row';
+                row.setAttribute('data-timer-id', timerObj.id);
 
                 // Checkbox
                 const checkbox = document.createElement('input');
@@ -682,7 +683,107 @@ export function displayTimers(timers) {
                 const content = document.createElement('div');
                 content.className = 'flex-1 min-w-0';
 
-                // RIGA 1: Data + Progetto + Durata
+                // === HELPER: Inline edit per testo semplice ===
+                function makeInlineEditable(el, fieldName, opts = {}) {
+                    el.classList.add('tl-inline-editable');
+                    el.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        if (el.querySelector('input, select')) return; // già in editing
+                        const currentVal = logData[fieldName] || '';
+                        const input = document.createElement('input');
+                        input.type = opts.type || 'text';
+                        input.className = 'tl-inline-input';
+                        input.value = opts.formatForEdit ? opts.formatForEdit(currentVal) : currentVal;
+                        if (opts.placeholder) input.placeholder = opts.placeholder;
+                        const originalText = el.textContent;
+                        const originalHTML = el.innerHTML;
+                        el.innerHTML = '';
+                        el.appendChild(input);
+                        input.focus();
+                        input.select();
+
+                        const save = () => {
+                            const raw = input.value.trim();
+                            const val = opts.parseValue ? opts.parseValue(raw) : raw;
+                            if (val === null) {
+                                // Valore non valido — ripristina
+                                el.innerHTML = originalHTML;
+                                return;
+                            }
+                            logData[fieldName] = val;
+                            const updateData = { [fieldName]: val };
+                            // Aggiorna anche il display
+                            if (opts.formatDisplay) {
+                                el.innerHTML = opts.formatDisplay(val);
+                            } else {
+                                el.textContent = val || opts.emptyText || '—';
+                            }
+                            // Se cambio durata, ricalcola hourlyRate display
+                            if (opts.extraUpdates) {
+                                const extra = opts.extraUpdates(val, logData);
+                                Object.assign(updateData, extra);
+                            }
+                            db.collection('timeLogs').doc(timerObj.id).update(updateData)
+                                .catch(err => console.error(`Errore aggiornamento ${fieldName}:`, err));
+                        };
+                        input.addEventListener('blur', save);
+                        input.addEventListener('keydown', (ev) => {
+                            if (ev.key === 'Enter') input.blur();
+                            if (ev.key === 'Escape') { el.innerHTML = originalHTML; }
+                        });
+                    });
+                }
+
+                // === HELPER: Inline edit per select (con caricamento dati Firestore) ===
+                function makeInlineSelect(el, fieldName, nameName, loadOptionsFn) {
+                    el.classList.add('tl-inline-editable');
+                    el.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        if (el.querySelector('select')) return;
+                        const originalHTML = el.innerHTML;
+                        const select = document.createElement('select');
+                        select.className = 'tl-inline-select';
+                        el.innerHTML = '';
+                        el.appendChild(select);
+
+                        loadOptionsFn(select, logData[fieldName]).then(() => {
+                            select.focus();
+                        });
+
+                        const save = () => {
+                            const selectedOpt = select.options[select.selectedIndex];
+                            if (selectedOpt && selectedOpt.value) {
+                                const newId = selectedOpt.value;
+                                const newName = selectedOpt.textContent;
+                                logData[fieldName] = newId;
+                                logData[nameName] = newName;
+                                el.textContent = newName;
+                                const updateData = { [fieldName]: newId, [nameName]: newName };
+                                // Se cambia worktype, aggiorna anche hourlyRate
+                                if (fieldName === 'worktypeId') {
+                                    db.collection('worktypes').doc(newId).get().then(doc => {
+                                        if (doc.exists) {
+                                            const rate = doc.data().hourlyRate || 0;
+                                            logData.hourlyRate = rate;
+                                            updateData.hourlyRate = rate;
+                                        }
+                                        db.collection('timeLogs').doc(timerObj.id).update(updateData)
+                                            .catch(err => console.error(`Errore aggiornamento ${fieldName}:`, err));
+                                    });
+                                    return;
+                                }
+                                db.collection('timeLogs').doc(timerObj.id).update(updateData)
+                                    .catch(err => console.error(`Errore aggiornamento ${fieldName}:`, err));
+                            } else {
+                                el.innerHTML = originalHTML;
+                            }
+                        };
+                        select.addEventListener('blur', save);
+                        select.addEventListener('change', () => select.blur());
+                    });
+                }
+
+                // RIGA 1: Data + Progetto (editable) + Durata (editable)
                 const mainRow = document.createElement('div');
                 mainRow.className = 'flex items-center gap-2 flex-wrap';
 
@@ -694,6 +795,23 @@ export function displayTimers(timers) {
                 const projectSpan = document.createElement('span');
                 projectSpan.className = 'text-sm font-medium text-surface-700 truncate';
                 projectSpan.textContent = logData.projectName || '—';
+                // Inline select per progetto
+                makeInlineSelect(projectSpan, 'projectId', 'projectName', (selectEl, currentId) => {
+                    selectEl.innerHTML = '<option value="">--Progetto--</option>';
+                    return db.collection('projects')
+                        .where('uid', '==', currentUser.uid)
+                        .where('clientId', '==', logData.clientId)
+                        .orderBy('name').get()
+                        .then(snap => {
+                            snap.forEach(doc => {
+                                const opt = document.createElement('option');
+                                opt.value = doc.id;
+                                opt.textContent = doc.data().name;
+                                if (doc.id === currentId) opt.selected = true;
+                                selectEl.appendChild(opt);
+                            });
+                        });
+                });
 
                 const spacer = document.createElement('span');
                 spacer.className = 'flex-1';
@@ -702,19 +820,52 @@ export function displayTimers(timers) {
                 durationSpan.className = 'font-mono text-base font-bold text-surface-800 flex-shrink-0';
                 const dur = logData.duration || 0;
                 durationSpan.textContent = `${Math.floor(dur / 3600)}h ${Math.floor((dur % 3600) / 60).toString().padStart(2, '0')}m`;
+                // Inline edit per durata
+                makeInlineEditable(durationSpan, 'duration', {
+                    placeholder: 'hh:mm:ss',
+                    formatForEdit: (sec) => {
+                        const h = Math.floor(sec / 3600);
+                        const m = Math.floor((sec % 3600) / 60);
+                        const s = Math.floor(sec % 60);
+                        return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+                    },
+                    parseValue: (raw) => {
+                        const parts = raw.split(':').map(Number);
+                        if (parts.length !== 3 || parts.some(isNaN)) return null;
+                        return parts[0] * 3600 + parts[1] * 60 + parts[2];
+                    },
+                    formatDisplay: (sec) => `${Math.floor(sec / 3600)}h ${Math.floor((sec % 3600) / 60).toString().padStart(2, '0')}m`
+                });
 
                 mainRow.appendChild(dateSpan);
                 mainRow.appendChild(projectSpan);
                 mainRow.appendChild(spacer);
                 mainRow.appendChild(durationSpan);
 
-                // RIGA 2: Tipo lavoro · Orari · Stato · Azioni
+                // RIGA 2: Tipo lavoro (editable) · Orari · Stato toggle · Azioni
                 const detailRow = document.createElement('div');
                 detailRow.className = 'flex items-center gap-2 mt-1 flex-wrap';
 
                 const worktypeSpan = document.createElement('span');
                 worktypeSpan.className = 'text-xs text-surface-400';
-                worktypeSpan.textContent = logData.worktypeName || '';
+                worktypeSpan.textContent = logData.worktypeName || '—';
+                // Inline select per tipo lavoro
+                makeInlineSelect(worktypeSpan, 'worktypeId', 'worktypeName', (selectEl, currentId) => {
+                    selectEl.innerHTML = '<option value="">--Tipo Lavoro--</option>';
+                    return db.collection('worktypes')
+                        .where('uid', '==', currentUser.uid)
+                        .where('clientId', '==', logData.clientId)
+                        .orderBy('name').get()
+                        .then(snap => {
+                            snap.forEach(doc => {
+                                const opt = document.createElement('option');
+                                opt.value = doc.id;
+                                opt.textContent = doc.data().name;
+                                if (doc.id === currentId) opt.selected = true;
+                                selectEl.appendChild(opt);
+                            });
+                        });
+                });
 
                 const timesSpan = document.createElement('span');
                 timesSpan.className = 'text-xs text-surface-400';
@@ -725,14 +876,28 @@ export function displayTimers(timers) {
                 const spacer2 = document.createElement('span');
                 spacer2.className = 'flex-1';
 
-                const statusBadge = document.createElement('span');
-                if (logData.isReported) {
-                    statusBadge.className = 'text-xs text-emerald-500 flex items-center gap-1';
-                    statusBadge.innerHTML = '<i class="fas fa-check-circle"></i> Reportato';
-                } else {
-                    statusBadge.className = 'text-xs text-amber-500 flex items-center gap-1';
-                    statusBadge.innerHTML = '<i class="fas fa-clock"></i> Pending';
+                // Stato — cliccabile per toggle
+                const statusBadge = document.createElement('button');
+                statusBadge.className = 'tl-inline-status';
+                statusBadge.title = 'Clicca per cambiare stato';
+                function renderStatusBadge() {
+                    if (logData.isReported) {
+                        statusBadge.className = 'tl-inline-status tl-inline-status--reported';
+                        statusBadge.innerHTML = '<i class="fas fa-check-circle"></i> Reportato';
+                    } else {
+                        statusBadge.className = 'tl-inline-status tl-inline-status--pending';
+                        statusBadge.innerHTML = '<i class="fas fa-clock"></i> Pending';
+                    }
                 }
+                renderStatusBadge();
+                statusBadge.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const newStatus = !logData.isReported;
+                    logData.isReported = newStatus;
+                    renderStatusBadge();
+                    db.collection('timeLogs').doc(timerObj.id).update({ isReported: newStatus })
+                        .catch(err => console.error('Errore toggle stato:', err));
+                });
 
                 detailRow.appendChild(worktypeSpan);
                 if (logData.worktypeName) {
@@ -745,6 +910,7 @@ export function displayTimers(timers) {
                 detailRow.appendChild(spacer2);
                 detailRow.appendChild(statusBadge);
 
+                // Link — inline editable
                 if (logData.link) {
                     const isUrl = /^https?:\/\//i.test(logData.link);
                     if (isUrl) {
@@ -753,28 +919,113 @@ export function displayTimers(timers) {
                         a.target = '_blank';
                         a.className = 'text-xs text-indigo-400 hover:text-indigo-600 transition-colors ml-2';
                         a.innerHTML = '<i class="fas fa-external-link-alt"></i>';
-                        a.title = 'Apri link';
+                        a.title = logData.link;
                         detailRow.appendChild(a);
                     } else {
-                        const note = document.createElement('span');
-                        note.className = 'text-xs text-surface-400 ml-2';
-                        note.innerHTML = `<i class="fas fa-sticky-note"></i> ${logData.link}`;
-                        note.title = logData.link;
-                        detailRow.appendChild(note);
+                        const linkSpan = document.createElement('span');
+                        linkSpan.className = 'text-xs text-surface-400 ml-2';
+                        linkSpan.innerHTML = `<i class="fas fa-link"></i> ${logData.link}`;
+                        linkSpan.title = logData.link;
+                        makeInlineEditable(linkSpan, 'link', { placeholder: 'https://...', emptyText: '—' });
+                        detailRow.appendChild(linkSpan);
                     }
+                } else {
+                    const linkSpan = document.createElement('span');
+                    linkSpan.className = 'text-xs text-surface-300 ml-2 italic';
+                    linkSpan.innerHTML = '<i class="fas fa-link"></i> —';
+                    makeInlineEditable(linkSpan, 'link', { placeholder: 'https://...', emptyText: '—',
+                        formatDisplay: (val) => `<i class="fas fa-link"></i> ${val || '—'}`
+                    });
+                    detailRow.appendChild(linkSpan);
                 }
 
-                const editBtn = document.createElement('button');
-                editBtn.className = 'tl-edit-btn ml-1';
-                editBtn.title = 'Modifica';
-                editBtn.innerHTML = '<i class="fas fa-pen text-xs"></i>';
-                editBtn.addEventListener('click', () => {
-                    import('./savedTimersUI.js').then(m => m.openEditSavedTimerModal(timerObj.id));
+                // Delete inline
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'tl-inline-action tl-inline-action--delete';
+                deleteBtn.title = 'Elimina';
+                deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+                deleteBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    Swal.fire({
+                        title: 'Eliminare questo timer?',
+                        text: 'Sarà spostato nel cestino.',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#ef4444',
+                        cancelButtonColor: '#64748b',
+                        confirmButtonText: 'Sì, elimina',
+                        cancelButtonText: 'Annulla'
+                    }).then(result => {
+                        if (result.isConfirmed) {
+                            db.collection('timeLogs').doc(timerObj.id).update({
+                                isDeleted: true,
+                                deletedAt: firebase.firestore.FieldValue.serverTimestamp()
+                            }).then(() => {
+                                row.style.transition = 'opacity 0.3s, transform 0.3s';
+                                row.style.opacity = '0';
+                                row.style.transform = 'translateX(20px)';
+                                setTimeout(() => row.remove(), 300);
+                                import('./main.js').then(m => m.showAlert('success', 'Eliminato', 'Timer spostato nel cestino.'));
+                            }).catch(err => {
+                                console.error('Errore eliminazione timer:', err);
+                                import('./main.js').then(m => m.showAlert('error', 'Errore', 'Impossibile eliminare.'));
+                            });
+                        }
+                    });
                 });
-                detailRow.appendChild(editBtn);
+                detailRow.appendChild(deleteBtn);
 
                 content.appendChild(mainRow);
                 content.appendChild(detailRow);
+
+                // RIGA 3: Note — sempre visibile se presente, editabile inline
+                const noteRow = document.createElement('div');
+                noteRow.className = 'tl-inline-note-row';
+                const noteIcon = document.createElement('i');
+                noteIcon.className = 'fas fa-sticky-note text-[9px]';
+                const noteText = document.createElement('span');
+                noteText.className = 'tl-inline-note-text';
+                noteText.textContent = logData.note || 'Aggiungi nota...';
+                if (!logData.note) noteText.classList.add('tl-inline-note-text--empty');
+                noteRow.appendChild(noteIcon);
+                noteRow.appendChild(noteText);
+
+                // Click per editare la nota
+                noteRow.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (noteRow.querySelector('input')) return;
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.className = 'tl-inline-input tl-inline-input--note';
+                    input.value = logData.note || '';
+                    input.placeholder = 'Scrivi una nota...';
+                    noteRow.innerHTML = '';
+                    noteRow.appendChild(input);
+                    input.focus();
+
+                    const save = () => {
+                        const val = input.value.trim();
+                        logData.note = val;
+                        noteRow.innerHTML = '';
+                        noteRow.appendChild(noteIcon);
+                        noteText.textContent = val || 'Aggiungi nota...';
+                        noteText.className = val ? 'tl-inline-note-text' : 'tl-inline-note-text tl-inline-note-text--empty';
+                        noteRow.appendChild(noteText);
+                        db.collection('timeLogs').doc(timerObj.id).update({ note: val })
+                            .catch(err => console.error('Errore aggiornamento nota:', err));
+                    };
+                    input.addEventListener('blur', save);
+                    input.addEventListener('keydown', (ev) => {
+                        if (ev.key === 'Enter') input.blur();
+                        if (ev.key === 'Escape') {
+                            noteRow.innerHTML = '';
+                            noteRow.appendChild(noteIcon);
+                            noteRow.appendChild(noteText);
+                        }
+                    });
+                });
+
+                content.appendChild(noteRow);
 
                 row.appendChild(checkbox);
                 row.appendChild(content);

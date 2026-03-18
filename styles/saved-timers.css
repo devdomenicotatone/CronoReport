@@ -570,4 +570,154 @@
         color: #6366f1;
     }
 
+    /* ============================================
+       Inline Editing — Timer Salvati PRO
+       ============================================ */
+
+    /* Campi editabili: cursore pointer + hover highlight */
+    .tl-inline-editable {
+        cursor: pointer;
+        border-radius: 0.25rem;
+        padding: 0.125rem 0.25rem;
+        margin: -0.125rem -0.25rem;
+        transition: background 0.15s ease, color 0.15s ease;
+    }
+
+    .tl-inline-editable:hover {
+        background: #eef2ff;
+        color: #4f46e5;
+    }
+
+    /* Input inline compatto */
+    .tl-inline-input {
+        font-family: inherit;
+        font-size: inherit;
+        font-weight: inherit;
+        color: #1e293b;
+        background: transparent;
+        border: none;
+        border-bottom: 2px solid #6366f1;
+        outline: none;
+        padding: 0.125rem 0;
+        width: 100%;
+        min-width: 4rem;
+        transition: border-color 0.2s ease;
+    }
+
+    .tl-inline-input:focus {
+        border-bottom-color: #4f46e5;
+    }
+
+    .tl-inline-input::placeholder {
+        color: #cbd5e1;
+        font-style: italic;
+    }
+
+    /* Input per note — full width */
+    .tl-inline-input--note {
+        font-size: 0.75rem;
+        width: 100%;
+    }
+
+    /* Select inline compatta */
+    .tl-inline-select {
+        font-family: inherit;
+        font-size: inherit;
+        font-weight: inherit;
+        color: #1e293b;
+        background: white;
+        border: 1.5px solid #6366f1;
+        border-radius: 0.375rem;
+        outline: none;
+        padding: 0.125rem 0.375rem;
+        min-width: 6rem;
+        max-width: 100%;
+        cursor: pointer;
+    }
+
+    /* Riga nota — layout dedicato */
+    .tl-inline-note-row {
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
+        margin-top: 0.375rem;
+        padding: 0.25rem 0.375rem;
+        border-radius: 0.375rem;
+        cursor: pointer;
+        transition: background 0.15s ease;
+        color: #94a3b8;
+        font-size: 0.75rem;
+    }
+
+    .tl-inline-note-row:hover {
+        background: #fef9c380;
+        color: #78716c;
+    }
+
+    .tl-inline-note-text {
+        color: #64748b;
+        font-size: 0.75rem;
+    }
+
+    .tl-inline-note-text--empty {
+        color: #cbd5e1;
+        font-style: italic;
+    }
+
+    /* Status badge — cliccabile per toggle */
+    .tl-inline-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        font-size: 0.75rem;
+        font-weight: 500;
+        border: none;
+        background: none;
+        cursor: pointer;
+        padding: 0.125rem 0.375rem;
+        border-radius: 9999px;
+        transition: all 0.2s ease;
+    }
+
+    .tl-inline-status--reported {
+        color: #22c55e;
+    }
+
+    .tl-inline-status--reported:hover {
+        background: #dcfce7;
+        color: #16a34a;
+    }
+
+    .tl-inline-status--pending {
+        color: #f59e0b;
+    }
+
+    .tl-inline-status--pending:hover {
+        background: #fef3c7;
+        color: #d97706;
+    }
+
+    /* Azioni inline micro — delete */
+    .tl-inline-action {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 1.5rem;
+        height: 1.5rem;
+        border-radius: 0.375rem;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        flex-shrink: 0;
+        font-size: 0.625rem;
+        color: #cbd5e1;
+        margin-left: 0.25rem;
+    }
+
+    .tl-inline-action--delete:hover {
+        background: #fef2f2;
+        color: #ef4444;
+    }
+
 }
