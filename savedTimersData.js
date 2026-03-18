@@ -619,14 +619,23 @@ export function displayTimers(timers) {
         timersByClient[clientName].push(timerObj);
     });
 
-    // Ordina i clienti per totale ore (decrescente)
+    // Ordina i clienti: usa ordine personalizzato (localStorage) se esiste, altrimenti per ore
+    const savedOrder = JSON.parse(localStorage.getItem('cr-client-sort-order') || '{}');
+    const hasSavedOrder = Object.keys(savedOrder).length > 0;
+
     const sortedClients = Object.keys(timersByClient).sort((a, b) => {
+        if (hasSavedOrder) {
+            const sa = savedOrder[a] ?? 9999;
+            const sb = savedOrder[b] ?? 9999;
+            if (sa !== sb) return sa - sb;
+        }
+        // Fallback: ordina per totale ore decrescente
         const totalA = timersByClient[a].reduce((sum, t) => sum + (t.data.duration || 0), 0);
         const totalB = timersByClient[b].reduce((sum, t) => sum + (t.data.duration || 0), 0);
         return totalB - totalA;
     });
 
-    sortedClients.forEach(clientName => {
+    sortedClients.forEach((clientName, clientIdx) => {
         const clientTimers = timersByClient[clientName];
         const color = getClientBgStyle(clientName);
 
@@ -639,16 +648,21 @@ export function displayTimers(timers) {
             totalEarnings += (t.data.duration / 3600) * rate;
         });
 
-        // --- Client Section ---
+        // --- Client Section (draggable) ---
         const clientSection = document.createElement('div');
-        clientSection.className = 'animate-slide-up';
+        clientSection.className = 'tl-client-section animate-slide-up';
+        clientSection.draggable = true;
+        clientSection.dataset.clientName = clientName;
 
-        // Client Header
+        // Client Header (collapsible + drag handle)
         const clientHeader = document.createElement('div');
         clientHeader.className = 'tl-day-header';
         clientHeader.style.borderLeftColor = getClientHexColor(clientName);
+        const startExpanded = clientIdx === 0;
         clientHeader.innerHTML = `
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-grip-vertical tl-drag-handle text-surface-300 cursor-grab text-xs" title="Trascina per riordinare"></i>
+                <i class="fas fa-chevron-${startExpanded ? 'down' : 'right'} text-xs text-surface-400 tl-client-chevron transition-transform"></i>
                 <span class="tl-badge-client" style="background:${color.bg}; color:${color.text};">${clientName}</span>
                 <span class="text-xs text-surface-400">(${clientTimers.length} timer)</span>
             </div>
@@ -662,6 +676,55 @@ export function displayTimers(timers) {
                 </span>
             </div>
         `;
+
+        // Client Body (collapsible container for months)
+        const clientBody = document.createElement('div');
+        clientBody.className = 'tl-client-body';
+        clientBody.style.display = startExpanded ? 'block' : 'none';
+
+        // Toggle collapse
+        clientHeader.addEventListener('click', (e) => {
+            // Don't toggle when clicking the drag handle
+            if (e.target.closest('.tl-drag-handle')) return;
+            const isOpen = clientBody.style.display !== 'none';
+            clientBody.style.display = isOpen ? 'none' : 'block';
+            const chevron = clientHeader.querySelector('.tl-client-chevron');
+            if (chevron) {
+                chevron.classList.toggle('fa-chevron-down', !isOpen);
+                chevron.classList.toggle('fa-chevron-right', isOpen);
+            }
+        });
+
+        // === DRAG & DROP (same pattern as Gestione Dati) ===
+        clientSection.addEventListener('dragstart', (e) => {
+            e.dataTransfer.setData('text/plain', clientName);
+            clientSection.classList.add('tl-dragging');
+        });
+        clientSection.addEventListener('dragend', () => clientSection.classList.remove('tl-dragging'));
+        clientSection.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            const dragging = savedTimersList.querySelector('.tl-dragging');
+            if (dragging && dragging !== clientSection) {
+                const rect = clientSection.getBoundingClientRect();
+                const midY = rect.top + rect.height / 2;
+                if (e.clientY < midY) {
+                    savedTimersList.insertBefore(dragging, clientSection);
+                } else {
+                    savedTimersList.insertBefore(dragging, clientSection.nextSibling);
+                }
+            }
+        });
+        clientSection.addEventListener('drop', (e) => {
+            e.preventDefault();
+            // Save new sort order to localStorage
+            const sections = savedTimersList.querySelectorAll('.tl-client-section');
+            const newOrder = {};
+            sections.forEach((s, i) => {
+                if (s.dataset.clientName) newOrder[s.dataset.clientName] = i;
+            });
+            localStorage.setItem('cr-client-sort-order', JSON.stringify(newOrder));
+        });
+
         clientSection.appendChild(clientHeader);
 
         // === Sub-raggruppa per mese ===
@@ -1173,9 +1236,10 @@ export function displayTimers(timers) {
 
             monthSection.appendChild(monthHeader);
             monthSection.appendChild(monthBody);
-            clientSection.appendChild(monthSection);
+            clientBody.appendChild(monthSection);
         });
 
+        clientSection.appendChild(clientBody);
         savedTimersList.appendChild(clientSection);
     });
 }

@@ -54,6 +54,35 @@
         position: relative;
     }
 
+    /* Drag handle */
+    .tl-drag-handle {
+        cursor: grab;
+        opacity: 0.35;
+        transition: opacity 0.15s;
+    }
+
+    .tl-day-header:hover .tl-drag-handle {
+        opacity: 0.7;
+    }
+
+    .tl-drag-handle:active {
+        cursor: grabbing;
+    }
+
+    /* Client chevron */
+    .tl-client-chevron {
+        transition: transform 0.2s ease;
+    }
+
+    /* Dragging state */
+    .tl-dragging {
+        opacity: 0.5;
+    }
+
+    .tl-client-section {
+        transition: opacity 0.15s;
+    }
+
     /* ═══════════════════════════════════════════════
        GERARCHIA: Month Section — card contenitore
        ═══════════════════════════════════════════════ */
