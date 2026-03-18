@@ -151,12 +151,81 @@ export async function initializeSavedTimersEvents() {
     const actionBar = document.getElementById('st-action-bar');
     const selectedCountEl = document.getElementById('st-selected-count');
 
-    // Delegated checkbox listener — aggiorna action bar
+    // --- Multi-Select: Shift+Click & Row Click ---
+    let lastCheckedCheckbox = null;
+
+    // Helper: aggiorna classe visiva su una riga
+    function updateRowVisualState(checkbox) {
+        const row = checkbox.closest('.tl-timer-row');
+        if (row) {
+            row.classList.toggle('tl-row-selected', checkbox.checked);
+        }
+    }
+
+    // Helper: aggiorna tutte le righe visivamente
+    function updateAllRowVisualStates() {
+        document.querySelectorAll('.timer-checkbox').forEach(cb => updateRowVisualState(cb));
+    }
+
+    // Delegated checkbox click — Shift+Click range selection
     if (savedTimersList) {
-        savedTimersList.addEventListener('change', (e) => {
-            if (e.target.classList.contains('timer-checkbox')) {
-                updateActionBar();
+        savedTimersList.addEventListener('click', (e) => {
+            const checkbox = e.target.closest('.timer-checkbox');
+            if (!checkbox) return;
+
+            const allCheckboxes = Array.from(savedTimersList.querySelectorAll('.timer-checkbox'));
+
+            if (e.shiftKey && lastCheckedCheckbox && lastCheckedCheckbox !== checkbox) {
+                // Range selection: seleziona tutto tra lastChecked e questo
+                const startIdx = allCheckboxes.indexOf(lastCheckedCheckbox);
+                const endIdx = allCheckboxes.indexOf(checkbox);
+                const [from, to] = startIdx < endIdx ? [startIdx, endIdx] : [endIdx, startIdx];
+                const newState = checkbox.checked;
+
+                for (let i = from; i <= to; i++) {
+                    allCheckboxes[i].checked = newState;
+                    updateRowVisualState(allCheckboxes[i]);
+                }
+            } else {
+                updateRowVisualState(checkbox);
             }
+
+            lastCheckedCheckbox = checkbox;
+            updateActionBar();
+        });
+
+        // Row click → toggle checkbox (solo se click su area vuota della riga)
+        savedTimersList.addEventListener('click', (e) => {
+            // Ignora click su checkbox, input, select, button, a, e campi editabili
+            const tag = e.target.tagName.toLowerCase();
+            if (['input', 'select', 'button', 'a', 'textarea'].includes(tag)) return;
+            if (e.target.closest('.tl-inline-editable, .tl-inline-link-wrap, .tl-inline-note-row, .tl-inline-status, .tl-inline-action, button, a, input, select')) return;
+
+            const row = e.target.closest('.tl-timer-row');
+            if (!row) return;
+
+            const checkbox = row.querySelector('.timer-checkbox');
+            if (!checkbox) return;
+
+            // Toggle
+            checkbox.checked = !checkbox.checked;
+            updateRowVisualState(checkbox);
+
+            // Shift+click su riga funziona anche qui
+            if (e.shiftKey && lastCheckedCheckbox && lastCheckedCheckbox !== checkbox) {
+                const allCheckboxes = Array.from(savedTimersList.querySelectorAll('.timer-checkbox'));
+                const startIdx = allCheckboxes.indexOf(lastCheckedCheckbox);
+                const endIdx = allCheckboxes.indexOf(checkbox);
+                const [from, to] = startIdx < endIdx ? [startIdx, endIdx] : [endIdx, startIdx];
+                const newState = checkbox.checked;
+                for (let i = from; i <= to; i++) {
+                    allCheckboxes[i].checked = newState;
+                    updateRowVisualState(allCheckboxes[i]);
+                }
+            }
+
+            lastCheckedCheckbox = checkbox;
+            updateActionBar();
         });
     }
 
@@ -174,6 +243,8 @@ export async function initializeSavedTimersEvents() {
     if (deselectBtn) {
         deselectBtn.addEventListener('click', () => {
             document.querySelectorAll('.timer-checkbox:checked').forEach(cb => { cb.checked = false; });
+            updateAllRowVisualStates();
+            lastCheckedCheckbox = null;
             updateActionBar();
         });
     }

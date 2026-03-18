@@ -570,6 +570,17 @@
         color: #6366f1;
     }
 
+    /* Riga selezionata — visual feedback */
+    .tl-timer-row.tl-row-selected {
+        background: #eef2ff !important;
+        border-left: 3px solid #6366f1;
+        padding-left: calc(1rem - 3px);
+    }
+
+    .tl-timer-row {
+        transition: background 0.15s ease, border-left 0.15s ease, padding-left 0.15s ease;
+    }
+
     /* ============================================
        Inline Editing — Timer Salvati PRO
        ============================================ */
