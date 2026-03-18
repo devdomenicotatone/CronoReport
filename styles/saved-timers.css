@@ -311,25 +311,32 @@
     }
 
     /* ============================================
-       Floating Contextual Action Bar
+       Floating Contextual Action Bar — Mobile First
        ============================================ */
+
+    /* ── Base (Mobile) ── */
     .st-action-bar {
         position: fixed;
-        bottom: 3.5rem;
-        left: 50%;
-        transform: translateX(-50%);
+        bottom: 55px; /* above mobile bottom nav */
+        left: 0;
+        right: 0;
         z-index: 40;
-        background: rgba(30, 27, 75, 0.92);
+        background: rgba(30, 27, 75, 0.95);
         backdrop-filter: blur(20px) saturate(1.8);
         -webkit-backdrop-filter: blur(20px) saturate(1.8);
-        border: 1px solid rgba(99, 102, 241, 0.25);
-        border-radius: 1rem;
-        padding: 0.625rem 1.25rem;
+        border-top: 1px solid rgba(99, 102, 241, 0.3);
+        border-radius: 1rem 1rem 0 0;
+        padding: 0.75rem 1rem;
         display: none;
-        align-items: center;
-        gap: 0.75rem;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25), 0 2px 8px rgba(99, 102, 241, 0.15);
-        max-width: calc(100vw - 2rem);
+        flex-direction: column;
+        gap: 0.625rem;
+        box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.3), 0 -1px 8px rgba(99, 102, 241, 0.15);
+        animation: stBarSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes stBarSlideUp {
+        from { opacity: 0; transform: translateY(100%); }
+        to   { opacity: 1; transform: translateY(0); }
     }
 
     .st-action-bar.st-action-bar--visible {
@@ -341,22 +348,22 @@
         font-weight: 700;
         color: #c7d2fe;
         white-space: nowrap;
-        padding-right: 0.5rem;
-        border-right: 1px solid rgba(99, 102, 241, 0.3);
     }
 
     .st-action-bar__count span {
         color: white;
-        font-size: 1rem;
+        font-size: 1.125rem;
     }
 
+    /* Action buttons — wrappable row */
     .st-action-bar__btn {
         display: inline-flex;
         align-items: center;
+        justify-content: center;
         gap: 0.375rem;
-        padding: 0.4375rem 0.875rem;
-        border-radius: 0.5rem;
-        font-size: 0.75rem;
+        padding: 0.5rem 0.75rem;
+        border-radius: 0.625rem;
+        font-size: 0.8125rem;
         font-weight: 600;
         border: none;
         cursor: pointer;
@@ -364,6 +371,12 @@
         white-space: nowrap;
         color: #e0e7ff;
         background: rgba(255, 255, 255, 0.08);
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .st-action-bar__btn:active {
+        transform: scale(0.96);
     }
 
     .st-action-bar__btn:hover {
@@ -402,20 +415,41 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 1.5rem;
-        height: 1.5rem;
-        border-radius: 0.375rem;
+        width: 2rem;
+        height: 2rem;
+        border-radius: 0.5rem;
         border: none;
-        background: transparent;
+        background: rgba(255, 255, 255, 0.06);
         color: #94a3b8;
         cursor: pointer;
         transition: all 0.15s ease;
-        margin-left: 0.25rem;
+        margin-left: auto;
+        flex-shrink: 0;
+    }
+
+    .st-action-bar__close:active {
+        transform: scale(0.92);
     }
 
     .st-action-bar__close:hover {
-        background: rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.15);
         color: white;
+    }
+
+    /* Header row: count + close side by side */
+    .st-action-bar__header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid rgba(99, 102, 241, 0.2);
+    }
+
+    /* Actions row: wrappable buttons */
+    .st-action-bar__actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
     }
 
     /* ============================================

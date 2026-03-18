@@ -157,22 +157,26 @@ export const savedTimersTemplate = `
 
     <!-- Floating Contextual Action Bar -->
     <div id="st-action-bar" class="st-action-bar">
-        <div class="st-action-bar__count"><span id="st-selected-count">0</span> selezionati</div>
-        <button class="st-action-bar__btn st-action-bar__btn--success" id="st-action-mark-reported" title="Segna come Reportati">
-            <i class="fas fa-check-circle"></i> Reportati
-        </button>
-        <button class="st-action-bar__btn" id="st-action-mark-unreported" title="Segna come Non Reportati">
-            <i class="fas fa-clock"></i> Pending
-        </button>
-        <button class="st-action-bar__btn st-action-bar__btn--danger" id="st-action-delete" title="Elimina selezionati">
-            <i class="fas fa-trash-alt"></i> Elimina
-        </button>
-        <button class="st-action-bar__btn st-action-bar__btn--primary" id="st-action-export" title="Esporta selezionati">
-            <i class="fas fa-download"></i> Esporta
-        </button>
-        <button class="st-action-bar__close" id="st-action-deselect" title="Deseleziona tutti">
-            <i class="fas fa-times"></i>
-        </button>
+        <div class="st-action-bar__header">
+            <div class="st-action-bar__count"><span id="st-selected-count">0</span> selezionati</div>
+            <button class="st-action-bar__close" id="st-action-deselect" title="Deseleziona tutti">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="st-action-bar__actions">
+            <button class="st-action-bar__btn st-action-bar__btn--success" id="st-action-mark-reported" title="Segna come Reportati">
+                <i class="fas fa-check-circle"></i> <span>Reportati</span>
+            </button>
+            <button class="st-action-bar__btn" id="st-action-mark-unreported" title="Segna come Non Reportati">
+                <i class="fas fa-clock"></i> <span>Pending</span>
+            </button>
+            <button class="st-action-bar__btn st-action-bar__btn--danger" id="st-action-delete" title="Elimina selezionati">
+                <i class="fas fa-trash-alt"></i> <span>Elimina</span>
+            </button>
+            <button class="st-action-bar__btn st-action-bar__btn--primary" id="st-action-export" title="Esporta selezionati">
+                <i class="fas fa-download"></i> <span>Esporta</span>
+            </button>
+        </div>
     </div>
 </div>
 
