@@ -63,7 +63,7 @@ export function loadAvailableYears() {
         });
 }
 
-// Popola i chip degli anni nella Quick Filter Bar
+// Popola i chip degli anni nella Quick Filter Bar (Smart Collapse)
 export function populateYearChips(years) {
     const container = document.getElementById('qf-year-chips');
     if (!container) return;
@@ -76,13 +76,73 @@ export function populateYearChips(years) {
     allBtn.textContent = 'Tutti';
     container.appendChild(allBtn);
 
-    years.forEach(year => {
+    if (years.length === 0) return;
+
+    const currentYear = new Date().getFullYear();
+    // Anno "primario" = anno selezionato oppure anno corrente
+    const primaryYear = activeQuickYear || currentYear;
+    // Anni secondari = tutti gli altri
+    const secondaryYears = years.filter(y => y !== primaryYear);
+
+    // Chip anno primario (sempre visibile)
+    if (years.includes(primaryYear)) {
         const btn = document.createElement('button');
-        btn.className = 'qf-chip' + (activeQuickYear === year ? ' qf-chip-active' : '');
-        btn.dataset.year = year;
-        btn.textContent = year;
+        btn.className = 'qf-chip' + (activeQuickYear === primaryYear ? ' qf-chip-active' : '');
+        btn.dataset.year = primaryYear;
+        btn.textContent = primaryYear;
         container.appendChild(btn);
-    });
+    }
+
+    // Se ci sono anni secondari, mostra il chip "⋯" + popover con chip nascosti
+    if (secondaryYears.length > 0) {
+        // Wrapper per posizionamento relativo
+        const moreWrapper = document.createElement('div');
+        moreWrapper.className = 'qf-year-more-wrap';
+
+        // Chip toggle "⋯"
+        const moreBtn = document.createElement('button');
+        moreBtn.className = 'qf-chip qf-chip-more';
+        moreBtn.id = 'qf-year-more';
+        moreBtn.textContent = '⋯';
+        moreBtn.title = `Mostra altri ${secondaryYears.length} anni`;
+        moreBtn.setAttribute('aria-expanded', 'false');
+        moreWrapper.appendChild(moreBtn);
+
+        // Popover container per gli anni nascosti
+        const overflow = document.createElement('div');
+        overflow.className = 'qf-year-overflow';
+        overflow.id = 'qf-year-overflow';
+
+        secondaryYears.forEach(year => {
+            const btn = document.createElement('button');
+            btn.className = 'qf-chip';
+            btn.dataset.year = year;
+            btn.textContent = year;
+            if (activeQuickYear === year) btn.classList.add('qf-chip-active');
+            overflow.appendChild(btn);
+        });
+
+        moreWrapper.appendChild(overflow);
+        container.appendChild(moreWrapper);
+
+        // Toggle handler
+        moreBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const expanded = overflow.classList.toggle('qf-year-overflow--open');
+            moreBtn.setAttribute('aria-expanded', String(expanded));
+            moreBtn.textContent = expanded ? '✕' : '⋯';
+            moreBtn.title = expanded ? 'Nascondi anni' : `Mostra altri ${secondaryYears.length} anni`;
+        });
+
+        // Click esterno chiude il popover
+        document.addEventListener('click', (e) => {
+            if (!moreWrapper.contains(e.target) && overflow.classList.contains('qf-year-overflow--open')) {
+                overflow.classList.remove('qf-year-overflow--open');
+                moreBtn.setAttribute('aria-expanded', 'false');
+                moreBtn.textContent = '⋯';
+            }
+        });
+    }
 }
 
 // Popola i chip dei mesi in base all'anno selezionato (solo mesi con dati)

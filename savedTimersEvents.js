@@ -381,6 +381,8 @@ export async function initializeSavedTimersEvents() {
         qfYearContainer.addEventListener('click', (e) => {
             const chip = e.target.closest('.qf-chip');
             if (!chip) return;
+            // Skip the "⋯" toggle chip (has its own handler)
+            if (chip.classList.contains('qf-chip-more')) return;
             const val = chip.dataset.year;
             if (val === 'all') {
                 setActiveQuickYear(null);

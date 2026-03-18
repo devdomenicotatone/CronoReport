@@ -13,10 +13,67 @@
         width: 50%;
     }
 
-    /* Quick filter bar: offset for sidebar */
+    /* Quick filter bar → desktop: sidebar offset, roomier layout */
     .quick-filter-bar {
-        left: 16rem; /* sidebar width: w-64 = 16rem */
+        inset: auto 0 0 16rem; /* anchored to bottom, offset by sidebar */
+        border-radius: 0;
         padding: 0.75rem 1.5rem;
+    }
+
+    .qf-inner {
+        max-width: 72rem;
+        margin-inline: auto;
+        gap: 0.5rem;
+    }
+
+    .qf-row {
+        gap: 0.5rem;
+    }
+
+    .qf-label {
+        font-size: 0.6875rem;
+        min-width: 2.5rem;
+    }
+
+    .qf-chips {
+        flex-wrap: wrap;
+        overflow-x: visible;
+        gap: 0.375rem;
+    }
+
+    .qf-chip {
+        font-size: 0.75rem;
+        padding: 0.3125rem 0.75rem;
+    }
+
+    .qf-chip:hover {
+        transform: scale(1.04);
+    }
+
+    .qf-chip-active:hover {
+        transform: scale(1.04);
+    }
+
+    .qf-chip-count {
+        min-width: 1.125rem;
+        height: 1.125rem;
+        font-size: 0.625rem;
+        padding: 0 0.3rem;
+        margin-left: 0.375rem;
+    }
+
+    .qf-divider {
+        height: 1.25rem;
+    }
+
+    .qf-month-section {
+        gap: 0.5rem;
+    }
+
+    /* Smart Collapse: desktop sizing */
+    .qf-chip-more {
+        font-size: 0.75rem;
+        padding: 0.3125rem 0.625rem;
     }
 
     /* ── Action Bar → Desktop pill ── */
@@ -87,20 +144,9 @@
         margin-bottom: 20px;
     }
 
-    /* Quick filter bar: above bottom nav */
-    .quick-filter-bar {
-        bottom: 55px; /* above mobile bottom nav */
-        border-radius: 1rem 1rem 0 0;
-    }
-
     /* Saved timers: extra padding for filter bar + action bar */
     #saved-timers-section {
         padding-bottom: 8.5rem;
-    }
-
-    /* Action bar on tablet-down: full-width bottom sheet */
-    .st-action-bar {
-        bottom: 55px;
     }
 }
 
@@ -164,24 +210,6 @@
 
 
     /* ── SAVED TIMERS ── */
-    .qf-inner {
-        padding: 0.5rem 0.75rem;
-    }
-
-    .qf-chip {
-        font-size: 0.65rem;
-        padding: 0.2rem 0.5rem;
-        min-width: 2rem;
-    }
-
-    .qf-label {
-        font-size: 0.6rem;
-        min-width: auto;
-    }
-
-    .qf-row {
-        gap: 0.375rem;
-    }
 
     /* ── ACTION BAR: mobile compact ── */
     .st-action-bar {
