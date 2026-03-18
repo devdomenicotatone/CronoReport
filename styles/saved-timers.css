@@ -720,4 +720,60 @@
         color: #ef4444;
     }
 
+    /* Link wrap — solo icona + edit button */
+    .tl-inline-link-wrap {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.125rem;
+        margin-left: 0.25rem;
+    }
+
+    .tl-inline-link-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 1.5rem;
+        height: 1.5rem;
+        border-radius: 0.375rem;
+        font-size: 0.625rem;
+        color: #6366f1;
+        transition: all 0.15s ease;
+        text-decoration: none;
+    }
+
+    .tl-inline-link-icon--active {
+        color: #6366f1;
+        cursor: pointer;
+    }
+
+    .tl-inline-link-icon--active:hover {
+        background: #eef2ff;
+        color: #4f46e5;
+    }
+
+    .tl-inline-link-icon--empty {
+        color: #cbd5e1;
+    }
+
+    .tl-inline-link-edit {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 1.25rem;
+        height: 1.25rem;
+        border-radius: 0.25rem;
+        border: none;
+        background: transparent;
+        color: #cbd5e1;
+        font-size: 0.625rem;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        padding: 0;
+    }
+
+    .tl-inline-link-edit:hover {
+        background: #eef2ff;
+        color: #6366f1;
+    }
+
 }

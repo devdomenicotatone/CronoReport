@@ -910,34 +910,81 @@ export function displayTimers(timers) {
                 detailRow.appendChild(spacer2);
                 detailRow.appendChild(statusBadge);
 
-                // Link — inline editable
-                if (logData.link) {
-                    const isUrl = /^https?:\/\//i.test(logData.link);
-                    if (isUrl) {
+                // Link — solo icona, editabile inline
+                const linkWrap = document.createElement('span');
+                linkWrap.className = 'tl-inline-link-wrap';
+
+                function renderLinkDisplay() {
+                    linkWrap.innerHTML = '';
+                    const val = logData.link || '';
+                    const isUrl = /^https?:\/\//i.test(val);
+
+                    if (val && isUrl) {
+                        // Icona link che apre in nuova tab
                         const a = document.createElement('a');
-                        a.href = logData.link;
+                        a.href = val;
                         a.target = '_blank';
-                        a.className = 'text-xs text-indigo-400 hover:text-indigo-600 transition-colors ml-2';
+                        a.className = 'tl-inline-link-icon tl-inline-link-icon--active';
                         a.innerHTML = '<i class="fas fa-external-link-alt"></i>';
-                        a.title = logData.link;
-                        detailRow.appendChild(a);
+                        a.title = val;
+                        a.addEventListener('click', (e) => e.stopPropagation());
+                        linkWrap.appendChild(a);
+                    } else if (val) {
+                        // Link non-URL — mostra icona link
+                        const icon = document.createElement('span');
+                        icon.className = 'tl-inline-link-icon';
+                        icon.innerHTML = '<i class="fas fa-link"></i>';
+                        icon.title = val;
+                        linkWrap.appendChild(icon);
                     } else {
-                        const linkSpan = document.createElement('span');
-                        linkSpan.className = 'text-xs text-surface-400 ml-2';
-                        linkSpan.innerHTML = `<i class="fas fa-link"></i> ${logData.link}`;
-                        linkSpan.title = logData.link;
-                        makeInlineEditable(linkSpan, 'link', { placeholder: 'https://...', emptyText: '—' });
-                        detailRow.appendChild(linkSpan);
+                        // Nessun link — icona dash
+                        const icon = document.createElement('span');
+                        icon.className = 'tl-inline-link-icon tl-inline-link-icon--empty';
+                        icon.innerHTML = '<i class="fas fa-link"></i>';
+                        icon.title = 'Aggiungi link';
+                        linkWrap.appendChild(icon);
                     }
-                } else {
-                    const linkSpan = document.createElement('span');
-                    linkSpan.className = 'text-xs text-surface-300 ml-2 italic';
-                    linkSpan.innerHTML = '<i class="fas fa-link"></i> —';
-                    makeInlineEditable(linkSpan, 'link', { placeholder: 'https://...', emptyText: '—',
-                        formatDisplay: (val) => `<i class="fas fa-link"></i> ${val || '—'}`
+
+                    // Bottone edit piccolo
+                    const editIcon = document.createElement('button');
+                    editIcon.className = 'tl-inline-link-edit';
+                    editIcon.innerHTML = '—';
+                    editIcon.title = val ? 'Modifica link' : 'Aggiungi link';
+                    editIcon.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        openLinkEditor();
                     });
-                    detailRow.appendChild(linkSpan);
+                    linkWrap.appendChild(editIcon);
                 }
+
+                function openLinkEditor() {
+                    linkWrap.innerHTML = '';
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.className = 'tl-inline-input';
+                    input.value = logData.link || '';
+                    input.placeholder = 'https://...';
+                    input.style.minWidth = '12rem';
+                    linkWrap.appendChild(input);
+                    input.focus();
+                    input.select();
+
+                    const save = () => {
+                        const val = input.value.trim();
+                        logData.link = val;
+                        renderLinkDisplay();
+                        db.collection('timeLogs').doc(timerObj.id).update({ link: val })
+                            .catch(err => console.error('Errore aggiornamento link:', err));
+                    };
+                    input.addEventListener('blur', save);
+                    input.addEventListener('keydown', (ev) => {
+                        if (ev.key === 'Enter') input.blur();
+                        if (ev.key === 'Escape') renderLinkDisplay();
+                    });
+                }
+
+                renderLinkDisplay();
+                detailRow.appendChild(linkWrap);
 
                 // Delete inline
                 const deleteBtn = document.createElement('button');
