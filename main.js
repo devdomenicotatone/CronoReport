@@ -397,13 +397,26 @@ export async function renderUnifiedClientAccordion(filter = 'active') {
                 body.classList.toggle('expanded');
             });
 
-            // === PROJECTS SECTION ===
+            // === PROJECTS SECTION (collapsible) ===
             const projectsSection = document.createElement('div');
             projectsSection.className = 'dm-sub-section';
-            projectsSection.innerHTML = `<div class="dm-sub-section-title"><i class="fas fa-folder-open"></i> Progetti</div>`;
+            const projCount = projectsSnap.size;
+            const projCollapsed = projCount > 3;
+            projectsSection.innerHTML = `
+                <div class="dm-sub-section-header${projCollapsed ? '' : ' open'}">
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-folder-open text-xs"></i>
+                        <span class="dm-sub-section-title" style="margin-bottom:0;">Progetti</span>
+                        <span class="dm-badge dm-badge-teal">${projCount}</span>
+                    </div>
+                    <i class="fas fa-chevron-down dm-sub-chevron"></i>
+                </div>
+            `;
+            const projBody = document.createElement('div');
+            projBody.className = 'dm-sub-body' + (projCollapsed ? '' : ' expanded');
 
             if (projectsSnap.empty) {
-                projectsSection.innerHTML += `<div class="dm-empty">Nessun progetto</div>`;
+                projBody.innerHTML = `<div class="dm-empty"><i class="fas fa-info-circle" style="margin-right:4px;"></i>Aggiungi un progetto per questo cliente (es. nome del sito)</div>`;
             } else {
                 projectsSnap.forEach(projectDoc => {
                     const projectData = projectDoc.data();
@@ -427,14 +440,14 @@ export async function renderUnifiedClientAccordion(filter = 'active') {
                             }
                         });
                     });
-                    projectsSection.appendChild(row);
+                    projBody.appendChild(row);
                 });
             }
 
             // Add project inline
             const addProjectRow = document.createElement('div');
             addProjectRow.className = 'dm-add-row';
-            addProjectRow.innerHTML = `<input type="text" class="flex-1" placeholder="Nuovo progetto..." /><input type="text" class="dm-url-input" placeholder="🔗 URL..." /><button class="dm-add-btn"><i class="fas fa-plus"></i></button>`;
+            addProjectRow.innerHTML = `<input type="text" class="flex-1" placeholder="Es. sito-cliente.it" /><input type="text" class="dm-url-input" placeholder="🔗 URL progetto..." /><button class="dm-add-btn"><i class="fas fa-plus"></i></button>`;
             addProjectRow.querySelector('.dm-add-btn').addEventListener('click', () => {
                 const inputs = addProjectRow.querySelectorAll('input');
                 const name = inputs[0].value.trim();
@@ -444,15 +457,35 @@ export async function renderUnifiedClientAccordion(filter = 'active') {
                     name, url, uid: currentUser.uid, clientId, createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 }).then(() => renderUnifiedClientAccordion(_currentDmFilter));
             });
-            projectsSection.appendChild(addProjectRow);
+            projBody.appendChild(addProjectRow);
+            projectsSection.appendChild(projBody);
 
-            // === WORKTYPES SECTION ===
+            // Toggle projects
+            projectsSection.querySelector('.dm-sub-section-header').addEventListener('click', () => {
+                projectsSection.querySelector('.dm-sub-section-header').classList.toggle('open');
+                projBody.classList.toggle('expanded');
+            });
+
+            // === WORKTYPES SECTION (collapsible) ===
             const wtSection = document.createElement('div');
             wtSection.className = 'dm-sub-section';
-            wtSection.innerHTML = `<div class="dm-sub-section-title"><i class="fas fa-tools"></i> Tipi di Lavoro</div>`;
+            const wtCount = worktypesSnap.size;
+            const wtCollapsed = wtCount > 3;
+            wtSection.innerHTML = `
+                <div class="dm-sub-section-header${wtCollapsed ? '' : ' open'}">
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-tools text-xs"></i>
+                        <span class="dm-sub-section-title" style="margin-bottom:0;">Tipi di Lavoro</span>
+                        <span class="dm-badge dm-badge-amber">${wtCount}</span>
+                    </div>
+                    <i class="fas fa-chevron-down dm-sub-chevron"></i>
+                </div>
+            `;
+            const wtBody = document.createElement('div');
+            wtBody.className = 'dm-sub-body' + (wtCollapsed ? '' : ' expanded');
 
             if (worktypesSnap.empty) {
-                wtSection.innerHTML += `<div class="dm-empty">Nessun tipo di lavoro</div>`;
+                wtBody.innerHTML = `<div class="dm-empty"><i class="fas fa-info-circle" style="margin-right:4px;"></i>Definisci come lavori per questo cliente (es. Sviluppo, Design, SEO...)</div>`;
             } else {
                 worktypesSnap.forEach(wtDoc => {
                     const wtData = wtDoc.data();
@@ -477,7 +510,7 @@ export async function renderUnifiedClientAccordion(filter = 'active') {
                             }
                         });
                     });
-                    wtSection.appendChild(row);
+                    wtBody.appendChild(row);
                 });
             }
 
@@ -485,8 +518,9 @@ export async function renderUnifiedClientAccordion(filter = 'active') {
             const addWtRow = document.createElement('div');
             addWtRow.className = 'dm-add-row';
             addWtRow.innerHTML = `
-                <input type="text" class="flex-1" placeholder="Tipo lavoro..." />
-                <input type="number" style="width:60px" placeholder="€/h" />
+                <input type="text" class="flex-1" placeholder="Es. Sviluppo, Design, SEO..." />
+                <input type="number" style="width:60px" placeholder="30" />
+                <span class="text-xs text-surface-400" style="margin-right:2px;">€/h</span>
                 <button class="dm-add-btn"><i class="fas fa-plus"></i></button>
             `;
             addWtRow.querySelector('.dm-add-btn').addEventListener('click', () => {
@@ -499,12 +533,31 @@ export async function renderUnifiedClientAccordion(filter = 'active') {
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 }).then(() => renderUnifiedClientAccordion(_currentDmFilter));
             });
-            wtSection.appendChild(addWtRow);
+            wtBody.appendChild(addWtRow);
+            wtSection.appendChild(wtBody);
+
+            // Toggle worktypes
+            wtSection.querySelector('.dm-sub-section-header').addEventListener('click', () => {
+                wtSection.querySelector('.dm-sub-section-header').classList.toggle('open');
+                wtBody.classList.toggle('expanded');
+            });
 
             // === NOTES SECTION ===
             const notesSection = document.createElement('div');
             notesSection.className = 'dm-sub-section';
-            notesSection.innerHTML = `<div class="dm-sub-section-title"><i class="fas fa-sticky-note"></i> Note</div>`;
+            const hasNotes = !!(clientData.notes && clientData.notes.trim());
+            notesSection.innerHTML = `
+                <div class="dm-sub-section-header open">
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-sticky-note text-xs"></i>
+                        <span class="dm-sub-section-title" style="margin-bottom:0;">Note</span>
+                        ${hasNotes ? '<span class="dm-badge dm-badge-teal">1</span>' : ''}
+                    </div>
+                    <i class="fas fa-chevron-down dm-sub-chevron"></i>
+                </div>
+            `;
+            const notesBody = document.createElement('div');
+            notesBody.className = 'dm-sub-body expanded';
             const notesTextarea = document.createElement('textarea');
             notesTextarea.className = 'dm-notes-textarea';
             notesTextarea.placeholder = 'Aggiungi note... (contatti, scadenze, ecc.)';
@@ -515,7 +568,14 @@ export async function renderUnifiedClientAccordion(filter = 'active') {
                     db.collection('clients').doc(clientId).update({ notes: val });
                 }
             });
-            notesSection.appendChild(notesTextarea);
+            notesBody.appendChild(notesTextarea);
+            notesSection.appendChild(notesBody);
+
+            // Toggle notes
+            notesSection.querySelector('.dm-sub-section-header').addEventListener('click', () => {
+                notesSection.querySelector('.dm-sub-section-header').classList.toggle('open');
+                notesBody.classList.toggle('expanded');
+            });
 
             // Assemble
             body.appendChild(projectsSection);
@@ -528,6 +588,20 @@ export async function renderUnifiedClientAccordion(filter = 'active') {
 
         // Update stats
         dmUpdateStats(totalClients, totalProjects, totalWorktypes);
+
+        // Toggle empty state vs data sections
+        const emptyState = document.getElementById('dm-empty-state');
+        const hasDataSection = document.getElementById('dm-has-data-section');
+        const searchWrap = document.getElementById('dm-search-wrap');
+        if (totalClients === 0) {
+            if (emptyState) emptyState.style.display = '';
+            if (hasDataSection) hasDataSection.style.display = 'none';
+            if (searchWrap) searchWrap.style.display = 'none';
+        } else {
+            if (emptyState) emptyState.style.display = 'none';
+            if (hasDataSection) hasDataSection.style.display = '';
+            if (searchWrap) searchWrap.style.display = '';
+        }
 
     } catch (error) {
         console.error('Errore nel rendering accordion:', error);

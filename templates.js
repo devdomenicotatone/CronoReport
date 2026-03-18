@@ -16,48 +16,86 @@ export const dataManagementTemplate = `
         <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
             <i class="fas fa-database text-white text-lg"></i>
         </div>
-        <h2 class="text-2xl font-bold text-surface-800">Gestione Dati</h2>
-    </div>
-
-    <!-- ═══ STAT CARDS ═══ -->
-    <div class="timer-today-grid mb-5" id="dm-stats-grid">
-        <div class="rw-stat-card stat-hours">
-            <div class="rw-stat-icon"><i class="fas fa-users"></i></div>
-            <div class="rw-stat-label">Clienti</div>
-            <div class="rw-stat-value" id="dm-stat-clients">0</div>
-        </div>
-        <div class="rw-stat-card stat-amount">
-            <div class="rw-stat-icon"><i class="fas fa-folder-open"></i></div>
-            <div class="rw-stat-label">Progetti</div>
-            <div class="rw-stat-value" id="dm-stat-projects">0</div>
-        </div>
-        <div class="rw-stat-card stat-count">
-            <div class="rw-stat-icon"><i class="fas fa-tools"></i></div>
-            <div class="rw-stat-label">Tipi di Lavoro</div>
-            <div class="rw-stat-value" id="dm-stat-worktypes">0</div>
+        <div>
+            <h2 class="text-2xl font-bold text-surface-800">Gestione Dati</h2>
+            <p class="text-xs font-medium text-surface-500 mt-0.5">Organizza clienti, progetti e tipi di lavoro</p>
         </div>
     </div>
 
-    <!-- ═══ FILTRI RAPIDI ═══ -->
-    <div class="flex items-center gap-2 mb-4" id="dm-filters">
-        <button class="dm-filter-chip active" data-filter="active">Attivi</button>
-        <button class="dm-filter-chip" data-filter="all">Tutti</button>
-        <button class="dm-filter-chip" data-filter="archived">Archiviati</button>
+    <!-- ═══ STAT CARDS (nascosto se 0 clienti) ═══ -->
+    <div id="dm-has-data-section">
+        <div class="timer-today-grid mb-5" id="dm-stats-grid">
+            <div class="rw-stat-card stat-hours">
+                <div class="rw-stat-icon"><i class="fas fa-users"></i></div>
+                <div class="rw-stat-label">Clienti</div>
+                <div class="rw-stat-value" id="dm-stat-clients">0</div>
+            </div>
+            <div class="rw-stat-card stat-amount">
+                <div class="rw-stat-icon"><i class="fas fa-folder-open"></i></div>
+                <div class="rw-stat-label">Progetti</div>
+                <div class="rw-stat-value" id="dm-stat-projects">0</div>
+            </div>
+            <div class="rw-stat-card stat-count">
+                <div class="rw-stat-icon"><i class="fas fa-tools"></i></div>
+                <div class="rw-stat-label">Tipi di Lavoro</div>
+                <div class="rw-stat-value" id="dm-stat-worktypes">0</div>
+            </div>
+        </div>
+
+        <!-- ═══ FILTRI RAPIDI ═══ -->
+        <div class="flex items-center gap-2 mb-4" id="dm-filters">
+            <button class="dm-filter-chip active" data-filter="active">Attivi</button>
+            <button class="dm-filter-chip" data-filter="all">Tutti</button>
+            <button class="dm-filter-chip" data-filter="archived">Archiviati</button>
+        </div>
     </div>
 
     <!-- ═══ SEARCH + ADD CLIENT ═══ -->
     <div class="cr-card mb-5 overflow-hidden">
         <div class="p-4 flex flex-col sm:flex-row gap-3">
-            <div class="dm-search-wrap flex-1">
+            <div class="dm-search-wrap flex-1" id="dm-search-wrap">
                 <i class="fas fa-search"></i>
-                <input type="text" id="dm-search-input" class="cr-input text-sm w-full" placeholder="Cerca clienti, siti, tipi...">
+                <input type="text" id="dm-search-input" class="cr-input text-sm w-full" placeholder="Cerca clienti, progetti, tipi di lavoro...">
             </div>
-            <div class="flex gap-2">
-                <input type="text" id="new-client-name" class="cr-input text-sm" placeholder="Nuovo cliente...">
+            <div class="flex gap-2 items-end">
+                <div class="flex-1 min-w-0">
+                    <input type="text" id="new-client-name" class="cr-input text-sm" placeholder="Nome del cliente o azienda...">
+                </div>
                 <button id="add-client-btn" class="timer-start-btn" style="padding: 0.4rem 1rem; font-size: 0.8rem;">
                     <i class="fas fa-plus"></i> Aggiungi
                 </button>
             </div>
+        </div>
+    </div>
+
+    <!-- ═══ EMPTY STATE (visibile solo se 0 clienti) ═══ -->
+    <div id="dm-empty-state" class="dm-empty-state" style="display:none;">
+        <div class="dm-empty-state__icon">
+            <i class="fas fa-sitemap"></i>
+        </div>
+        <h3 class="dm-empty-state__title">Inizia organizzando il tuo lavoro</h3>
+        <p class="dm-empty-state__desc">Prima di avviare un timer, configura qui i tuoi dati di base. Serve solo un minuto.</p>
+        <div class="dm-empty-state__steps">
+            <div class="dm-empty-step">
+                <div class="dm-empty-step__num">1</div>
+                <div class="dm-empty-step__icon"><i class="fas fa-user-plus"></i></div>
+                <div class="dm-empty-step__label">Crea un cliente</div>
+            </div>
+            <div class="dm-empty-step__arrow"><i class="fas fa-chevron-right"></i></div>
+            <div class="dm-empty-step">
+                <div class="dm-empty-step__num">2</div>
+                <div class="dm-empty-step__icon"><i class="fas fa-folder-plus"></i></div>
+                <div class="dm-empty-step__label">Aggiungi i progetti</div>
+            </div>
+            <div class="dm-empty-step__arrow"><i class="fas fa-chevron-right"></i></div>
+            <div class="dm-empty-step">
+                <div class="dm-empty-step__num">3</div>
+                <div class="dm-empty-step__icon"><i class="fas fa-tools"></i></div>
+                <div class="dm-empty-step__label">Definisci i tipi di lavoro</div>
+            </div>
+        </div>
+        <div class="dm-empty-state__hint">
+            <i class="fas fa-arrow-up"></i> Scrivi il nome del tuo primo cliente nel campo qui sopra
         </div>
     </div>
 

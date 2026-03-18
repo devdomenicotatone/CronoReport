@@ -1460,6 +1460,30 @@ export function exportTimersToPDF(timers) {
         return;
     }
 
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 14;
+
+    // === HEADER ===
+    // Gradient bar
+    doc.setFillColor(99, 102, 241); // indigo-500
+    doc.rect(0, 0, pageWidth, 18, 'F');
+    doc.setFillColor(79, 70, 229); // indigo-600
+    doc.rect(pageWidth / 2, 0, pageWidth / 2, 18, 'F');
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(14);
+    doc.setFont(undefined, 'bold');
+    doc.text('CronoReport — Storico Timer', margin, 11);
+
+    doc.setFontSize(8);
+    doc.setFont(undefined, 'normal');
+    const dateStr = new Date().toLocaleDateString('it-IT', { day: '2-digit', month: 'long', year: 'numeric' });
+    doc.text(`${dateStr} — ${timers.length} timer`, pageWidth - margin, 11, { align: 'right' });
+
+    let yPos = 26;
+
     // Raggruppa per cliente
     const byClient = {};
     timers.forEach(t => {
@@ -1468,41 +1492,9 @@ export function exportTimersToPDF(timers) {
         byClient[client].push(t);
     });
 
-    // Apri finestra di stampa con layout professionale
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-        import('./main.js').then(m => m.showAlert('error', 'Errore', 'Il browser ha bloccato la finestra popup. Abilita i popup per esportare in PDF.'));
-        return;
-    }
+    const clientNames = Object.keys(byClient).sort();
 
-    let html = `<!DOCTYPE html>
-<html lang="it">
-<head>
-    <meta charset="UTF-8">
-    <title>CronoReport — Export Timer</title>
-    <style>
-        * { margin:0; padding:0; box-sizing:border-box; }
-        body { font-family: 'Segoe UI', system-ui, sans-serif; color:#1e293b; padding:2rem; font-size:11px; }
-        h1 { font-size:1.5rem; color:#4f46e5; margin-bottom:.25rem; }
-        .subtitle { color:#64748b; font-size:.85rem; margin-bottom:1.5rem; }
-        .client-section { margin-bottom:1.5rem; page-break-inside:avoid; }
-        .client-header { background:linear-gradient(135deg,#6366f1,#4f46e5); color:#fff; padding:.5rem 1rem; border-radius:.5rem .5rem 0 0; font-weight:700; font-size:.9rem; display:flex; justify-content:space-between; }
-        table { width:100%; border-collapse:collapse; margin-bottom:.75rem; }
-        th { background:#f1f5f9; color:#64748b; font-weight:600; text-transform:uppercase; font-size:.6rem; letter-spacing:.05em; padding:.4rem .5rem; text-align:left; border-bottom:1px solid #e2e8f0; }
-        td { padding:.4rem .5rem; border-bottom:1px solid #f1f5f9; font-size:.7rem; }
-        tr:nth-child(even) { background:#fafbfc; }
-        .status-reported { color:#22c55e; font-weight:600; }
-        .status-pending { color:#f59e0b; font-weight:600; }
-        .totals { text-align:right; font-weight:700; font-size:.8rem; color:#1e293b; padding:.5rem 1rem; background:#f8fafc; border-radius:0 0 .5rem .5rem; border:1px solid #e2e8f0; }
-        .footer { margin-top:2rem; padding-top:1rem; border-top:1px solid #e2e8f0; color:#94a3b8; font-size:.7rem; text-align:center; }
-        @media print { body { padding:.5rem; } .client-section { page-break-inside:avoid; } }
-    </style>
-</head>
-<body>
-    <h1>📊 CronoReport — Storico Timer</h1>
-    <p class="subtitle">Generato il ${new Date().toLocaleDateString('it-IT', { day: '2-digit', month: 'long', year: 'numeric' })} — ${timers.length} timer</p>`;
-
-    for (const clientName of Object.keys(byClient).sort()) {
+    clientNames.forEach((clientName, clientIdx) => {
         const clientTimers = byClient[clientName];
         let totalSec = 0, totalEur = 0;
         clientTimers.forEach(t => {
@@ -1510,43 +1502,122 @@ export function exportTimersToPDF(timers) {
             totalEur += ((t.data.duration / 3600) * (t.data.hourlyRate || 0));
         });
 
-        html += `<div class="client-section">
-        <div class="client-header">
-            <span>${clientName}</span>
-            <span>${clientTimers.length} timer · ${Math.floor(totalSec/3600)}h ${Math.floor((totalSec%3600)/60).toString().padStart(2,'0')}m · € ${totalEur.toFixed(2)}</span>
-        </div>
-        <table>
-            <thead><tr><th>Data</th><th>Progetto</th><th>Tipo</th><th>Orario</th><th>Durata</th><th>Importo</th><th>Stato</th></tr></thead>
-            <tbody>`;
+        // Check if we need a new page for the client header
+        if (yPos > doc.internal.pageSize.getHeight() - 40) {
+            doc.addPage();
+            yPos = 14;
+        }
 
-        clientTimers.forEach(t => {
+        // Client header bar
+        doc.setFillColor(99, 102, 241);
+        doc.roundedRect(margin, yPos, pageWidth - margin * 2, 8, 1.5, 1.5, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(9);
+        doc.setFont(undefined, 'bold');
+        doc.text(clientName, margin + 4, yPos + 5.5);
+
+        const summaryText = `${clientTimers.length} timer · ${Math.floor(totalSec / 3600)}h ${Math.floor((totalSec % 3600) / 60).toString().padStart(2, '0')}m · € ${totalEur.toFixed(2)}`;
+        doc.setFontSize(7);
+        doc.setFont(undefined, 'normal');
+        doc.text(summaryText, pageWidth - margin - 4, yPos + 5.5, { align: 'right' });
+
+        yPos += 10;
+
+        // Table data
+        const tableBody = clientTimers.map(t => {
             const d = t.data;
             const start = d.startTime ? d.startTime.toDate() : null;
             const end = d.endTime ? d.endTime.toDate() : null;
             const dur = d.duration || 0;
             const amt = ((dur / 3600) * (d.hourlyRate || 0)).toFixed(2);
-            html += `<tr>
-                <td>${start ? start.toLocaleDateString('it-IT', { day:'2-digit', month:'short' }) : '—'}</td>
-                <td>${d.projectName || '—'}</td>
-                <td>${d.worktypeName || '—'}</td>
-                <td>${start ? start.toLocaleTimeString('it-IT', {hour:'2-digit',minute:'2-digit'}) : '—'} – ${end ? end.toLocaleTimeString('it-IT', {hour:'2-digit',minute:'2-digit'}) : '—'}</td>
-                <td>${Math.floor(dur/3600)}h ${Math.floor((dur%3600)/60).toString().padStart(2,'0')}m</td>
-                <td>€ ${amt}</td>
-                <td class="${d.isReported ? 'status-reported' : 'status-pending'}">${d.isReported ? '✓ Reportato' : '⏳ Pending'}</td>
-            </tr>`;
+            return [
+                start ? start.toLocaleDateString('it-IT', { day: '2-digit', month: 'short' }) : '—',
+                d.projectName || '—',
+                d.worktypeName || '—',
+                `${start ? start.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : '—'} – ${end ? end.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : '—'}`,
+                `${Math.floor(dur / 3600)}h ${Math.floor((dur % 3600) / 60).toString().padStart(2, '0')}m`,
+                `€ ${amt}`,
+                d.isReported ? '✓' : '⏳'
+            ];
         });
 
-        html += `</tbody></table>
-        <div class="totals">Totale: ${Math.floor(totalSec/3600)}h ${Math.floor((totalSec%3600)/60).toString().padStart(2,'0')}m — € ${totalEur.toFixed(2)}</div>
-        </div>`;
+        doc.autoTable({
+            startY: yPos,
+            margin: { left: margin, right: margin },
+            head: [['Data', 'Progetto', 'Tipo', 'Orario', 'Durata', 'Importo', '']],
+            body: tableBody,
+            theme: 'grid',
+            headStyles: {
+                fillColor: [241, 245, 249],
+                textColor: [100, 116, 139],
+                fontStyle: 'bold',
+                fontSize: 6,
+                cellPadding: 2,
+                lineColor: [226, 232, 240],
+                lineWidth: 0.2
+            },
+            bodyStyles: {
+                fontSize: 7,
+                cellPadding: 2,
+                textColor: [30, 41, 59],
+                lineColor: [241, 245, 249],
+                lineWidth: 0.1
+            },
+            alternateRowStyles: {
+                fillColor: [250, 251, 252]
+            },
+            columnStyles: {
+                0: { cellWidth: 18 },
+                3: { cellWidth: 28 },
+                4: { cellWidth: 18 },
+                5: { cellWidth: 18 },
+                6: { cellWidth: 10, halign: 'center' }
+            },
+            didParseCell: (data) => {
+                // Color the status column
+                if (data.section === 'body' && data.column.index === 6) {
+                    if (data.cell.raw === '✓') {
+                        data.cell.styles.textColor = [34, 197, 94]; // green
+                        data.cell.styles.fontStyle = 'bold';
+                    } else {
+                        data.cell.styles.textColor = [245, 158, 11]; // amber
+                    }
+                }
+            }
+        });
+
+        yPos = doc.lastAutoTable.finalY + 2;
+
+        // Client total row
+        doc.setFillColor(248, 250, 252);
+        doc.setDrawColor(226, 232, 240);
+        doc.roundedRect(margin, yPos, pageWidth - margin * 2, 6, 1, 1, 'FD');
+        doc.setTextColor(30, 41, 59);
+        doc.setFontSize(7);
+        doc.setFont(undefined, 'bold');
+        doc.text(`Totale: ${Math.floor(totalSec / 3600)}h ${Math.floor((totalSec % 3600) / 60).toString().padStart(2, '0')}m — € ${totalEur.toFixed(2)}`, pageWidth - margin - 4, yPos + 4, { align: 'right' });
+
+        yPos += 12;
+    });
+
+    // === FOOTER on each page ===
+    const totalPages = doc.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        doc.setFontSize(6);
+        doc.setTextColor(148, 163, 184);
+        doc.setFont(undefined, 'normal');
+        doc.text(
+            `CronoReport — ${new Date().getFullYear()} | Pagina ${i} di ${totalPages}`,
+            pageWidth / 2,
+            doc.internal.pageSize.getHeight() - 6,
+            { align: 'center' }
+        );
     }
 
-    html += `<div class="footer">CronoReport — ${new Date().getFullYear()} | Generato automaticamente</div>
-</body></html>`;
+    // Save
+    const fileName = `CronoReport_Timer_${new Date().toISOString().slice(0, 10)}.pdf`;
+    doc.save(fileName);
 
-    printWindow.document.write(html);
-    printWindow.document.close();
-    printWindow.onload = () => {
-        printWindow.print();
-    };
+    import('./main.js').then(m => m.showAlert('success', 'PDF Esportato', `${timers.length} timer esportati in "${fileName}".`));
 }
