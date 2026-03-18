@@ -206,6 +206,8 @@ export function createTimerCard(timer) {
 
     // Inline time editing
     timerDisplay.addEventListener('click', () => {
+        // Guard: se l'input è già presente, non ricreare
+        if (timerDisplay.querySelector('input')) return;
         // Only allow editing when paused
         if (!timer.isPaused) {
             Swal.fire({ icon: 'info', title: 'Metti in pausa', text: 'Metti in pausa il timer prima di modificare il tempo.', confirmButtonText: 'OK', timer: 2500 });
@@ -217,6 +219,8 @@ export function createTimerCard(timer) {
         input.className = 'timer-time-input';
         input.value = currentVal;
         input.placeholder = 'hh:mm:ss';
+        // Blocca bubble click sull'input per evitare che il parent lo ricrei
+        input.addEventListener('click', (e) => e.stopPropagation());
         timerDisplay.textContent = '';
         timerDisplay.appendChild(input);
         input.focus();
