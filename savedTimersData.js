@@ -930,17 +930,17 @@ export function displayTimers(timers) {
                         a.addEventListener('click', (e) => e.stopPropagation());
                         linkWrap.appendChild(a);
                     } else if (val) {
-                        // Link non-URL — mostra icona link
+                        // Link non-URL — icona attiva
                         const icon = document.createElement('span');
-                        icon.className = 'tl-inline-link-icon';
-                        icon.innerHTML = '<i class="fas fa-link"></i>';
+                        icon.className = 'tl-inline-link-icon tl-inline-link-icon--active';
+                        icon.innerHTML = '<i class="fas fa-external-link-alt"></i>';
                         icon.title = val;
                         linkWrap.appendChild(icon);
                     } else {
-                        // Nessun link — icona dash
+                        // Nessun link — icona disattivata
                         const icon = document.createElement('span');
                         icon.className = 'tl-inline-link-icon tl-inline-link-icon--empty';
-                        icon.innerHTML = '<i class="fas fa-link"></i>';
+                        icon.innerHTML = '<i class="fas fa-external-link-alt"></i>';
                         icon.title = 'Aggiungi link';
                         linkWrap.appendChild(icon);
                     }
