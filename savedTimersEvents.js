@@ -240,14 +240,28 @@ export async function initializeSavedTimersEvents() {
 
     // Deseleziona tutti
     const deselectBtn = document.getElementById('st-action-deselect');
-    if (deselectBtn) {
-        deselectBtn.addEventListener('click', () => {
-            document.querySelectorAll('.timer-checkbox:checked').forEach(cb => { cb.checked = false; });
-            updateAllRowVisualStates();
-            lastCheckedCheckbox = null;
-            updateActionBar();
-        });
+    function deselectAll() {
+        document.querySelectorAll('.timer-checkbox:checked').forEach(cb => { cb.checked = false; });
+        updateAllRowVisualStates();
+        lastCheckedCheckbox = null;
+        updateActionBar();
     }
+    if (deselectBtn) {
+        deselectBtn.addEventListener('click', deselectAll);
+    }
+
+    // Escape → annulla selezione
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        if (!document.getElementById('saved-timers-section')) return;
+        const tag = (e.target.tagName || '').toLowerCase();
+        if (['input', 'select', 'textarea'].includes(tag)) return; // non interferire con editing
+        const checked = document.querySelectorAll('.timer-checkbox:checked');
+        if (checked.length > 0) {
+            e.preventDefault();
+            deselectAll();
+        }
+    });
 
     // Segna come Reportati
     const markReportedBtn = document.getElementById('st-action-mark-reported');
