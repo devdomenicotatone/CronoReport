@@ -67,7 +67,7 @@ export function createFaviconEl(projectName, projectUrl, sizePx) {
             faviconCache.set(domain, entry);
 
             const img = new Image();
-            img.src = `https://${domain}/favicon.ico`;
+            img.src = `https://www.google.com/s2/favicons?domain=${domain}&sz=${sizePx * 2}`;
             img.onload = () => {
                 entry.status = 'loaded';
                 entry.img = img;
