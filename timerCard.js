@@ -1,24 +1,11 @@
 // timerCard.js — Card UI e Timer Lifecycle (start, pause, resume, stop)
 import { createFaviconEl, loadRecentTasks, loadTodaySummary, loadTodayLog, updateActiveTimerCount } from './timerWidgets.js';
-import { formatDuration, updateLiveAmount } from './timerHelpers.js';
+import { formatDuration, updateLiveAmount, hhmmssToSeconds, secondsToHHMMSS } from './timerHelpers.js';
 import { getClientHexColor } from './clientColors.js';
+import * as notify from './notify.js';
 
 // Shared state: activeTimers vive qui per evitare dipendenza circolare con timerInit/timerCrud
 export let activeTimers = [];
-
-// === HELPER: hhmmss ↔ seconds ===
-function hhmmssToSeconds(str) {
-    const parts = (str || '').split(':').map(Number);
-    if (parts.length !== 3 || parts.some(isNaN)) return NaN;
-    return parts[0] * 3600 + parts[1] * 60 + parts[2];
-}
-
-function secondsToHHMMSS(sec) {
-    const h = Math.floor(sec / 3600);
-    const m = Math.floor((sec % 3600) / 60);
-    const s = Math.floor(sec % 60);
-    return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
-}
 
 // === CREATE TIMER CARD (with inline editing) ===
 
@@ -210,7 +197,7 @@ export function createTimerCard(timer) {
         if (timerDisplay.querySelector('input')) return;
         // Only allow editing when paused
         if (!timer.isPaused) {
-            Swal.fire({ icon: 'info', title: 'Metti in pausa', text: 'Metti in pausa il timer prima di modificare il tempo.', confirmButtonText: 'OK', timer: 2500 });
+            notify.info('Metti in pausa', 'Metti in pausa il timer prima di modificare il tempo.');
             return;
         }
         const currentVal = secondsToHHMMSS(timer.accumulatedElapsedTime);
@@ -236,7 +223,7 @@ export function createTimerCard(timer) {
                     .catch(e => console.error('Errore aggiornamento tempo:', e));
             } else {
                 timerDisplay.textContent = formatDuration(timer.accumulatedElapsedTime);
-                Swal.fire({ icon: 'error', title: 'Formato non valido', text: 'Usa il formato hh:mm:ss', timer: 2000, showConfirmButton: false });
+                notify.error('Formato non valido', 'Usa il formato hh:mm:ss');
             }
         };
         input.addEventListener('blur', save);
@@ -307,34 +294,23 @@ export function createTimerCard(timer) {
         stopTimer(timer, card);
     });
 
-    deleteBtn.addEventListener('click', () => {
-        Swal.fire({
-            title: 'Eliminare questo timer?',
-            text: 'Il timer verrà rimosso definitivamente.',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#ef4444',
-            cancelButtonColor: '#64748b',
-            confirmButtonText: 'Sì, elimina',
-            cancelButtonText: 'Annulla'
-        }).then(result => {
-            if (result.isConfirmed) {
-                clearInterval(timer.intervalId);
-                db.collection('timers').doc(timer.id).delete()
-                    .then(() => {
-                        const idx = activeTimers.indexOf(timer);
-                        if (idx > -1) activeTimers.splice(idx, 1);
-                        card.remove();
-                        updateActiveTimerCount(activeTimers);
-                        updateTabTitle();
-                        Swal.fire({ icon: 'success', title: 'Eliminato!', timer: 1500, showConfirmButton: false });
-                    })
-                    .catch(e => {
-                        console.error('Errore eliminazione timer:', e);
-                        Swal.fire({ icon: 'error', title: 'Errore', text: 'Impossibile eliminare il timer.' });
-                    });
+    deleteBtn.addEventListener('click', async () => {
+        const confirmed = await notify.confirm('Eliminare questo timer?', 'Il timer verrà rimosso definitivamente.', { confirmText: 'Sì, elimina' });
+        if (confirmed) {
+            clearInterval(timer.intervalId);
+            try {
+                await db.collection('timers').doc(timer.id).delete();
+                const idx = activeTimers.indexOf(timer);
+                if (idx > -1) activeTimers.splice(idx, 1);
+                card.remove();
+                updateActiveTimerCount(activeTimers);
+                updateTabTitle();
+                notify.toast('Eliminato!');
+            } catch (e) {
+                console.error('Errore eliminazione timer:', e);
+                notify.error('Errore', 'Impossibile eliminare il timer.');
             }
-        });
+        }
     });
 
     actions.appendChild(pauseBtn);
@@ -421,7 +397,7 @@ export function resumeTimer(timer) {
     updateTabTitle();
 }
 
-export function stopTimer(timer, card) {
+export async function stopTimer(timer, card) {
     clearInterval(timer.intervalId);
 
     const now = new Date();
@@ -453,50 +429,32 @@ export function stopTimer(timer, card) {
     };
 
     if (typeof timeLogData.hourlyRate !== 'number') {
-        Swal.fire({
-            icon: 'error',
-            title: 'Errore',
-            text: 'La tariffa oraria non è valida.',
-            confirmButtonText: 'OK'
-        });
+        notify.error('Errore', 'La tariffa oraria non è valida.');
         return;
     }
 
-    db.collection('timeLogs').add(timeLogData)
-        .then(() => {
-            db.collection('timers').doc(timer.id).update({
-                isActive: false,
-                endTime: firebase.firestore.FieldValue.serverTimestamp(),
-                totalElapsedTime: totalElapsedTime
-            }).then(() => {
-                const index = activeTimers.indexOf(timer);
-                if (index > -1) {
-                    activeTimers.splice(index, 1);
-                }
-
-                card.remove();
-                updateActiveTimerCount(activeTimers);
-                loadTodaySummary();
-                loadRecentTasks();
-                loadTodayLog();
-                updateTabTitle();
-
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Timer Salvato',
-                    text: 'Il tempo è stato registrato con successo.',
-                    confirmButtonText: 'OK'
-                });
-            }).catch(error => {
-                console.error('Errore nell\'aggiornamento del timer:', error);
-            });
-        }).catch(error => {
-            console.error('Errore nell\'aggiunta del log del tempo:', error);
-            Swal.fire({
-                icon: 'error',
-                title: 'Errore',
-                text: 'Si è verificato un errore durante il salvataggio del tempo.',
-                confirmButtonText: 'OK'
-            });
+    try {
+        await db.collection('timeLogs').add(timeLogData);
+        await db.collection('timers').doc(timer.id).update({
+            isActive: false,
+            endTime: firebase.firestore.FieldValue.serverTimestamp(),
+            totalElapsedTime: totalElapsedTime
         });
+        const index = activeTimers.indexOf(timer);
+        if (index > -1) {
+            activeTimers.splice(index, 1);
+        }
+
+        card.remove();
+        updateActiveTimerCount(activeTimers);
+        loadTodaySummary();
+        loadRecentTasks();
+        loadTodayLog();
+        updateTabTitle();
+
+        notify.success('Timer Salvato', 'Il tempo è stato registrato con successo.');
+    } catch (error) {
+        console.error('Errore nel salvataggio del tempo:', error);
+        notify.error('Errore', 'Si è verificato un errore durante il salvataggio del tempo.');
+    }
 }

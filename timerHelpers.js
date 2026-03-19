@@ -2,64 +2,70 @@
 
 // === DROPDOWN LOADING ===
 
-export function loadTimerClientDropdown(selectElement) {
+export async function loadTimerClientDropdown(selectElement) {
     selectElement.innerHTML = '<option value="">--Seleziona Cliente--</option>';
-    db.collection('clients')
-        .where('uid', '==', currentUser.uid)
-        .get()
-        .then(snapshot => {
-            snapshot.forEach(doc => {
-                const option = document.createElement('option');
-                option.value = doc.id;
-                option.textContent = doc.data().name;
-                selectElement.appendChild(option);
-            });
-        })
-        .catch(error => {
-            console.error('Errore nel caricamento dei clienti nel Timer:', error);
+    try {
+        const snapshot = await db.collection('clients')
+            .where('uid', '==', currentUser.uid)
+            .orderBy('name')
+            .get();
+        snapshot.forEach(doc => {
+            const option = document.createElement('option');
+            option.value = doc.id;
+            option.textContent = doc.data().name;
+            selectElement.appendChild(option);
         });
+    } catch (error) {
+        console.error('Errore nel caricamento dei clienti:', error);
+    }
 }
 
-export function loadProjects(selectElement, clientId) {
+export async function loadProjects(selectElement, clientId) {
     selectElement.innerHTML = '<option value="">--Seleziona Progetto--</option>';
-    return (
-    db.collection('projects')
-        .where('uid', '==', currentUser.uid)
-        .where('clientId', '==', clientId)
-        .get()
-        .then(snapshot => {
+    try {
+        const snapshot = await db.collection('projects')
+            .where('uid', '==', currentUser.uid)
+            .where('clientId', '==', clientId)
+            .orderBy('name')
+            .get();
+        if (snapshot.empty) {
+            selectElement.disabled = true;
+        } else {
+            selectElement.disabled = false;
             snapshot.forEach(doc => {
                 const option = document.createElement('option');
                 option.value = doc.id;
                 option.textContent = doc.data().name;
                 selectElement.appendChild(option);
             });
-        })
-        .catch(error => {
-            console.error('Errore nel caricamento dei progetti nel Timer:', error);
-        })
-    );
+        }
+    } catch (error) {
+        console.error('Errore nel caricamento dei progetti:', error);
+    }
 }
 
-export function loadWorktypes(selectElement, clientId) {
+export async function loadWorktypes(selectElement, clientId) {
     selectElement.innerHTML = '<option value="">--Seleziona Tipo di Lavoro--</option>';
-    return (
-    db.collection('worktypes')
-        .where('uid', '==', currentUser.uid)
-        .where('clientId', '==', clientId)
-        .get()
-        .then(snapshot => {
+    try {
+        const snapshot = await db.collection('worktypes')
+            .where('uid', '==', currentUser.uid)
+            .where('clientId', '==', clientId)
+            .orderBy('name')
+            .get();
+        if (snapshot.empty) {
+            selectElement.disabled = true;
+        } else {
+            selectElement.disabled = false;
             snapshot.forEach(doc => {
                 const option = document.createElement('option');
                 option.value = doc.id;
                 option.textContent = doc.data().name;
                 selectElement.appendChild(option);
             });
-        })
-        .catch(error => {
-            console.error('Errore nel caricamento dei tipi di lavoro nel Timer:', error);
-        })
-    );
+        }
+    } catch (error) {
+        console.error('Errore nel caricamento dei tipi di lavoro:', error);
+    }
 }
 
 // === DATE/TIME PARSING & FORMATTING ===
@@ -118,26 +124,7 @@ export function formatDuration(seconds) {
     return secondsToHHMMSS(seconds);
 }
 
-// === RATE & AMOUNT ===
 
-export async function getHourlyRate() {
-    try {
-        const snapshot = await db.collection('reportConfigs')
-            .where('uid', '==', currentUser.uid)
-            .orderBy('timestamp', 'desc')
-            .limit(1)
-            .get();
-
-        if (!snapshot.empty) {
-            const config = snapshot.docs[0].data();
-            return typeof config.hourlyRate === 'number' ? config.hourlyRate : 0;
-        }
-        return 0;
-    } catch (error) {
-        console.error('Errore nel recuperare hourlyRate:', error);
-        return 0;
-    }
-}
 
 export function updateLiveAmount(timer, totalElapsedSeconds) {
     if (!timer.liveAmountDisplay) return;

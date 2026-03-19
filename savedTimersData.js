@@ -2,7 +2,7 @@
 import { CrModal } from './uiComponents.js';
 import { loadClientColors, getClientBgStyle, getClientHexColor } from './clientColors.js';
 import { createTimerRow, formatDuration, getMonthName, formatDate, formatTimeShort } from './savedTimersUI.js';
-// NOTE: showAlert (main.js) usato via dynamic import()
+import * as notify from './notify.js';
 
 // Shared state: displayedTimers ora vive qui per evitare dipendenza circolare con savedTimersEvents.js
 export let displayedTimers = [];
@@ -29,38 +29,36 @@ let previousPeriodStats = { hours: 0, earnings: 0, count: 0 };
 const MONTH_NAMES_SHORT = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
 
 // Funzione per caricare gli anni e mesi disponibili e popolare i chip
-export function loadAvailableYears() {
-    return db.collection('timeLogs')
-        .where('uid', '==', currentUser.uid)
-        .where('isDeleted', '==', false)
-        .orderBy('startTime', 'desc')
-        .get()
-        .then(snapshot => {
-            const yearMonthMap = {};
-            snapshot.forEach(doc => {
-                const startTime = doc.data().startTime;
-                if (startTime) {
-                    const d = startTime.toDate();
-                    const year = d.getFullYear();
-                    const month = d.getMonth() + 1; // 1-12
-                    if (!yearMonthMap[year]) yearMonthMap[year] = new Set();
-                    yearMonthMap[year].add(month);
-                }
-            });
-            // Converti Sets in Arrays ordinati
-            availableMonthsByYear = {};
-            for (const year in yearMonthMap) {
-                availableMonthsByYear[year] = Array.from(yearMonthMap[year]).sort((a, b) => a - b);
+export async function loadAvailableYears() {
+    try {
+        const snapshot = await db.collection('timeLogs')
+            .where('uid', '==', currentUser.uid)
+            .where('isDeleted', '==', false)
+            .orderBy('startTime', 'desc')
+            .get();
+        const yearMonthMap = {};
+        snapshot.forEach(doc => {
+            const startTime = doc.data().startTime;
+            if (startTime) {
+                const d = startTime.toDate();
+                const year = d.getFullYear();
+                const month = d.getMonth() + 1;
+                if (!yearMonthMap[year]) yearMonthMap[year] = new Set();
+                yearMonthMap[year].add(month);
             }
-            const years = Object.keys(availableMonthsByYear).map(Number).sort((a, b) => b - a);
-            populateYearChips(years);
-            updateQuickFilterBar();
-            return years;
-        })
-        .catch(error => {
-            console.error('Errore nel caricamento degli anni disponibili:', error);
-            return [];
         });
+        availableMonthsByYear = {};
+        for (const year in yearMonthMap) {
+            availableMonthsByYear[year] = Array.from(yearMonthMap[year]).sort((a, b) => a - b);
+        }
+        const years = Object.keys(availableMonthsByYear).map(Number).sort((a, b) => b - a);
+        populateYearChips(years);
+        updateQuickFilterBar();
+        return years;
+    } catch (error) {
+        console.error('Errore nel caricamento degli anni disponibili:', error);
+        return [];
+    }
 }
 
 // Popola i chip degli anni nella Quick Filter Bar (Smart Collapse)
@@ -263,47 +261,46 @@ export async function loadSavedTimers(filters = {}) {
         query = query.where('clientId', '==', filters.client);
     }
 
-    query.orderBy('startTime', 'desc').get()
-        .then(snapshot => {
-            displayedTimers.length = 0;
-            const unreportedAmounts = {};
+    try {
+        const snapshot = await query.orderBy('startTime', 'desc').get();
+        displayedTimers.length = 0;
+        const unreportedAmounts = {};
 
-            if (snapshot.empty) {
-                const noTimersMessage = document.createElement('p');
-                noTimersMessage.textContent = 'Non ci sono timer salvati.';
-                savedTimersList.appendChild(noTimersMessage);
-                updateQuickFilterBar();
-                return;
-            }
+        if (snapshot.empty) {
+            const noTimersMessage = document.createElement('p');
+            noTimersMessage.textContent = 'Non ci sono timer salvati.';
+            savedTimersList.appendChild(noTimersMessage);
+            updateQuickFilterBar();
+            return;
+        }
 
-            snapshot.forEach(doc => {
-                const logData = doc.data();
-                const clientName = logData.clientName || 'Cliente Sconosciuto';
+        snapshot.forEach(doc => {
+            const logData = doc.data();
+            const clientName = logData.clientName || 'Cliente Sconosciuto';
 
-                displayedTimers.push({
-                    id: doc.id,
-                    data: logData
-                });
-
-                if (!logData.isReported) {
-                    const durationInHours = logData.duration / 3600;
-                    const hourlyRate = logData.hourlyRate || 0;
-                    const amount = durationInHours * hourlyRate;
-
-                    if (!unreportedAmounts[clientName]) {
-                        unreportedAmounts[clientName] = 0;
-                    }
-                    unreportedAmounts[clientName] += amount;
-                }
+            displayedTimers.push({
+                id: doc.id,
+                data: logData
             });
 
-            displayTimers(displayedTimers);
-            displayUnreportedAmounts(unreportedAmounts);
-            updateQuickFilterBar();
-        })
-        .catch(error => {
-            console.error('Errore nel caricamento dei timer salvati:', error);
+            if (!logData.isReported) {
+                const durationInHours = logData.duration / 3600;
+                const hourlyRate = logData.hourlyRate || 0;
+                const amount = durationInHours * hourlyRate;
+
+                if (!unreportedAmounts[clientName]) {
+                    unreportedAmounts[clientName] = 0;
+                }
+                unreportedAmounts[clientName] += amount;
+            }
         });
+
+        displayTimers(displayedTimers);
+        displayUnreportedAmounts(unreportedAmounts);
+        updateQuickFilterBar();
+    } catch (error) {
+        console.error('Errore nel caricamento dei timer salvati:', error);
+    }
 }
 
 export function generateSafeId(prefix, name) {
@@ -411,82 +408,80 @@ export function displayUnreportedAmounts(unreportedAmounts) {
     }
 }
 
-export function saveReminderSettings(clientName, reminderAmount, reminderDate) {
-    // Controlla se esiste già un promemoria per questo cliente
-    db.collection('reminders')
-        .where('uid', '==', currentUser.uid)
-        .where('clientName', '==', clientName)
-        .get()
-        .then(snapshot => {
-            if (!snapshot.empty) {
-                // Aggiorna il documento esistente
-                const docId = snapshot.docs[0].id;
-                db.collection('reminders').doc(docId).update({
+export async function saveReminderSettings(clientName, reminderAmount, reminderDate) {
+    try {
+        const snapshot = await db.collection('reminders')
+            .where('uid', '==', currentUser.uid)
+            .where('clientName', '==', clientName)
+            .get();
+
+        if (!snapshot.empty) {
+            const docId = snapshot.docs[0].id;
+            try {
+                await db.collection('reminders').doc(docId).update({
                     reminderAmount: reminderAmount,
                     reminderDate: reminderDate,
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                }).then(() => {
-                    CrModal.hide('setReminderModal');
-                    import('./main.js').then(m => m.showAlert('success', 'Promemoria Salvato', 'Le impostazioni di promemoria sono state aggiornate.'));
-                    // Ricarica la sezione degli importi non riscossi
-                    loadSavedTimers(getCurrentFilters());
-                }).catch(error => {
-                    console.error('Errore nell\'aggiornamento del promemoria:', error);
-                    import('./main.js').then(m => m.showAlert('error', 'Errore', 'Si è verificato un errore durante il salvataggio del promemoria.'));
                 });
-            } else {
-                // Crea un nuovo documento
-                db.collection('reminders').add({
+                CrModal.hide('setReminderModal');
+                const m = await import('./main.js');
+                m.showAlert('success', 'Promemoria Salvato', 'Le impostazioni di promemoria sono state aggiornate.');
+                loadSavedTimers(getCurrentFilters());
+            } catch (error) {
+                console.error('Errore nell\'aggiornamento del promemoria:', error);
+                const m = await import('./main.js');
+                m.showAlert('error', 'Errore', 'Si è verificato un errore durante il salvataggio del promemoria.');
+            }
+        } else {
+            try {
+                await db.collection('reminders').add({
                     uid: currentUser.uid,
                     clientName: clientName,
                     reminderAmount: reminderAmount,
                     reminderDate: reminderDate,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                }).then(() => {
-                    CrModal.hide('setReminderModal');
-                    import('./main.js').then(m => m.showAlert('success', 'Promemoria Salvato', 'Le impostazioni di promemoria sono state salvate.'));
-                    // Ricarica la sezione degli importi non riscossi
-                    loadSavedTimers(getCurrentFilters());
-                }).catch(error => {
-                    console.error('Errore nel salvataggio del promemoria:', error);
-                    import('./main.js').then(m => m.showAlert('error', 'Errore', 'Si è verificato un errore durante il salvataggio del promemoria.'));
                 });
+                CrModal.hide('setReminderModal');
+                const m = await import('./main.js');
+                m.showAlert('success', 'Promemoria Salvato', 'Le impostazioni di promemoria sono state salvate.');
+                loadSavedTimers(getCurrentFilters());
+            } catch (error) {
+                console.error('Errore nel salvataggio del promemoria:', error);
+                const m = await import('./main.js');
+                m.showAlert('error', 'Errore', 'Si è verificato un errore durante il salvataggio del promemoria.');
             }
-        })
-        .catch(error => {
-            console.error('Errore nel controllare il promemoria esistente:', error);
-        });
+        }
+    } catch (error) {
+        console.error('Errore nel controllare il promemoria esistente:', error);
+    }
 }
 
-export function loadReminderSettings(clientName, reminderCell, currentAmount) {
-    db.collection('reminders')
-        .where('uid', '==', currentUser.uid)
-        .where('clientName', '==', clientName)
-        .get()
-        .then(snapshot => {
-            if (!snapshot.empty) {
-                const reminderData = snapshot.docs[0].data();
-                let reminderText = '';
+export async function loadReminderSettings(clientName, reminderCell, currentAmount) {
+    try {
+        const snapshot = await db.collection('reminders')
+            .where('uid', '==', currentUser.uid)
+            .where('clientName', '==', clientName)
+            .get();
+        if (!snapshot.empty) {
+            const reminderData = snapshot.docs[0].data();
+            let reminderText = '';
 
-                if (reminderData.reminderAmount) {
-                    reminderText += `Importo: ${reminderData.reminderAmount.toFixed(2)} €`;
-                }
-                if (reminderData.reminderDate) {
-                    if (reminderText) reminderText += ' | ';
-                    reminderText += `Data: ${formatDate(reminderData.reminderDate)}`;
-                }
-
-                reminderCell.textContent = reminderText;
-
-                // Controlla se il promemoria deve essere attivato
-                checkReminder(clientName, currentAmount, reminderData);
-            } else {
-                reminderCell.textContent = 'Nessun promemoria impostato';
+            if (reminderData.reminderAmount) {
+                reminderText += `Importo: ${reminderData.reminderAmount.toFixed(2)} €`;
             }
-        })
-        .catch(error => {
-            console.error('Errore nel caricamento delle impostazioni di promemoria:', error);
-        });
+            if (reminderData.reminderDate) {
+                if (reminderText) reminderText += ' | ';
+                reminderText += `Data: ${formatDate(reminderData.reminderDate)}`;
+            }
+
+            reminderCell.textContent = reminderText;
+            checkReminder(clientName, currentAmount, reminderData);
+        } else {
+            reminderCell.textContent = 'Nessun promemoria impostato';
+        }
+    } catch (error) {
+        console.error('Errore nel caricamento delle impostazioni di promemoria:', error);
+    }
 }
 
 export function checkReminder(clientName, currentAmount, reminderData) {
@@ -521,54 +516,44 @@ export function checkReminder(clientName, currentAmount, reminderData) {
         }
 
         // Mostra una notifica all'utente
-        Swal.fire({
-            icon: 'info',
-            title: 'Promemoria',
-            text: `Il cliente "${clientName}" ha raggiunto le condizioni del promemoria.`,
-            confirmButtonText: 'OK'
-        });
+        notify.info('Promemoria', `Il cliente "${clientName}" ha raggiunto le condizioni del promemoria.`);
     }
 }
 
-export function showSetReminderModal(clientName, currentAmount) {
-    // Imposta il nome del cliente nella modale
+export async function showSetReminderModal(clientName, currentAmount) {
     document.getElementById('modal-client-name').textContent = clientName;
 
-    // Reset dei campi
     document.getElementById('reminder-amount').value = '';
     document.getElementById('reminder-date').value = '';
 
-    // Carica le impostazioni esistenti, se presenti
-    db.collection('reminders')
-        .where('uid', '==', currentUser.uid)
-        .where('clientName', '==', clientName)
-        .get()
-        .then(snapshot => {
-            if (!snapshot.empty) {
-                const reminderData = snapshot.docs[0].data();
-                if (reminderData.reminderAmount) {
-                    document.getElementById('reminder-amount').value = reminderData.reminderAmount;
-                }
-                if (reminderData.reminderDate) {
-                    document.getElementById('reminder-date').value = reminderData.reminderDate;
-                }
+    try {
+        const snapshot = await db.collection('reminders')
+            .where('uid', '==', currentUser.uid)
+            .where('clientName', '==', clientName)
+            .get();
+        if (!snapshot.empty) {
+            const reminderData = snapshot.docs[0].data();
+            if (reminderData.reminderAmount) {
+                document.getElementById('reminder-amount').value = reminderData.reminderAmount;
             }
-        })
-        .catch(error => {
-            console.error('Errore nel caricamento delle impostazioni di promemoria:', error);
-        });
+            if (reminderData.reminderDate) {
+                document.getElementById('reminder-date').value = reminderData.reminderDate;
+            }
+        }
+    } catch (error) {
+        console.error('Errore nel caricamento delle impostazioni di promemoria:', error);
+    }
 
-    // Mostra la modale
     CrModal.show('setReminderModal');
 
-    // Aggiungi event listener per il pulsante Salva
     const saveReminderBtn = document.getElementById('save-reminder-btn');
-    saveReminderBtn.onclick = () => {
+    saveReminderBtn.onclick = async () => {
         const reminderAmount = parseFloat(document.getElementById('reminder-amount').value);
         const reminderDate = document.getElementById('reminder-date').value;
 
         if (isNaN(reminderAmount) && !reminderDate) {
-            import('./main.js').then(m => m.showAlert('warning', 'Attenzione', 'Inserisci almeno un valore per il promemoria.'));
+            const m = await import('./main.js');
+            m.showAlert('warning', 'Attenzione', 'Inserisci almeno un valore per il promemoria.');
             return;
         }
 
@@ -860,7 +845,7 @@ export function displayTimers(timers) {
                 // === HELPER: Inline edit per select (con caricamento dati Firestore) ===
                 function makeInlineSelect(el, fieldName, nameName, loadOptionsFn) {
                     el.classList.add('tl-inline-editable');
-                    el.addEventListener('click', (e) => {
+                    el.addEventListener('click', async (e) => {
                         e.stopPropagation();
                         if (el.querySelector('select')) return;
                         const originalHTML = el.innerHTML;
@@ -869,11 +854,10 @@ export function displayTimers(timers) {
                         el.innerHTML = '';
                         el.appendChild(select);
 
-                        loadOptionsFn(select, logData[fieldName]).then(() => {
-                            select.focus();
-                        });
+                        await loadOptionsFn(select, logData[fieldName]);
+                        select.focus();
 
-                        const save = () => {
+                        const save = async () => {
                             const selectedOpt = select.options[select.selectedIndex];
                             if (selectedOpt && selectedOpt.value) {
                                 const newId = selectedOpt.value;
@@ -882,17 +866,18 @@ export function displayTimers(timers) {
                                 logData[nameName] = newName;
                                 el.textContent = newName;
                                 const updateData = { [fieldName]: newId, [nameName]: newName };
-                                // Se cambia worktype, aggiorna anche hourlyRate
                                 if (fieldName === 'worktypeId') {
-                                    db.collection('worktypes').doc(newId).get().then(doc => {
+                                    try {
+                                        const doc = await db.collection('worktypes').doc(newId).get();
                                         if (doc.exists) {
                                             const rate = doc.data().hourlyRate || 0;
                                             logData.hourlyRate = rate;
                                             updateData.hourlyRate = rate;
                                         }
-                                        db.collection('timeLogs').doc(timerObj.id).update(updateData)
-                                            .catch(err => console.error(`Errore aggiornamento ${fieldName}:`, err));
-                                    });
+                                        await db.collection('timeLogs').doc(timerObj.id).update(updateData);
+                                    } catch (err) {
+                                        console.error(`Errore aggiornamento ${fieldName}:`, err);
+                                    }
                                     return;
                                 }
                                 db.collection('timeLogs').doc(timerObj.id).update(updateData)
@@ -919,21 +904,19 @@ export function displayTimers(timers) {
                 projectSpan.className = 'text-sm font-medium text-surface-700 truncate';
                 projectSpan.textContent = logData.projectName || '—';
                 // Inline select per progetto
-                makeInlineSelect(projectSpan, 'projectId', 'projectName', (selectEl, currentId) => {
+                makeInlineSelect(projectSpan, 'projectId', 'projectName', async (selectEl, currentId) => {
                     selectEl.innerHTML = '<option value="">--Progetto--</option>';
-                    return db.collection('projects')
+                    const snap = await db.collection('projects')
                         .where('uid', '==', currentUser.uid)
                         .where('clientId', '==', logData.clientId)
-                        .orderBy('name').get()
-                        .then(snap => {
-                            snap.forEach(doc => {
-                                const opt = document.createElement('option');
-                                opt.value = doc.id;
-                                opt.textContent = doc.data().name;
-                                if (doc.id === currentId) opt.selected = true;
-                                selectEl.appendChild(opt);
-                            });
-                        });
+                        .orderBy('name').get();
+                    snap.forEach(doc => {
+                        const opt = document.createElement('option');
+                        opt.value = doc.id;
+                        opt.textContent = doc.data().name;
+                        if (doc.id === currentId) opt.selected = true;
+                        selectEl.appendChild(opt);
+                    });
                 });
 
                 const spacer = document.createElement('span');
@@ -973,21 +956,19 @@ export function displayTimers(timers) {
                 worktypeSpan.className = 'text-xs text-surface-400';
                 worktypeSpan.textContent = logData.worktypeName || '—';
                 // Inline select per tipo lavoro
-                makeInlineSelect(worktypeSpan, 'worktypeId', 'worktypeName', (selectEl, currentId) => {
+                makeInlineSelect(worktypeSpan, 'worktypeId', 'worktypeName', async (selectEl, currentId) => {
                     selectEl.innerHTML = '<option value="">--Tipo Lavoro--</option>';
-                    return db.collection('worktypes')
+                    const snap = await db.collection('worktypes')
                         .where('uid', '==', currentUser.uid)
                         .where('clientId', '==', logData.clientId)
-                        .orderBy('name').get()
-                        .then(snap => {
-                            snap.forEach(doc => {
-                                const opt = document.createElement('option');
-                                opt.value = doc.id;
-                                opt.textContent = doc.data().name;
-                                if (doc.id === currentId) opt.selected = true;
-                                selectEl.appendChild(opt);
-                            });
-                        });
+                        .orderBy('name').get();
+                    snap.forEach(doc => {
+                        const opt = document.createElement('option');
+                        opt.value = doc.id;
+                        opt.textContent = doc.data().name;
+                        if (doc.id === currentId) opt.selected = true;
+                        selectEl.appendChild(opt);
+                    });
                 });
 
                 const timesSpan = document.createElement('span');
@@ -1114,34 +1095,25 @@ export function displayTimers(timers) {
                 deleteBtn.className = 'tl-inline-action tl-inline-action--delete';
                 deleteBtn.title = 'Elimina';
                 deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
-                deleteBtn.addEventListener('click', (e) => {
+                deleteBtn.addEventListener('click', async (e) => {
                     e.stopPropagation();
-                    Swal.fire({
-                        title: 'Eliminare questo timer?',
-                        text: 'Sarà spostato nel cestino.',
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonColor: '#ef4444',
-                        cancelButtonColor: '#64748b',
-                        confirmButtonText: 'Sì, elimina',
-                        cancelButtonText: 'Annulla'
-                    }).then(result => {
-                        if (result.isConfirmed) {
-                            db.collection('timeLogs').doc(timerObj.id).update({
+                    const confirmed = await notify.confirm('Eliminare questo timer?', 'Sarà spostato nel cestino.', { confirmText: 'Sì, elimina' });
+                    if (confirmed) {
+                        try {
+                            await db.collection('timeLogs').doc(timerObj.id).update({
                                 isDeleted: true,
                                 deletedAt: firebase.firestore.FieldValue.serverTimestamp()
-                            }).then(() => {
-                                row.style.transition = 'opacity 0.3s, transform 0.3s';
-                                row.style.opacity = '0';
-                                row.style.transform = 'translateX(20px)';
-                                setTimeout(() => row.remove(), 300);
-                                import('./main.js').then(m => m.showAlert('success', 'Eliminato', 'Timer spostato nel cestino.'));
-                            }).catch(err => {
-                                console.error('Errore eliminazione timer:', err);
-                                import('./main.js').then(m => m.showAlert('error', 'Errore', 'Impossibile eliminare.'));
                             });
+                            row.style.transition = 'opacity 0.3s, transform 0.3s';
+                            row.style.opacity = '0';
+                            row.style.transform = 'translateX(20px)';
+                            setTimeout(() => row.remove(), 300);
+                            notify.success('Eliminato', 'Timer spostato nel cestino.');
+                        } catch (err) {
+                            console.error('Errore eliminazione timer:', err);
+                            notify.error('Errore', 'Impossibile eliminare.');
                         }
-                    });
+                    }
                 });
                 detailRow.appendChild(deleteBtn);
 
@@ -1348,24 +1320,23 @@ export function populateWorktypeChips(timers) {
 }
 
 // Funzione per caricare i clienti nel filtro
-export function loadClientsForFilter() {
+export async function loadClientsForFilter() {
     const filterClientSelect = document.getElementById('filter-client');
-    return db.collection('clients')
-        .where('uid', '==', currentUser.uid)
-        .orderBy('name')
-        .get()
-        .then(snapshot => {
-            snapshot.forEach(doc => {
-                const clientData = doc.data();
-                const option = document.createElement('option');
-                option.value = doc.id;
-                option.textContent = clientData.name;
-                filterClientSelect.appendChild(option);
-            });
-        })
-        .catch(error => {
-            console.error('Errore nel caricamento dei clienti per il filtro:', error);
+    try {
+        const snapshot = await db.collection('clients')
+            .where('uid', '==', currentUser.uid)
+            .orderBy('name')
+            .get();
+        snapshot.forEach(doc => {
+            const clientData = doc.data();
+            const option = document.createElement('option');
+            option.value = doc.id;
+            option.textContent = clientData.name;
+            filterClientSelect.appendChild(option);
         });
+    } catch (error) {
+        console.error('Errore nel caricamento dei clienti per il filtro:', error);
+    }
 }
 
 // Funzione per ottenere i filtri correnti
@@ -1403,9 +1374,10 @@ export function applyAdvancedFilters(timers) {
 // ============================================
 // Export CSV Nativo
 // ============================================
-export function exportTimersToCSV(timers) {
+export async function exportTimersToCSV(timers) {
     if (!timers || timers.length === 0) {
-        import('./main.js').then(m => m.showAlert('info', 'Nessun Dato', 'Non ci sono timer da esportare.'));
+        const m = await import('./main.js');
+        m.showAlert('info', 'Nessun Dato', 'Non ci sono timer da esportare.');
         return;
     }
 
@@ -1448,15 +1420,17 @@ export function exportTimersToCSV(timers) {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    import('./main.js').then(m => m.showAlert('success', 'CSV Esportato', `${timers.length} timer esportati con successo.`));
+    const m = await import('./main.js');
+    m.showAlert('success', 'CSV Esportato', `${timers.length} timer esportati con successo.`);
 }
 
 // ============================================
 // Export PDF Nativo
 // ============================================
-export function exportTimersToPDF(timers) {
+export async function exportTimersToPDF(timers) {
     if (!timers || timers.length === 0) {
-        import('./main.js').then(m => m.showAlert('info', 'Nessun Dato', 'Non ci sono timer da esportare.'));
+        const m = await import('./main.js');
+        m.showAlert('info', 'Nessun Dato', 'Non ci sono timer da esportare.');
         return;
     }
 
@@ -1619,5 +1593,6 @@ export function exportTimersToPDF(timers) {
     const fileName = `CronoReport_Timer_${new Date().toISOString().slice(0, 10)}.pdf`;
     doc.save(fileName);
 
-    import('./main.js').then(m => m.showAlert('success', 'PDF Esportato', `${timers.length} timer esportati in "${fileName}".`));
+    const mPdf = await import('./main.js');
+    mPdf.showAlert('success', 'PDF Esportato', `${timers.length} timer esportati in "${fileName}".`);
 }

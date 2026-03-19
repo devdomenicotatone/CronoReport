@@ -2,6 +2,7 @@
 import { gapiInited, gisInited, handleAuthClick, maybeEnableButtons } from './firebaseConfig.js';
 import { loadSavedTimers, getCurrentFilters, loadAvailableYears, loadClientsForFilter, updateQuickFilterBar, activeQuickYear, activeQuickMonth, populateMonthChips, displayTimers, setActiveQuickYear, setActiveQuickMonth, displayUnreportedAmounts, displayedTimers, activeStatusFilter, activeWorktypeFilter, setActiveStatusFilter, setActiveWorktypeFilter, applyAdvancedFilters, exportTimersToCSV, exportTimersToPDF } from './savedTimersData.js';
 import { attachSavedTimersListeners, deleteTimerById, formatDuration, getMonthName, formatDateTime } from './savedTimersUI.js';
+import * as notify from './notify.js';
 
 // Variabili globali
 let lastOperation = null;
@@ -58,12 +59,7 @@ export async function initializeSavedTimersEvents() {
                     unmarkFilteredTimers();
                     break;
                 default:
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Attenzione',
-                        text: 'Seleziona un\'azione da eseguire.',
-                        confirmButtonText: 'OK'
-                    });
+                    notify.warning('Attenzione', 'Seleziona un\'azione da eseguire.');
                     break;
             }
         });
@@ -73,12 +69,7 @@ export async function initializeSavedTimersEvents() {
         undoActionBtn.addEventListener('click', () => {
             console.log("Cliccato Annulla Ultima Operazione");
             if (!lastOperation) {
-                Swal.fire({
-                    icon: 'info',
-                    title: 'Nessuna Operazione da Annullare',
-                    text: 'Non ci sono operazioni recenti da annullare.',
-                    confirmButtonText: 'OK'
-                });
+                notify.info('Nessuna Operazione da Annullare', 'Non ci sono operazioni recenti da annullare.');
                 return;
             }
 
@@ -96,12 +87,7 @@ export async function initializeSavedTimersEvents() {
                     undoDeleteYear(lastOperation);
                     break;
                 default:
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Errore',
-                        text: 'Operazione non riconosciuta.',
-                        confirmButtonText: 'OK'
-                    });
+                    notify.error('Errore', 'Operazione non riconosciuta.');
                     break;
             }
         });
@@ -194,7 +180,8 @@ export async function initializeSavedTimersEvents() {
             updateActionBar();
         });
 
-        // Row click → toggle checkbox (solo se click su area vuota della riga)
+        // Row click → toggle checkbox (SOLO se in "selection mode", cioè almeno 1 checkbox è checked)
+        // Pattern Gmail: prima selezione solo via checkbox, poi tutta la riga diventa cliccabile
         savedTimersList.addEventListener('click', (e) => {
             // Ignora click su checkbox, input, select, button, a, e campi editabili
             const tag = e.target.tagName.toLowerCase();
@@ -203,6 +190,10 @@ export async function initializeSavedTimersEvents() {
 
             const row = e.target.closest('.tl-timer-row');
             if (!row) return;
+
+            // Se nessuna checkbox è selezionata, NON attivare selection mode via row click
+            const anyChecked = savedTimersList.querySelector('.timer-checkbox:checked');
+            if (!anyChecked) return;
 
             const checkbox = row.querySelector('.timer-checkbox');
             if (!checkbox) return;
@@ -286,49 +277,35 @@ export async function initializeSavedTimersEvents() {
     // Elimina selezionati
     const deleteSelectedBtn = document.getElementById('st-action-delete');
     if (deleteSelectedBtn) {
-        deleteSelectedBtn.addEventListener('click', () => {
+        deleteSelectedBtn.addEventListener('click', async () => {
             const ids = getSelectedTimerIds();
             if (ids.length === 0) return;
-            Swal.fire({
-                title: 'Sei sicuro?',
-                text: `Vuoi eliminare ${ids.length} timer selezionati?`,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Sì, elimina!',
-                cancelButtonText: 'Annulla'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    bulkDeleteTimers(ids);
-                }
-            });
+            const confirmed = await notify.confirm('Sei sicuro?', `Vuoi eliminare ${ids.length} timer selezionati?`, { confirmText: 'Si, elimina!' });
+            if (confirmed) bulkDeleteTimers(ids);
         });
     }
 
     // Esporta selezionati
     const exportSelectedBtn = document.getElementById('st-action-export');
     if (exportSelectedBtn) {
-        exportSelectedBtn.addEventListener('click', () => {
+        exportSelectedBtn.addEventListener('click', async () => {
             const ids = getSelectedTimerIds();
             if (ids.length === 0) return;
             const selectedTimers = displayedTimers.filter(t => ids.includes(t.id));
-            // Mostra opzioni export
-            Swal.fire({
+            const result = await Swal.fire({
                 title: 'Esporta Selezionati',
                 text: `Esporta ${ids.length} timer selezionati come:`,
                 showDenyButton: true,
-                confirmButtonText: '📄 CSV',
-                denyButtonText: '📑 PDF',
+                confirmButtonText: 'CSV',
+                denyButtonText: 'PDF',
                 denyButtonColor: '#ef4444',
                 confirmButtonColor: '#6366f1',
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    exportTimersToCSV(selectedTimers);
-                } else if (result.isDenied) {
-                    exportTimersToPDF(selectedTimers);
-                }
             });
+            if (result.isConfirmed) {
+                exportTimersToCSV(selectedTimers);
+            } else if (result.isDenied) {
+                exportTimersToPDF(selectedTimers);
+            }
         });
     }
 
@@ -435,22 +412,23 @@ function getSelectedTimerIds() {
     return Array.from(document.querySelectorAll('.timer-checkbox:checked')).map(cb => cb.value);
 }
 
-function markTimersReportedStatus(timerIds, isReported) {
+async function markTimersReportedStatus(timerIds, isReported) {
     const batch = db.batch();
     timerIds.forEach(id => {
         batch.update(db.collection('timeLogs').doc(id), { isReported });
     });
-    batch.commit().then(() => {
+    try {
+        await batch.commit();
         lastOperation = { action: 'unmark', timerIds };
-        import('./main.js').then(m => m.showAlert('success', 'Aggiornato', `${timerIds.length} timer aggiornati.`));
+        notify.success('Aggiornato', `${timerIds.length} timer aggiornati.`);
         loadSavedTimers(getCurrentFilters());
-    }).catch(err => {
+    } catch (err) {
         console.error('Errore bulk update:', err);
-        import('./main.js').then(m => m.showAlert('error', 'Errore', 'Si è verificato un errore.'));
-    });
+        notify.error('Errore', 'Si e verificato un errore.');
+    }
 }
 
-function bulkDeleteTimers(timerIds) {
+async function bulkDeleteTimers(timerIds) {
     const batch = db.batch();
     timerIds.forEach(id => {
         batch.update(db.collection('timeLogs').doc(id), {
@@ -458,14 +436,15 @@ function bulkDeleteTimers(timerIds) {
             deletedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
     });
-    batch.commit().then(() => {
+    try {
+        await batch.commit();
         lastOperation = { action: 'bulkDelete', timerIds };
-        import('./main.js').then(m => m.showAlert('success', 'Eliminati', `${timerIds.length} timer spostati nel cestino.`));
+        notify.success('Eliminati', `${timerIds.length} timer spostati nel cestino.`);
         loadSavedTimers(getCurrentFilters());
-    }).catch(err => {
+    } catch (err) {
         console.error('Errore bulk delete:', err);
-        import('./main.js').then(m => m.showAlert('error', 'Errore', 'Si è verificato un errore.'));
-    });
+        notify.error('Errore', 'Si e verificato un errore.');
+    }
 }
 
 function reapplyFiltersAndDisplay() {
@@ -487,7 +466,7 @@ function reapplyFiltersAndDisplay() {
 
 
 
-export function undoDeleteYear(operation) {
+export async function undoDeleteYear(operation) {
     const { clientName, year, timerIds, yearSection } = operation;
     const batch = db.batch();
 
@@ -499,8 +478,8 @@ export function undoDeleteYear(operation) {
         });
     });
 
-    batch.commit().then(() => {
-        // Re-inserisci la sezione dell'anno nell'interfaccia
+    try {
+        await batch.commit();
         const clientSections = document.querySelectorAll('.cr-card');
         let inserted = false;
 
@@ -514,29 +493,18 @@ export function undoDeleteYear(operation) {
         });
 
         if (!inserted) {
-            // Se la sezione del cliente non esiste più, ricarica i timer
             loadSavedTimers(getCurrentFilters());
         }
 
         lastOperation = null;
-        Swal.fire({
-            icon: 'success',
-            title: 'Operazione Annullata',
-            text: `L'eliminazione dell'anno ${year} per il cliente ${clientName} è stata annullata.`,
-            confirmButtonText: 'OK'
-        });
-    }).catch(error => {
+        notify.success('Operazione Annullata', `L'eliminazione dell'anno ${year} per il cliente ${clientName} e stata annullata.`);
+    } catch (error) {
         console.error('Errore durante l\'annullamento dell\'eliminazione dell\'anno:', error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Errore',
-            text: 'Si è verificato un errore durante il ripristino dei timer.',
-            confirmButtonText: 'OK'
-        });
-    });
+        notify.error('Errore', 'Si e verificato un errore durante il ripristino dei timer.');
+    }
 }
 
-export function undoDeleteMonth(operation) {
+export async function undoDeleteMonth(operation) {
     const { clientName, year, month, timerIds, monthSection } = operation;
     const batch = db.batch();
 
@@ -548,8 +516,8 @@ export function undoDeleteMonth(operation) {
         });
     });
 
-    batch.commit().then(() => {
-        // Re-inserisci la sezione del mese nell'interfaccia
+    try {
+        await batch.commit();
         const yearSections = document.querySelectorAll('.cr-card');
         let inserted = false;
 
@@ -563,106 +531,61 @@ export function undoDeleteMonth(operation) {
         });
 
         if (!inserted) {
-            // Se la sezione dell'anno non esiste più, ricarica i timer
             loadSavedTimers(getCurrentFilters());
         }
 
         lastOperation = null;
-        Swal.fire({
-            icon: 'success',
-            title: 'Operazione Annullata',
-            text: `L'eliminazione del mese ${month} per l'anno ${year} è stata annullata.`,
-            confirmButtonText: 'OK'
-        });
-    }).catch(error => {
+        notify.success('Operazione Annullata', `L'eliminazione del mese ${month} per l'anno ${year} e stata annullata.`);
+    } catch (error) {
         console.error('Errore durante l\'annullamento dell\'eliminazione del mese:', error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Errore',
-            text: 'Si è verificato un errore durante il ripristino dei timer.',
-            confirmButtonText: 'OK'
-        });
-    });
+        notify.error('Errore', 'Si e verificato un errore durante il ripristino dei timer.');
+    }
 }
 
-export function deleteMonthTimers(clientName, year, month, monthSection) {
-    Swal.fire({
-        title: 'Sei sicuro?',
-        text: `Vuoi eliminare tutti i timer del mese di ${getMonthName(parseInt(month))} ${year} per il cliente ${clientName}?`,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#6c757d',
-        confirmButtonText: 'Sì, elimina!',
-        cancelButtonText: 'Annulla'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            // Recupera tutti i timer del mese specificato per il cliente
-            db.collection('timeLogs')
+export async function deleteMonthTimers(clientName, year, month, monthSection) {
+    const confirmed = await notify.confirm(
+        'Sei sicuro?',
+        `Vuoi eliminare tutti i timer del mese di ${getMonthName(parseInt(month))} ${year} per il cliente ${clientName}?`,
+        { confirmText: 'Sì, elimina!' }
+    );
+    if (confirmed) {
+        try {
+            const snapshot = await db.collection('timeLogs')
                 .where('uid', '==', currentUser.uid)
                 .where('isDeleted', '==', false)
                 .where('clientName', '==', clientName)
-                .get()
-                .then(snapshot => {
-                    const batch = db.batch();
-                    const timerIds = [];
+                .get();
+            const batch = db.batch();
+            const timerIds = [];
 
-                    snapshot.forEach(doc => {
-                        const logData = doc.data();
-                        const startTime = logData.startTime.toDate();
-                        const timerYear = startTime.getFullYear();
-                        const timerMonth = String(startTime.getMonth() + 1).padStart(2, '0');
+            snapshot.forEach(doc => {
+                const logData = doc.data();
+                const startTime = logData.startTime.toDate();
+                const timerYear = startTime.getFullYear();
+                const timerMonth = String(startTime.getMonth() + 1).padStart(2, '0');
 
-                        if (timerYear === parseInt(year) && timerMonth === month) {
-                            const timerRef = db.collection('timeLogs').doc(doc.id);
-                            batch.update(timerRef, {
-                                isDeleted: true,
-                                deletedAt: firebase.firestore.FieldValue.serverTimestamp()
-                            });
-                            timerIds.push(doc.id);
-                        }
+                if (timerYear === parseInt(year) && timerMonth === month) {
+                    const timerRef = db.collection('timeLogs').doc(doc.id);
+                    batch.update(timerRef, {
+                        isDeleted: true,
+                        deletedAt: firebase.firestore.FieldValue.serverTimestamp()
                     });
+                    timerIds.push(doc.id);
+                }
+            });
 
-                    batch.commit().then(() => {
-                        // Rimuovi la sezione del mese dall'interfaccia
-                        monthSection.parentNode.removeChild(monthSection);
-
-                        // Salva l'operazione per l'undo
-                        lastOperation = {
-                            action: 'deleteMonth',
-                            clientName: clientName,
-                            year: year,
-                            month: month,
-                            timerIds: timerIds,
-                            monthSection: monthSection
-                        };
-
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Mese Eliminato',
-                            text: `Tutti i timer del mese di ${getMonthName(parseInt(month))} ${year} per il cliente ${clientName} sono stati eliminati.`,
-                            confirmButtonText: 'OK'
-                        });
-                    }).catch(error => {
-                        console.error('Errore durante l\'eliminazione dei timer del mese:', error);
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Errore',
-                            text: 'Si è verificato un errore durante l\'eliminazione dei timer.',
-                            confirmButtonText: 'OK'
-                        });
-                    });
-                }).catch(error => {
-                    console.error('Errore durante il recupero dei timer del mese:', error);
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Errore',
-                        text: 'Si è verificato un errore durante il recupero dei timer.',
-                        confirmButtonText: 'OK'
-                    });
-                });
+            await batch.commit();
+            monthSection.parentNode.removeChild(monthSection);
+            lastOperation = {
+                action: 'deleteMonth',
+                clientName, year, month, timerIds, monthSection
+            };
+            notify.success('Mese Eliminato', `Tutti i timer del mese di ${getMonthName(parseInt(month))} ${year} per il cliente ${clientName} sono stati eliminati.`);
+        } catch (error) {
+            console.error('Errore durante l\'eliminazione dei timer del mese:', error);
+            notify.error('Errore', 'Si e verificato un errore durante l\'eliminazione dei timer.');
         }
-    });
+    }
 }
 
 // Funzione per filtrare i timer salvati
@@ -726,12 +649,7 @@ export function filterDisplayedTimers(searchTerm) {
 // Funzione per esportare i timer in Google Docs
 export async function exportTimersToGoogleDoc() {
     if (displayedTimers.length === 0) {
-        Swal.fire({
-            icon: 'info',
-            title: 'Nessun Dato',
-            text: 'Non ci sono timer da esportare.',
-            confirmButtonText: 'OK'
-        });
+        notify.info('Nessun Dato', 'Non ci sono timer da esportare.');
         return;
     }
 
@@ -754,12 +672,7 @@ export function proceedWithExportToGoogleDoc() {
 // Funzione per esportare i timer in Google Sheets
 export async function exportTimersToGoogleSheet() {
     if (displayedTimers.length === 0) {
-        Swal.fire({
-            icon: 'info',
-            title: 'Nessun Dato',
-            text: 'Non ci sono timer da esportare.',
-            confirmButtonText: 'OK'
-        });
+        notify.info('Nessun Dato', 'Non ci sono timer da esportare.');
         return;
     }
 
@@ -832,113 +745,89 @@ export function generateTimersReportValues(timers) {
 }
 
 // Funzioni per creare il documento Google Docs
-export function createGoogleDoc(reportContent, fileName) {
-    gapi.client.docs.documents.create({
-        title: fileName
-    }).then((response) => {
+export async function createGoogleDoc(reportContent, fileName) {
+    try {
+        const response = await gapi.client.docs.documents.create({
+            title: fileName
+        });
         const documentId = response.result.documentId;
-
-        // Inserisci il contenuto nel documento
         insertContentIntoDoc(documentId, reportContent);
-    }, (error) => {
+    } catch (error) {
         console.error('Errore durante la creazione del documento:', error);
-    });
+    }
 }
 
-export function insertContentIntoDoc(documentId, reportContent) {
-    const requests = [];
-
-    // Aggiungi il testo al documento
-    requests.push({
+export async function insertContentIntoDoc(documentId, reportContent) {
+    const requests = [{
         insertText: {
-            location: {
-                index: 1 // Inserisci dopo l'inizio del documento
-            },
+            location: { index: 1 },
             text: reportContent
         }
-    });
+    }];
 
-    gapi.client.docs.documents.batchUpdate({
-        documentId: documentId,
-        requests: requests
-    }).then((response) => {
+    try {
+        const response = await gapi.client.docs.documents.batchUpdate({
+            documentId: documentId,
+            requests: requests
+        });
         console.log('Contenuto inserito nel documento:', response);
-        // Apri il documento in una nuova scheda
         window.open(`https://docs.google.com/document/d/${documentId}/edit`, '_blank');
-    }, (error) => {
+    } catch (error) {
         console.error('Errore durante l\'inserimento del contenuto:', error);
-    });
+    }
 }
 
 // Funzioni per creare il foglio Google Sheets
-export function createGoogleSheet(reportValues, fileName) {
-    gapi.client.sheets.spreadsheets.create({
-        properties: {
-            title: fileName
-        }
-    }).then((response) => {
+export async function createGoogleSheet(reportValues, fileName) {
+    try {
+        const response = await gapi.client.sheets.spreadsheets.create({
+            properties: {
+                title: fileName
+            }
+        });
         const spreadsheetId = response.result.spreadsheetId;
         const sheetName = response.result.sheets[0].properties.title;
-
-        // Inserisci i dati nel foglio
         insertDataIntoSheet(spreadsheetId, sheetName, reportValues);
-    }, (error) => {
+    } catch (error) {
         console.error('Errore durante la creazione del foglio di calcolo:', error);
-    });
+    }
 }
 
-export function insertDataIntoSheet(spreadsheetId, sheetName, reportValues) {
+export async function insertDataIntoSheet(spreadsheetId, sheetName, reportValues) {
     const range = `${sheetName}!A1`;
 
-    gapi.client.sheets.spreadsheets.values.update({
-        spreadsheetId: spreadsheetId,
-        range: range,
-        valueInputOption: 'RAW',
-        values: reportValues
-    }).then((response) => {
+    try {
+        const response = await gapi.client.sheets.spreadsheets.values.update({
+            spreadsheetId: spreadsheetId,
+            range: range,
+            valueInputOption: 'RAW',
+            values: reportValues
+        });
         console.log('Dati inseriti nel foglio di calcolo:', response);
-        // Apri il foglio di calcolo in una nuova scheda
         window.open(`https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`, '_blank');
-    }, (error) => {
+    } catch (error) {
         console.error('Errore durante l\'inserimento dei dati:', error);
-    });
+    }
 }
 
 // Funzione per rimuovere il contrassegno a tutti i timer
-export function unmarkAllTimers() {
-    Swal.fire({
-        title: 'Sei sicuro?',
-        text: 'Vuoi rimuovere il contrassegno da tutti i timer?',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#6c757d',
-        confirmButtonText: 'Sì, rimuovi!',
-        cancelButtonText: 'Annulla'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            db.collection('timeLogs')
-                .where('uid', '==', currentUser.uid)
-                .where('isDeleted', '==', false)
-                .get()
-                .then(snapshot => {
-                    const timerIds = snapshot.docs.map(doc => doc.id);
-                    unmarkTimers(timerIds);
-                });
-        }
-    });
+export async function unmarkAllTimers() {
+    const confirmed = await notify.confirm('Sei sicuro?', 'Vuoi rimuovere il contrassegno da tutti i timer?', { confirmText: 'Sì, rimuovi!' });
+    if (confirmed) {
+        const snapshot = await db.collection('timeLogs')
+            .where('uid', '==', currentUser.uid)
+            .where('isDeleted', '==', false)
+            .get();
+        const timerIds = snapshot.docs.map(doc => doc.id);
+        unmarkTimers(timerIds);
+    }
 }
 
 // Funzione per rimuovere il contrassegno ai timer selezionati
 export function unmarkSelectedTimers() {
     const selectedTimers = Array.from(document.querySelectorAll('.timer-checkbox:checked')).map(checkbox => checkbox.value);
     if (selectedTimers.length === 0) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Attenzione',
-            text: 'Seleziona almeno un timer per rimuovere il contrassegno.',
-            confirmButtonText: 'OK'
-        });
+        notify.warning('Attenzione', 'Seleziona almeno un timer per rimuovere il contrassegno.');
         return;
     }
     unmarkTimers(selectedTimers);
@@ -948,84 +837,63 @@ export function unmarkSelectedTimers() {
 export function unmarkFilteredTimers() {
     const timerIds = displayedTimers.map(timer => timer.id);
     if (timerIds.length === 0) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Attenzione',
-            text: 'Non ci sono timer filtrati da cui rimuovere il contrassegno.',
-            confirmButtonText: 'OK'
-        });
+        notify.warning('Attenzione', 'Non ci sono timer filtrati da cui rimuovere il contrassegno.');
         return;
     }
     unmarkTimers(timerIds);
 }
 
 // Funzione per rimuovere il contrassegno ai timer specificati
-export function unmarkTimers(timerIds) {
+export async function unmarkTimers(timerIds) {
     const batch = db.batch();
     timerIds.forEach(timerId => {
         const timerRef = db.collection('timeLogs').doc(timerId);
         batch.update(timerRef, { isReported: false });
     });
 
-    batch.commit().then(() => {
+    try {
+        await batch.commit();
         lastOperation = {
             action: 'unmark',
             timerIds: timerIds
         };
-        Swal.fire({
-            icon: 'success',
-            title: 'Contrassegno Rimosso',
-            text: 'Il contrassegno è stato rimosso dai timer selezionati.',
-            confirmButtonText: 'OK'
-        });
-        // Aggiorna la visualizzazione
+        notify.success('Contrassegno Rimosso', 'Il contrassegno e stato rimosso dai timer selezionati.');
         loadSavedTimers(getCurrentFilters());
-    }).catch(error => {
+    } catch (error) {
         console.error('Errore durante la rimozione del contrassegno:', error);
-    });
+    }
 }
 
 // Funzione per annullare la rimozione del contrassegno
-export function undoUnmarkTimers(timerIds) {
+export async function undoUnmarkTimers(timerIds) {
     const batch = db.batch();
     timerIds.forEach(timerId => {
         const timerRef = db.collection('timeLogs').doc(timerId);
         batch.update(timerRef, { isReported: true });
     });
 
-    batch.commit().then(() => {
+    try {
+        await batch.commit();
         lastOperation = null;
-        Swal.fire({
-            icon: 'success',
-            title: 'Operazione Annullata',
-            text: 'La rimozione del contrassegno è stata annullata.',
-            confirmButtonText: 'OK'
-        });
-        // Aggiorna la visualizzazione
+        notify.success('Operazione Annullata', 'La rimozione del contrassegno e stata annullata.');
         loadSavedTimers(getCurrentFilters());
-    }).catch(error => {
+    } catch (error) {
         console.error('Errore durante l\'annullamento della rimozione del contrassegno:', error);
-    });
+    }
 }
 
-// Funzione per annullare l'eliminazione di un timer
-export function undoDeleteTimer(timerId) {
-    db.collection('timeLogs').doc(timerId).update({
-        isDeleted: false,
-        deletedAt: null
-    }).then(() => {
-        lastOperation = null;
-        Swal.fire({
-            icon: 'success',
-            title: 'Timer Ripristinato',
-            text: 'L\'eliminazione del timer è stata annullata.',
-            confirmButtonText: 'OK'
+export async function undoDeleteTimer(timerId) {
+    try {
+        await db.collection('timeLogs').doc(timerId).update({
+            isDeleted: false,
+            deletedAt: null
         });
-        // Aggiorna la visualizzazione
+        lastOperation = null;
+        notify.success('Timer Ripristinato', 'L\'eliminazione del timer e stata annullata.');
         loadSavedTimers(getCurrentFilters());
-    }).catch(error => {
+    } catch (error) {
         console.error('Errore durante il ripristino del timer:', error);
-    });
+    }
 }
 
 // Avvia l'inizializzazione dopo che l'utente è autenticato

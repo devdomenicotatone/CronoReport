@@ -1,4 +1,5 @@
 // reportEvents.js
+import * as notify from './notify.js';
 import { loadClients, loadProjects, loadWorktypes, loadSavedConfigs, saveReportConfig, generatePDF, generateReportContentString, generateReportValuesArray, exportReportToGoogleSheet, createGoogleDoc, createGoogleSheet, extractDomainName, displayLogoPreview, clearLogoPreview, applySavedConfig } from './reportConfig.js';
 import { gapiInited, gisInited, handleAuthClick, maybeEnableButtons, initializeGoogleApiClient } from './firebaseConfig.js';
 import { formatDuration } from './timerHelpers.js';
@@ -25,24 +26,23 @@ export function initializeReportEvents() {
 }
 
 // Funzione per caricare le tariffe orarie dei tipi di lavoro
-export function loadWorktypeRates() {
-    return db.collection('worktypes')
-        .where('uid', '==', currentUser.uid)
-        .get()
-        .then(snapshot => {
-            snapshot.forEach(doc => {
-                const worktypeData = doc.data();
-                worktypeRates[doc.id] = worktypeData.hourlyRate || 0;
-            });
-            return worktypeRates;
-        })
-        .catch(error => {
-            console.error('Errore nel caricamento delle tariffe dei tipi di lavoro:', error);
+export async function loadWorktypeRates() {
+    try {
+        const snapshot = await db.collection('worktypes')
+            .where('uid', '==', currentUser.uid)
+            .get();
+        snapshot.forEach(doc => {
+            const worktypeData = doc.data();
+            worktypeRates[doc.id] = worktypeData.hourlyRate || 0;
         });
+        return worktypeRates;
+    } catch (error) {
+        console.error('Errore nel caricamento delle tariffe dei tipi di lavoro:', error);
+    }
 }
 
 // Funzione per impostare la sezione Report
-export function setupReportSection() {
+export async function setupReportSection() {
     const reportForm = document.getElementById('report-form');
     const downloadPdfBtn = document.getElementById('download-pdf-btn');
     const exportGoogleDocBtn = document.getElementById('export-google-doc-btn');
@@ -363,7 +363,7 @@ export function setupReportSection() {
         saveConfigBtn.addEventListener('click', () => {
             const configName = document.getElementById('config-name').value.trim();
             if (!configName) {
-                Swal.fire({ icon: 'info', title: 'Nome mancante', text: 'Inserisci un nome per il preset.', confirmButtonText: 'OK' });
+                notify.info('Nome mancante', 'Inserisci un nome per il preset.');
                 return;
             }
             const config = {
@@ -378,7 +378,7 @@ export function setupReportSection() {
     // === SAVE DRAFT ===
     const saveDraftBtn = document.getElementById('rw-save-draft-btn');
 
-    saveDraftBtn.addEventListener('click', () => {
+    saveDraftBtn.addEventListener('click', async () => {
         const reportHeader = document.getElementById('report-header').value.trim();
         const startDateVal = startDateInput.value;
         const endDateVal = endDateInput.value;
@@ -391,7 +391,7 @@ export function setupReportSection() {
         const reportNotes = document.getElementById('report-notes').value.trim();
 
         if (!reportHeader && !clientId) {
-            Swal.fire({ icon: 'info', title: 'Nessun dato', text: 'Compila almeno l\'intestazione o seleziona un cliente prima di salvare la bozza.', confirmButtonText: 'OK' });
+            notify.info('Nessun dato', 'Compila almeno l\'intestazione o seleziona un cliente prima di salvare la bozza.');
             return;
         }
 
@@ -420,21 +420,13 @@ export function setupReportSection() {
             isDeleted: false
         };
 
-        db.collection('reportDrafts').add(draft)
-            .then(() => {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Bozza salvata!',
-                    text: 'La configurazione è stata salvata. Puoi riprenderla dallo Storico Report.',
-                    confirmButtonText: 'OK',
-                    timer: 2500,
-                    timerProgressBar: true
-                });
-            })
-            .catch(error => {
-                console.error('Errore salvataggio bozza:', error);
-                Swal.fire({ icon: 'error', title: 'Errore', text: 'Impossibile salvare la bozza.', confirmButtonText: 'OK' });
-            });
+        try {
+            await db.collection('reportDrafts').add(draft);
+            notify.success('Bozza salvata!', 'La configurazione è stata salvata. Puoi riprenderla dallo Storico Report.');
+        } catch (error) {
+            console.error('Errore salvataggio bozza:', error);
+            notify.error('Errore', 'Impossibile salvare la bozza.');
+        }
     });
 
     // === LOAD DRAFT (from Storico Report) ===
@@ -590,7 +582,7 @@ export function setupReportSection() {
         requestAnimationFrame(() => { scrollEl.scrollTop = scrollY; });
     }
 
-    function loadPreview() {
+    async function loadPreview() {
         const startVal = startDateInput.value;
         const endVal = endDateInput.value;
         const clientId = filterClientSelect.value;
@@ -626,7 +618,8 @@ export function setupReportSection() {
         endDate.setHours(23, 59, 59, 999);
 
         // Load worktype rates first
-        loadWorktypeRates().then(() => {
+        try {
+            await loadWorktypeRates();
             let query = db.collection('timeLogs')
                 .where('uid', '==', currentUser.uid)
                 .where('isDeleted', '==', false)
@@ -638,8 +631,7 @@ export function setupReportSection() {
             if (worktypeId) query = query.where('worktypeId', '==', worktypeId);
             query = query.where('isReported', '==', false);
 
-            return query.orderBy('startTime', 'asc').get();
-        }).then(snapshot => {
+            const snapshot = await query.orderBy('startTime', 'asc').get();
             let totalHours = 0;
             let totalAmount = 0;
             let count = 0;
@@ -673,231 +665,231 @@ export function setupReportSection() {
             // Store for later (including timerIds for mark-as-reported)
             lastPreviewData = { totalHours, totalAmount, count, allRows, timerIds };
             renderWysiwygPreview(lastPreviewData);
-        }).catch(error => {
+        } catch (error) {
             console.error('Errore anteprima:', error);
             document.getElementById('rw-preview-container').innerHTML = `
-                <div class="rw-empty-preview">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <p>Errore nel caricamento dell'anteprima</p>
-                </div>
-            `;
+            <div class="rw-empty-preview">
+                <i class="fas fa-exclamation-triangle"></i>
+                <p>Errore nel caricamento dell'anteprima</p>
+            </div>
+        `;
             if (generateBtn) generateBtn.disabled = true;
-        });
+        }
     }
 
     function renderWysiwygPreview(data) {
-            const { totalHours, totalAmount, count, allRows } = data;
-            const groupBy = groupBySelect.value;
-            const activeCols = getActiveColumns();
+        const { totalHours, totalAmount, count, allRows } = data;
+        const groupBy = groupBySelect.value;
+        const activeCols = getActiveColumns();
 
-            // === Build WYSIWYG preview ===
-            const container = document.getElementById('rw-preview-container');
-            if (count === 0) {
-                container.innerHTML = `
+        // === Build WYSIWYG preview ===
+        const container = document.getElementById('rw-preview-container');
+        if (count === 0) {
+            container.innerHTML = `
                     <div class="rw-empty-preview">
                         <i class="fas fa-inbox"></i>
                         <p>Nessun timer trovato per il periodo e i filtri selezionati</p>
                     </div>
                 `;
-                if (generateBtn) generateBtn.disabled = true;
-                return;
+            if (generateBtn) generateBtn.disabled = true;
+            return;
+        }
+
+        // Column header labels
+        const colLabels = {
+            date: 'Data', worktype: 'Tipo', project: 'Progetto',
+            link: 'Link', note: 'Note', duration: 'Durata',
+            rate: 'Tariffa', amount: 'Importo'
+        };
+
+        // Column width strategy: fixed for predictable content, auto for text
+        const colWidths = {
+            date: '110px', worktype: 'auto', project: 'auto',
+            link: 'auto', note: 'auto', duration: '95px',
+            rate: '90px', amount: '100px'
+        };
+
+        // Build colgroup
+        let colgroup = '<colgroup>';
+        activeCols.forEach(col => {
+            const w = colWidths[col] || 'auto';
+            colgroup += w === 'auto' ? '<col>' : `<col style="width:${w};">`;
+        });
+        colgroup += '</colgroup>';
+
+        // Build table header
+        let thead = '<tr>';
+        activeCols.forEach(col => {
+            const align = (col === 'amount' || col === 'rate') ? ' style="text-align:right;"' : '';
+            thead += `<th${align}>${colLabels[col]}</th>`;
+        });
+        thead += '</tr>';
+
+        // Group rows
+        let groups;
+        if (groupBy === 'none') {
+            groups = [{ label: null, rows: allRows }];
+        } else {
+            const groupMap = {};
+            allRows.forEach(row => {
+                let key;
+                if (groupBy === 'date') key = row.date;
+                else if (groupBy === 'worktype') key = row.workType;
+                else if (groupBy === 'project') key = row.project;
+                else key = 'Altro';
+                if (!groupMap[key]) groupMap[key] = [];
+                groupMap[key].push(row);
+            });
+            groups = Object.entries(groupMap).map(([label, rows]) => ({ label, rows }));
+        }
+
+        // Render cell value
+        function cellVal(row, col) {
+            switch (col) {
+                case 'date': return row.date;
+                case 'worktype': return row.workType;
+                case 'project': return row.project;
+                case 'link': return row.link ? `<a href="${row.link}" target="_blank" class="text-indigo-500 hover:underline text-xs">${row.link.replace(/https?:\/\/(www\.)?/, '').substring(0, 30)}…</a>` : '—';
+                case 'note': return row.note ? `<span class="text-xs text-surface-500">${row.note.length > 50 ? row.note.substring(0, 50) + '…' : row.note}</span>` : '—';
+                case 'duration': return row.hours;
+                case 'rate': return `€ ${row.rate.toFixed(2)}`;
+                case 'amount': return `€ ${row.amount.toFixed(2)}`;
+                default: return '';
             }
+        }
 
-            // Column header labels
-            const colLabels = {
-                date: 'Data', worktype: 'Tipo', project: 'Progetto',
-                link: 'Link', note: 'Note', duration: 'Durata',
-                rate: 'Tariffa', amount: 'Importo'
-            };
-
-            // Column width strategy: fixed for predictable content, auto for text
-            const colWidths = {
-                date: '110px', worktype: 'auto', project: 'auto',
-                link: 'auto', note: 'auto', duration: '95px',
-                rate: '90px', amount: '100px'
-            };
-
-            // Build colgroup
-            let colgroup = '<colgroup>';
-            activeCols.forEach(col => {
-                const w = colWidths[col] || 'auto';
-                colgroup += w === 'auto' ? '<col>' : `<col style="width:${w};">`;
-            });
-            colgroup += '</colgroup>';
-
-            // Build table header
-            let thead = '<tr>';
-            activeCols.forEach(col => {
-                const align = (col === 'amount' || col === 'rate') ? ' style="text-align:right;"' : '';
-                thead += `<th${align}>${colLabels[col]}</th>`;
-            });
-            thead += '</tr>';
-
-            // Group rows
-            let groups;
-            if (groupBy === 'none') {
-                groups = [{ label: null, rows: allRows }];
-            } else {
-                const groupMap = {};
-                allRows.forEach(row => {
-                    let key;
-                    if (groupBy === 'date') key = row.date;
-                    else if (groupBy === 'worktype') key = row.workType;
-                    else if (groupBy === 'project') key = row.project;
-                    else key = 'Altro';
-                    if (!groupMap[key]) groupMap[key] = [];
-                    groupMap[key].push(row);
+        // Build table body
+        let tbody = '';
+        groups.forEach(group => {
+            if (group.label) {
+                tbody += `<tr class="rw-group-header"><td colspan="${activeCols.length}">${group.label}</td></tr>`;
+            }
+            let rowIdx = 0;
+            group.rows.forEach(row => {
+                const zebraClass = rowIdx % 2 === 1 ? ' class="rw-row-alt"' : '';
+                tbody += `<tr${zebraClass}>`;
+                activeCols.forEach(col => {
+                    const align = (col === 'amount' || col === 'rate') ? ' style="text-align:right; font-weight:600;"' : '';
+                    tbody += `<td${align}>${cellVal(row, col)}</td>`;
                 });
-                groups = Object.entries(groupMap).map(([label, rows]) => ({ label, rows }));
-            }
-
-            // Render cell value
-            function cellVal(row, col) {
-                switch (col) {
-                    case 'date': return row.date;
-                    case 'worktype': return row.workType;
-                    case 'project': return row.project;
-                    case 'link': return row.link ? `<a href="${row.link}" target="_blank" class="text-indigo-500 hover:underline text-xs">${row.link.replace(/https?:\/\/(www\.)?/, '').substring(0, 30)}…</a>` : '—';
-                    case 'note': return row.note ? `<span class="text-xs text-surface-500">${row.note.length > 50 ? row.note.substring(0, 50) + '…' : row.note}</span>` : '—';
-                    case 'duration': return row.hours;
-                    case 'rate': return `€ ${row.rate.toFixed(2)}`;
-                    case 'amount': return `€ ${row.amount.toFixed(2)}`;
-                    default: return '';
-                }
-            }
-
-            // Build table body
-            let tbody = '';
-            groups.forEach(group => {
-                if (group.label) {
-                    tbody += `<tr class="rw-group-header"><td colspan="${activeCols.length}">${group.label}</td></tr>`;
-                }
-                let rowIdx = 0;
-                group.rows.forEach(row => {
-                    const zebraClass = rowIdx % 2 === 1 ? ' class="rw-row-alt"' : '';
-                    tbody += `<tr${zebraClass}>`;
-                    activeCols.forEach(col => {
-                        const align = (col === 'amount' || col === 'rate') ? ' style="text-align:right; font-weight:600;"' : '';
-                        tbody += `<td${align}>${cellVal(row, col)}</td>`;
-                    });
-                    tbody += '</tr>';
-                    rowIdx++;
-                });
-                // Sub-total per group
-                if (group.label && groups.length > 1) {
-                    const gHours = group.rows.reduce((s, r) => s + r.durationSec, 0);
-                    const gAmount = group.rows.reduce((s, r) => s + r.amount, 0);
-                    const gHH = Math.floor(gHours / 3600);
-                    const gMM = Math.floor((gHours % 3600) / 60);
-                    tbody += `<tr class="rw-group-subtotal">`;
-                    activeCols.forEach((col, i) => {
-                        if (col === 'duration') tbody += `<td style="text-align:right;">${gHH}h ${gMM.toString().padStart(2, '0')}m</td>`;
-                        else if (col === 'amount') tbody += `<td style="text-align:right;">€ ${gAmount.toFixed(2)}</td>`;
-                        else if (i === 0) tbody += `<td><strong>Subtotale</strong></td>`;
-                        else tbody += `<td></td>`;
-                    });
-                    tbody += '</tr>';
-                }
+                tbody += '</tr>';
+                rowIdx++;
             });
+            // Sub-total per group
+            if (group.label && groups.length > 1) {
+                const gHours = group.rows.reduce((s, r) => s + r.durationSec, 0);
+                const gAmount = group.rows.reduce((s, r) => s + r.amount, 0);
+                const gHH = Math.floor(gHours / 3600);
+                const gMM = Math.floor((gHours % 3600) / 60);
+                tbody += `<tr class="rw-group-subtotal">`;
+                activeCols.forEach((col, i) => {
+                    if (col === 'duration') tbody += `<td style="text-align:right;">${gHH}h ${gMM.toString().padStart(2, '0')}m</td>`;
+                    else if (col === 'amount') tbody += `<td style="text-align:right;">€ ${gAmount.toFixed(2)}</td>`;
+                    else if (i === 0) tbody += `<td><strong>Subtotale</strong></td>`;
+                    else tbody += `<td></td>`;
+                });
+                tbody += '</tr>';
+            }
+        });
 
-            // WYSIWYG wrapper
-            const reportHeader = document.getElementById('report-header').value.trim() || 'Report';
-            const reportNotes = document.getElementById('report-notes').value.trim();
-            const clientName = filterClientSelect.options[filterClientSelect.selectedIndex]?.text || '';
-            const logoSrc = companyLogoBase64;
-            const tpl = getActiveTemplate();
-            const accent = getAccentColor();
-            const startVal = startDateInput.value;
-            const endVal = endDateInput.value;
-            // Executive: no separate KPI (data is in totals)
+        // WYSIWYG wrapper
+        const reportHeader = document.getElementById('report-header').value.trim() || 'Report';
+        const reportNotes = document.getElementById('report-notes').value.trim();
+        const clientName = filterClientSelect.options[filterClientSelect.selectedIndex]?.text || '';
+        const logoSrc = companyLogoBase64;
+        const tpl = getActiveTemplate();
+        const accent = getAccentColor();
+        const startVal = startDateInput.value;
+        const endVal = endDateInput.value;
+        // Executive: no separate KPI (data is in totals)
 
-            let wysiwygHtml = `<div class="rw-wysiwyg-preview rw-tpl-${tpl}" style="--rw-accent:${accent};">`;
-            // Accent line
-            wysiwygHtml += `<div class="rw-accent-line" style="height:${tpl === 'executive' ? '5px' : tpl === 'minimal' ? '2px' : '3px'}; background:${accent};"></div>`;
-            // Header
-            wysiwygHtml += `<div class="rw-wysiwyg-header">`;
-            wysiwygHtml += `<div>
+        let wysiwygHtml = `<div class="rw-wysiwyg-preview rw-tpl-${tpl}" style="--rw-accent:${accent};">`;
+        // Accent line
+        wysiwygHtml += `<div class="rw-accent-line" style="height:${tpl === 'executive' ? '5px' : tpl === 'minimal' ? '2px' : '3px'}; background:${accent};"></div>`;
+        // Header
+        wysiwygHtml += `<div class="rw-wysiwyg-header">`;
+        wysiwygHtml += `<div>
                 <div class="rw-wysiwyg-title">${reportHeader}</div>
                 <div class="rw-wysiwyg-meta">${clientName} · ${new Date(startVal).toLocaleDateString('it-IT')} — ${new Date(endVal).toLocaleDateString('it-IT')} · ${count} timer</div>
             </div>`;
-            if (logoSrc) wysiwygHtml += `<img src="${logoSrc}" alt="Logo" class="rw-wysiwyg-logo" style="margin-left:auto;">`;
-            wysiwygHtml += `</div>`;
-            wysiwygHtml += `<hr style="border-color:${accent};margin:0.5rem 0;">`;
+        if (logoSrc) wysiwygHtml += `<img src="${logoSrc}" alt="Logo" class="rw-wysiwyg-logo" style="margin-left:auto;">`;
+        wysiwygHtml += `</div>`;
+        wysiwygHtml += `<hr style="border-color:${accent};margin:0.5rem 0;">`;
 
-            const totalSec = Math.floor(totalHours * 3600);
-            const hh = Math.floor(totalSec / 3600);
-            const mm = Math.floor((totalSec % 3600) / 60);
+        const totalSec = Math.floor(totalHours * 3600);
+        const hh = Math.floor(totalSec / 3600);
+        const mm = Math.floor((totalSec % 3600) / 60);
 
-            // Executive KPI cards (before table)
-            if (tpl === 'executive') {
-                const formattedHrs = `${hh.toString().padStart(2,'0')}:${mm.toString().padStart(2,'0')}:${String(totalSec % 60).padStart(2,'0')}`;
-                wysiwygHtml += `<div class="rw-exec-kpi">
+        // Executive KPI cards (before table)
+        if (tpl === 'executive') {
+            const formattedHrs = `${hh.toString().padStart(2, '0')}:${mm.toString().padStart(2, '0')}:${String(totalSec % 60).padStart(2, '0')}`;
+            wysiwygHtml += `<div class="rw-exec-kpi">
                     <div class="rw-exec-kpi-card"><div class="rw-exec-kpi-val">${count}</div><div class="rw-exec-kpi-lbl">TIMER</div></div>
                     <div class="rw-exec-kpi-card"><div class="rw-exec-kpi-val">${formattedHrs}</div><div class="rw-exec-kpi-lbl">DURATA TOTALE</div></div>
                     <div class="rw-exec-kpi-card"><div class="rw-exec-kpi-val">€ ${totalAmount.toFixed(2)}</div><div class="rw-exec-kpi-lbl">IMPORTO TOTALE</div></div>
                 </div>`;
+        }
+
+        // Table
+        wysiwygHtml += `<table class="rw-preview-table">${colgroup}<thead>${thead}</thead><tbody>${tbody}</tbody></table>`;
+
+        // === Tax & Sconto calculations ===
+        const taxDiscount = getTaxDiscount();
+        const subtotal = totalAmount;
+        let discountAmt = 0;
+        if (taxDiscount.discountValue > 0) {
+            discountAmt = taxDiscount.discountType === 'percent'
+                ? subtotal * (taxDiscount.discountValue / 100)
+                : taxDiscount.discountValue;
+        }
+        const afterDiscount = Math.max(0, subtotal - discountAmt);
+        const ivaAmt = afterDiscount * (taxDiscount.iva / 100);
+        const grandTotal = afterDiscount + ivaAmt;
+        const hasTaxOrDiscount = taxDiscount.iva > 0 || taxDiscount.discountValue > 0;
+
+        const formattedHours = `${hh.toString().padStart(2, '0')}:${mm.toString().padStart(2, '0')}:${String(totalSec % 60).padStart(2, '0')}`;
+
+        // Totals box (matching PDF riepilogo)
+        wysiwygHtml += `<div class="rw-totals-box">`;
+        wysiwygHtml += `<div class="rw-totals-box-header" style="background:${accent};">RIEPILOGO TOTALI</div>`;
+        wysiwygHtml += `<div class="rw-totals-box-body">`;
+
+        if (hasTaxOrDiscount) {
+            wysiwygHtml += `<div class="rw-totals-row"><span class="rw-totals-row-label">Timer:</span><span class="rw-totals-row-value">${count}</span></div>`;
+            wysiwygHtml += `<div class="rw-totals-row"><span class="rw-totals-row-label">Totale Durata:</span><span class="rw-totals-row-value">${formattedHours}</span></div>`;
+            wysiwygHtml += `<div class="rw-totals-divider"></div>`;
+            wysiwygHtml += `<div class="rw-totals-row"><span class="rw-totals-row-label">Subtotale:</span><span class="rw-totals-row-value">€ ${subtotal.toFixed(2)}</span></div>`;
+            if (discountAmt > 0) {
+                const discLabel = taxDiscount.discountType === 'percent' ? `Sconto (${taxDiscount.discountValue}%):` : 'Sconto:';
+                wysiwygHtml += `<div class="rw-totals-row rw-totals-discount"><span class="rw-totals-row-label">${discLabel}</span><span class="rw-totals-row-value">- € ${discountAmt.toFixed(2)}</span></div>`;
             }
-
-            // Table
-            wysiwygHtml += `<table class="rw-preview-table">${colgroup}<thead>${thead}</thead><tbody>${tbody}</tbody></table>`;
-
-            // === Tax & Sconto calculations ===
-            const taxDiscount = getTaxDiscount();
-            const subtotal = totalAmount;
-            let discountAmt = 0;
-            if (taxDiscount.discountValue > 0) {
-                discountAmt = taxDiscount.discountType === 'percent'
-                    ? subtotal * (taxDiscount.discountValue / 100)
-                    : taxDiscount.discountValue;
+            if (taxDiscount.iva > 0) {
+                wysiwygHtml += `<div class="rw-totals-row"><span class="rw-totals-row-label">Imponibile:</span><span class="rw-totals-row-value">€ ${afterDiscount.toFixed(2)}</span></div>`;
+                wysiwygHtml += `<div class="rw-totals-row"><span class="rw-totals-row-label">IVA (${taxDiscount.iva}%):</span><span class="rw-totals-row-value">+ € ${ivaAmt.toFixed(2)}</span></div>`;
             }
-            const afterDiscount = Math.max(0, subtotal - discountAmt);
-            const ivaAmt = afterDiscount * (taxDiscount.iva / 100);
-            const grandTotal = afterDiscount + ivaAmt;
-            const hasTaxOrDiscount = taxDiscount.iva > 0 || taxDiscount.discountValue > 0;
+            wysiwygHtml += `<div class="rw-totals-divider"></div>`;
+            wysiwygHtml += `<div class="rw-totals-row rw-totals-grand"><span class="rw-totals-row-label">TOTALE:</span><span class="rw-totals-row-value" style="color:${accent};">€ ${grandTotal.toFixed(2)}</span></div>`;
+        } else {
+            wysiwygHtml += `<div class="rw-totals-row"><span class="rw-totals-row-label">Totale Durata:</span><span class="rw-totals-row-value">${formattedHours}</span></div>`;
+            wysiwygHtml += `<div class="rw-totals-row"><span class="rw-totals-row-label">Totale Importo:</span><span class="rw-totals-row-value" style="color:${accent};">€ ${totalAmount.toFixed(2)}</span></div>`;
+        }
+        wysiwygHtml += `</div></div>`;
 
-            const formattedHours = `${hh.toString().padStart(2,'0')}:${mm.toString().padStart(2,'0')}:${String(totalSec % 60).padStart(2,'0')}`;
-
-            // Totals box (matching PDF riepilogo)
-            wysiwygHtml += `<div class="rw-totals-box">`;
-            wysiwygHtml += `<div class="rw-totals-box-header" style="background:${accent};">RIEPILOGO TOTALI</div>`;
-            wysiwygHtml += `<div class="rw-totals-box-body">`;
-
-            if (hasTaxOrDiscount) {
-                wysiwygHtml += `<div class="rw-totals-row"><span class="rw-totals-row-label">Timer:</span><span class="rw-totals-row-value">${count}</span></div>`;
-                wysiwygHtml += `<div class="rw-totals-row"><span class="rw-totals-row-label">Totale Durata:</span><span class="rw-totals-row-value">${formattedHours}</span></div>`;
-                wysiwygHtml += `<div class="rw-totals-divider"></div>`;
-                wysiwygHtml += `<div class="rw-totals-row"><span class="rw-totals-row-label">Subtotale:</span><span class="rw-totals-row-value">€ ${subtotal.toFixed(2)}</span></div>`;
-                if (discountAmt > 0) {
-                    const discLabel = taxDiscount.discountType === 'percent' ? `Sconto (${taxDiscount.discountValue}%):` : 'Sconto:';
-                    wysiwygHtml += `<div class="rw-totals-row rw-totals-discount"><span class="rw-totals-row-label">${discLabel}</span><span class="rw-totals-row-value">- € ${discountAmt.toFixed(2)}</span></div>`;
-                }
-                if (taxDiscount.iva > 0) {
-                    wysiwygHtml += `<div class="rw-totals-row"><span class="rw-totals-row-label">Imponibile:</span><span class="rw-totals-row-value">€ ${afterDiscount.toFixed(2)}</span></div>`;
-                    wysiwygHtml += `<div class="rw-totals-row"><span class="rw-totals-row-label">IVA (${taxDiscount.iva}%):</span><span class="rw-totals-row-value">+ € ${ivaAmt.toFixed(2)}</span></div>`;
-                }
-                wysiwygHtml += `<div class="rw-totals-divider"></div>`;
-                wysiwygHtml += `<div class="rw-totals-row rw-totals-grand"><span class="rw-totals-row-label">TOTALE:</span><span class="rw-totals-row-value" style="color:${accent};">€ ${grandTotal.toFixed(2)}</span></div>`;
-            } else {
-                wysiwygHtml += `<div class="rw-totals-row"><span class="rw-totals-row-label">Totale Durata:</span><span class="rw-totals-row-value">${formattedHours}</span></div>`;
-                wysiwygHtml += `<div class="rw-totals-row"><span class="rw-totals-row-label">Totale Importo:</span><span class="rw-totals-row-value" style="color:${accent};">€ ${totalAmount.toFixed(2)}</span></div>`;
-            }
-            wysiwygHtml += `</div></div>`;
-
-            // Notes
-            if (reportNotes) {
-                wysiwygHtml += `<div class="rw-wysiwyg-notes"><strong>Note:</strong> ${reportNotes.replace(/\n/g, '<br>')}</div>`;
-            }
-            // Footer branding
-            wysiwygHtml += `<div class="rw-wysiwyg-footer" style="display:flex;justify-content:space-between;font-size:7px;color:#64748b;font-style:italic;padding-top:0.75rem;margin-top:1rem;border-top:0.3px solid #f1f5f9;">
+        // Notes
+        if (reportNotes) {
+            wysiwygHtml += `<div class="rw-wysiwyg-notes"><strong>Note:</strong> ${reportNotes.replace(/\n/g, '<br>')}</div>`;
+        }
+        // Footer branding
+        wysiwygHtml += `<div class="rw-wysiwyg-footer" style="display:flex;justify-content:space-between;font-size:7px;color:#64748b;font-style:italic;padding-top:0.75rem;margin-top:1rem;border-top:0.3px solid #f1f5f9;">
                 <span style="font-style:italic;">Generato il ${new Date().toLocaleDateString('it-IT', { day: '2-digit', month: 'long', year: 'numeric' })}</span>
                 <span>Pagina 1 di 1</span>
             </div>`;
-            wysiwygHtml += `</div>`;
+        wysiwygHtml += `</div>`;
 
-            container.innerHTML = wysiwygHtml;
-            if (generateBtn) generateBtn.disabled = false;
-            if (saveDraftBtn) saveDraftBtn.disabled = false;
-            if (exportButtonsContainer) exportButtonsContainer.style.display = 'flex';
+        container.innerHTML = wysiwygHtml;
+        if (generateBtn) generateBtn.disabled = false;
+        if (saveDraftBtn) saveDraftBtn.disabled = false;
+        if (exportButtonsContainer) exportButtonsContainer.style.display = 'flex';
     }
 
     // === CONFIG MANAGEMENT ===
@@ -925,45 +917,24 @@ export function setupReportSection() {
     }
 
     if (deleteConfigBtn) {
-        deleteConfigBtn.addEventListener('click', () => {
+        deleteConfigBtn.addEventListener('click', async () => {
             const selectedConfigId = savedConfigSelect ? savedConfigSelect.value : null;
             if (selectedConfigId) {
-                Swal.fire({
-                    title: 'Sei sicuro?',
-                    text: 'Vuoi eliminare questa configurazione?',
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#d33',
-                    cancelButtonColor: '#6c757d',
-                    confirmButtonText: 'Sì, elimina!',
-                    cancelButtonText: 'Annulla'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        db.collection('reportConfigs').doc(selectedConfigId).delete()
-                            .then(() => {
-                                Swal.fire({
-                                    icon: 'success',
-                                    title: 'Configurazione Eliminata',
-                                    text: 'La configurazione è stata eliminata con successo.',
-                                    confirmButtonText: 'OK'
-                                });
-                                loadSavedConfigs();
-                                reportForm.reset();
-                                companyLogoBase64 = '';
-                                deleteConfigBtn.style.display = 'none';
-                                clearLogoPreview();
-                            })
-                            .catch(error => {
-                                console.error('Errore durante l\'eliminazione della configurazione:', error);
-                                Swal.fire({
-                                    icon: 'error',
-                                    title: 'Errore',
-                                    text: 'Si è verificato un errore durante l\'eliminazione della configurazione.',
-                                    confirmButtonText: 'OK'
-                                });
-                            });
+                const confirmed = await notify.confirm('Sei sicuro?', 'Vuoi eliminare questa configurazione?', { confirmText: 'Sì, elimina!' });
+                if (confirmed) {
+                    try {
+                        await db.collection('reportConfigs').doc(selectedConfigId).delete();
+                        notify.success('Configurazione Eliminata', 'La configurazione è stata eliminata con successo.');
+                        loadSavedConfigs();
+                        reportForm.reset();
+                        companyLogoBase64 = '';
+                        deleteConfigBtn.style.display = 'none';
+                        clearLogoPreview();
+                    } catch (error) {
+                        console.error('Errore durante l\'eliminazione della configurazione:', error);
+                        notify.error('Errore', 'Si è verificato un errore durante l\'eliminazione della configurazione.');
                     }
-                });
+                }
             }
         });
     }
@@ -991,7 +962,7 @@ export function setupReportSection() {
     if (downloadPdfBtn) {
         downloadPdfBtn.addEventListener('click', async () => {
             if (!lastPreviewData || !lastPreviewData.allRows || lastPreviewData.allRows.length === 0) {
-                Swal.fire({ icon: 'info', title: 'Nessun dato', text: 'Carica prima i dati per generare il report.' });
+                notify.info('Nessun dato', 'Carica prima i dati per generare il report.');
                 return;
             }
             const p = getReportParams();
@@ -1020,7 +991,7 @@ export function setupReportSection() {
                 askMarkAsReported(lastPreviewData.timerIds);
             } catch (error) {
                 console.error('Errore generazione PDF:', error);
-                Swal.fire({ icon: 'error', title: 'Errore PDF', text: error.message || 'Errore durante la generazione del PDF.' });
+                notify.error('Errore PDF', error.message || 'Errore durante la generazione del PDF.');
             } finally {
                 downloadPdfBtn.disabled = false;
                 downloadPdfBtn.innerHTML = '<i class="fas fa-file-pdf"></i> Scarica PDF';
@@ -1035,7 +1006,7 @@ export function setupReportSection() {
                 return;
             }
             if (!lastPreviewData || !lastPreviewData.allRows || lastPreviewData.allRows.length === 0) {
-                Swal.fire({ icon: 'info', title: 'Nessun dato', text: 'Carica prima i dati.' });
+                notify.info('Nessun dato', 'Carica prima i dati.');
                 return;
             }
             const p = getReportParams();
@@ -1050,7 +1021,7 @@ export function setupReportSection() {
                 askMarkAsReported(lastPreviewData.timerIds);
             } catch (error) {
                 console.error('Errore Google Docs:', error);
-                Swal.fire({ icon: 'error', title: 'Errore Google Docs', text: error.message || 'Errore durante la creazione del documento.' });
+                notify.error('Errore Google Docs', error.message || 'Errore durante la creazione del documento.');
             } finally {
                 exportGoogleDocBtn.disabled = false;
                 exportGoogleDocBtn.innerHTML = '<i class="fab fa-google-drive"></i> Google Docs';
@@ -1065,7 +1036,7 @@ export function setupReportSection() {
                 return;
             }
             if (!lastPreviewData || !lastPreviewData.allRows || lastPreviewData.allRows.length === 0) {
-                Swal.fire({ icon: 'info', title: 'Nessun dato', text: 'Carica prima i dati.' });
+                notify.info('Nessun dato', 'Carica prima i dati.');
                 return;
             }
             const p = getReportParams();
@@ -1080,7 +1051,7 @@ export function setupReportSection() {
                 askMarkAsReported(lastPreviewData.timerIds);
             } catch (error) {
                 console.error('Errore Google Sheets:', error);
-                Swal.fire({ icon: 'error', title: 'Errore Google Sheets', text: error.message || 'Errore durante la creazione del foglio.' });
+                notify.error('Errore Google Sheets', error.message || 'Errore durante la creazione del foglio.');
             } finally {
                 exportGoogleSheetBtn.disabled = false;
                 exportGoogleSheetBtn.innerHTML = '<i class="fab fa-google-drive"></i> Google Sheets';
@@ -1088,7 +1059,7 @@ export function setupReportSection() {
         });
     }
 
-    function saveReportToHistory(params, clientName, fileName, previewData) {
+    async function saveReportToHistory(params, clientName, fileName, previewData) {
         const filterClient = filterClientSelect.value;
         const filterProject = filterProjectSelect.value;
         const filterWorktype = filterWorktypeSelect.value;
@@ -1116,46 +1087,21 @@ export function setupReportSection() {
             includeHourlyRate: params.includeHourlyRate
         };
 
-        db.collection('reports').add(reportDetails)
-            .then(() => {
-                console.log('Report salvato nello storico.');
-            })
-            .catch(error => {
-                console.error('Errore nel salvataggio del report nello storico:', error);
-            });
+        try {
+            await db.collection('reports').add(reportDetails);
+            console.log('Report salvato nello storico.');
+        } catch (error) {
+            console.error('Errore nel salvataggio del report nello storico:', error);
+        }
     }
 
-    function askMarkAsReported(timerIds) {
+    async function askMarkAsReported(timerIds) {
         if (!timerIds || timerIds.length === 0) return;
-        Swal.fire({
-            icon: 'question',
-            title: 'Contrassegnare come riportati?',
-            text: `Vuoi contrassegnare ${timerIds.length} timer inclusi nel report come già riportati?`,
-            showCancelButton: true,
-            confirmButtonText: 'Sì, contrassegna',
-            cancelButtonText: 'No, lascia invariati',
-            customClass: {
-                popup: 'cr-swal-popup',
-                title: 'cr-swal-title',
-                htmlContainer: 'cr-swal-text',
-                confirmButton: 'cr-swal-confirm',
-                cancelButton: 'cr-swal-cancel',
-                actions: 'cr-swal-actions'
-            },
-            buttonsStyling: false
-        }).then((result) => {
-            if (result.isConfirmed) {
-                markTimersAsReported(timerIds);
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Timer aggiornati',
-                    text: `${timerIds.length} timer contrassegnati come riportati.`,
-                    timer: 2000,
-                    timerProgressBar: true,
-                    showConfirmButton: false
-                });
-            }
-        });
+        const confirmed = await notify.confirm('Contrassegnare come riportati?', `Vuoi contrassegnare ${timerIds.length} timer inclusi nel report come già riportati?`, { icon: 'question', confirmText: 'Sì, contrassegna', cancelText: 'No, lascia invariati' });
+        if (confirmed) {
+            markTimersAsReported(timerIds);
+            notify.toast(`${timerIds.length} timer contrassegnati come riportati`);
+        }
     }
 
     function markTimersAsReported(timerIds) {
@@ -1168,90 +1114,78 @@ export function setupReportSection() {
         });
     }
 
-    function setAutoDateRange(clientId) {
+    async function setAutoDateRange(clientId) {
         if (!clientId) return;
-        db.collection('timeLogs')
-            .where('uid', '==', currentUser.uid)
-            .where('clientId', '==', clientId)
-            .where('isReported', '==', false)
-            .where('isDeleted', '==', false)
-            .orderBy('startTime', 'asc')
-            .get()
-            .then(snapshot => {
-                if (!snapshot.empty) {
-                    const firstTimer = snapshot.docs[0].data();
-                    const lastTimer = snapshot.docs[snapshot.docs.length - 1].data();
-                    startDateInput.value = new Date(firstTimer.startTime.seconds * 1000).toISOString().split('T')[0];
-                    endDateInput.value = new Date(lastTimer.startTime.seconds * 1000).toISOString().split('T')[0];
-                    // Attiva il chip "Non reportati" e mostra le date
-                    activePeriod = 'auto';
-                    updatePeriodChipsUI();
-                } else {
-                    // Nessun timer non reportato per questo cliente: reset date
-                    startDateInput.value = '';
-                    endDateInput.value = '';
-                    activePeriod = null;
-                    updatePeriodChipsUI();
-                }
-                tryLoadPreview();
-            })
-            .catch(error => {
-                console.error('Errore nel recupero dei timer non reportati:', error);
-            });
+        try {
+            const snapshot = await db.collection('timeLogs')
+                .where('uid', '==', currentUser.uid)
+                .where('clientId', '==', clientId)
+                .where('isReported', '==', false)
+                .where('isDeleted', '==', false)
+                .orderBy('startTime', 'asc')
+                .get();
+            if (!snapshot.empty) {
+                const firstTimer = snapshot.docs[0].data();
+                const lastTimer = snapshot.docs[snapshot.docs.length - 1].data();
+                startDateInput.value = new Date(firstTimer.startTime.seconds * 1000).toISOString().split('T')[0];
+                endDateInput.value = new Date(lastTimer.startTime.seconds * 1000).toISOString().split('T')[0];
+                activePeriod = 'auto';
+                updatePeriodChipsUI();
+            } else {
+                startDateInput.value = '';
+                endDateInput.value = '';
+                activePeriod = null;
+                updatePeriodChipsUI();
+            }
+            tryLoadPreview();
+        } catch (error) {
+            console.error('Errore nel recupero dei timer non reportati:', error);
+        }
     }
 
     // === REPORT GENERATION (invariato) ===
-    reportForm.addEventListener('submit', (e) => {
+    reportForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        loadWorktypeRates().then(() => {
+        try {
+            await loadWorktypeRates();
             generateReport();
-        }).catch(error => {
+        } catch (error) {
             console.error('Errore nel caricamento delle tariffe orarie:', error);
-            Swal.fire({
-                icon: 'error',
-                title: 'Errore',
-                text: 'Si è verificato un errore durante il caricamento delle tariffe orarie.',
-                confirmButtonText: 'OK'
-            });
-        });
+            notify.error('Errore', 'Si è verificato un errore durante il caricamento delle tariffe orarie.');
+        }
     });
 
-    function generateReport() {
+    async function generateReport() {
         const reportHeader = document.getElementById('report-header').value.trim();
         const startDateInputVal = document.getElementById('start-date').value;
         const endDateInputVal = document.getElementById('end-date').value;
         const configName = document.getElementById('config-name').value.trim();
-    
+
         const activeCols = getActiveColumns();
         const groupBy = groupBySelect.value;
         const reportNotes = document.getElementById('report-notes').value.trim();
         const includeHourlyRate = activeCols.includes('rate');
-    
+
         let errorMessage = '';
-    
+
         if (!reportHeader) errorMessage += '• Inserisci l\'intestazione del report.\n';
         if (!startDateInputVal) errorMessage += '• Seleziona una data di inizio.\n';
         if (!endDateInputVal) errorMessage += '• Seleziona una data di fine.\n';
         if (startDateInputVal && endDateInputVal && new Date(startDateInputVal) > new Date(endDateInputVal)) {
             errorMessage += '• La data di inizio non può essere successiva alla data di fine.\n';
         }
-    
+
         const filterClient = document.getElementById('filter-client').value;
         const filterProject = document.getElementById('filter-project').value;
         const filterWorktype = document.getElementById('filter-worktype').value;
-    
+
         if (!filterClient) errorMessage += '• Seleziona un cliente per il filtro.\n';
-    
+
         if (errorMessage) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Attenzione',
-                html: errorMessage.replace(/\n/g, '<br>'),
-                confirmButtonText: 'OK'
-            });
+            notify.warning('Attenzione', errorMessage.replace(/\n/g, '<br>'));
             return;
         }
-    
+
         if (configName) {
             saveReportConfig({
                 name: configName,
@@ -1262,204 +1196,164 @@ export function setupReportSection() {
                 filterWorktype
             });
         }
-    
-    
+
+
         const reportFileName = `${reportHeader} - ${startDateInputVal} a ${endDateInputVal}`;
         function sanitizeFileName(fileName) {
             return fileName.replace(/[\/\\?%*:|"<>]/g, '-');
         }
         const sanitizedReportFileName = sanitizeFileName(reportFileName);
-    
+
         const startDate = new Date(startDateInputVal);
         const endDate = new Date(endDateInputVal);
         endDate.setHours(23, 59, 59, 999);
-    
+
         let query = db.collection('timeLogs')
             .where('uid', '==', currentUser.uid)
             .where('isDeleted', '==', false)
             .where('startTime', '>=', firebase.firestore.Timestamp.fromDate(startDate))
             .where('startTime', '<=', firebase.firestore.Timestamp.fromDate(endDate));
-    
+
         if (filterClient) query = query.where('clientId', '==', filterClient);
         if (filterProject) query = query.where('projectId', '==', filterProject);
         if (filterWorktype) query = query.where('worktypeId', '==', filterWorktype);
         query = query.where('isReported', '==', false);
-    
-        query.orderBy('startTime', 'asc')
-            .get()
-            .then(snapshot => {
-                if (snapshot.empty) {
-                    Swal.fire({
-                        icon: 'info',
-                        title: 'Nessun Dato',
-                        text: 'Non ci sono dati disponibili per l\'intervallo di date e i filtri selezionati.',
-                        confirmButtonText: 'OK'
-                    });
-                    return;
-                }
-    
-                let totalAmount = 0;
-                let totalHours = 0;
-                let reportData = [];
-                let timerIds = [];
-    
-                snapshot.forEach(doc => {
-                    const logData = doc.data();
-                    timerIds.push(doc.id);
-    
-                    const durationInHours = logData.duration / 3600;
-                    const hourlyRate = worktypeRates[logData.worktypeId] || logData.hourlyRate || 0;
-                    const amount = durationInHours * hourlyRate;
-                    totalAmount += amount;
-                    totalHours += durationInHours;
-    
-                    const dataRow = {
-                        date: new Date(logData.startTime.seconds * 1000).toLocaleDateString(),
-                        dateGroupKey: new Date(logData.startTime.seconds * 1000).toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' }),
-                        workType: logData.worktypeName,
-                        project: logData.projectName || '—',
-                        hourlyRate: hourlyRate.toFixed(2),
-                        link: logData.link || '',
-                        linkText: logData.link ? extractDomainName(logData.link) : '-',
-                        note: logData.note || '',
-                        timeWorked: formatDuration(logData.duration),
-                        durationSec: logData.duration,
-                        amount: amount.toFixed(2)
-                    };
-    
-                    reportData.push(dataRow);
-                });
-    
-                // Helper: dopo l'export, chiedi se marcare i timer come riportati
-                function askMarkAsReported() {
-                    Swal.fire({
-                        icon: 'question',
-                        title: 'Contrassegnare come riportati?',
-                        text: 'Vuoi contrassegnare i timer inclusi nel report come già riportati?',
-                        showCancelButton: true,
-                        confirmButtonText: 'Sì, contrassegna',
-                        cancelButtonText: 'No, lascia invariati',
-                        customClass: {
-                            popup: 'cr-swal-popup',
-                            title: 'cr-swal-title',
-                            htmlContainer: 'cr-swal-text',
-                            confirmButton: 'cr-swal-confirm',
-                            cancelButton: 'cr-swal-cancel',
-                            actions: 'cr-swal-actions'
-                        },
-                        buttonsStyling: false
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            markTimersAsReported(timerIds);
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Timer aggiornati',
-                                text: `${timerIds.length} timer contrassegnati come riportati.`,
-                                timer: 2000,
-                                timerProgressBar: true,
-                                showConfirmButton: false
-                            });
-                        }
-                    });
-                }
 
-                // Bind export buttons
-                const clientNameLegacy = document.getElementById('filter-client').options[document.getElementById('filter-client').selectedIndex]?.text || '';
-                const legacyMetaInfo = clientNameLegacy ? `${clientNameLegacy} \u00b7 ${new Date(startDateInputVal).toLocaleDateString('it-IT')} — ${new Date(endDateInputVal).toLocaleDateString('it-IT')} \u00b7 ${reportData.length} timer` : null;
-                downloadPdfBtn.onclick = () => {
-                    generatePDF(reportHeader, reportData, totalHours, totalAmount, companyLogoBase64, sanitizedReportFileName, includeHourlyRate, getActiveTemplate(), getAccentColor(), getTaxDiscount(), getActiveColumns(), legacyMetaInfo);
-                    askMarkAsReported();
-                };
-                
-                exportGoogleDocBtn.onclick = () => {
-                    const reportContentString = generateReportContentString(reportHeader, reportData, totalHours, totalAmount, includeHourlyRate);
-                    handleAuthClick(() => {
-                        createGoogleDoc(reportContentString, sanitizedReportFileName);
-                        askMarkAsReported();
-                    });
-                };
-    
-                exportGoogleSheetBtn.onclick = () => {
-                    const reportValuesArray = generateReportValuesArray(reportHeader, reportData, totalHours, totalAmount, includeHourlyRate);
-                    handleAuthClick(() => {
-                        createGoogleSheet(reportValuesArray, sanitizedReportFileName);
-                        askMarkAsReported();
-                    });
+        try {
+            const snapshot = await query.orderBy('startTime', 'asc').get();
+
+            if (snapshot.empty) {
+                notify.info('Nessun Dato', 'Non ci sono dati disponibili per l\'intervallo di date e i filtri selezionati.');
+                return;
+            }
+
+            let totalAmount = 0;
+            let totalHours = 0;
+            let reportData = [];
+            let timerIds = [];
+
+            snapshot.forEach(doc => {
+                const logData = doc.data();
+                timerIds.push(doc.id);
+
+                const durationInHours = logData.duration / 3600;
+                const hourlyRate = worktypeRates[logData.worktypeId] || logData.hourlyRate || 0;
+                const amount = durationInHours * hourlyRate;
+                totalAmount += amount;
+                totalHours += durationInHours;
+
+                const dataRow = {
+                    date: new Date(logData.startTime.seconds * 1000).toLocaleDateString(),
+                    dateGroupKey: new Date(logData.startTime.seconds * 1000).toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' }),
+                    workType: logData.worktypeName,
+                    project: logData.projectName || '—',
+                    hourlyRate: hourlyRate.toFixed(2),
+                    link: logData.link || '',
+                    linkText: logData.link ? extractDomainName(logData.link) : '-',
+                    note: logData.note || '',
+                    timeWorked: formatDuration(logData.duration),
+                    durationSec: logData.duration,
+                    amount: amount.toFixed(2)
                 };
 
-                // Show export buttons
-                if (exportButtonsContainer) exportButtonsContainer.style.display = '';
-    
-                let filterClientName = '';
-                let filterprojectName = '';
-                let filterWorktypeName = '';
-    
-                if (document.getElementById('filter-client').value) {
-                    filterClientName = document.getElementById('filter-client').options[document.getElementById('filter-client').selectedIndex].text;
-                }
-                if (document.getElementById('filter-project').value) {
-                    filterprojectName = document.getElementById('filter-project').options[document.getElementById('filter-project').selectedIndex].text;
-                }
-                if (document.getElementById('filter-worktype').value) {
-                    filterWorktypeName = document.getElementById('filter-worktype').options[document.getElementById('filter-worktype').selectedIndex].text;
-                }
-    
-                const reportDetails = {
-                    uid: currentUser.uid,
-                    reportHeader: reportHeader,
-                    startDate: startDateInputVal,
-                    endDate: endDateInputVal,
-                    filterClient: filterClient || null,
-                    filterProject: filterProject || null,
-                    filterWorktype: filterWorktype || null,
-                    filterClientName: filterClientName,
-                    filterprojectName: filterprojectName,
-                    filterWorktypeName: filterWorktypeName,
-                    totalAmount: totalAmount,
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                    companyLogoBase64: companyLogoBase64,
-                    reportName: sanitizedReportFileName,
-                    reportDataArray: reportData,
-                    includeHourlyRate: includeHourlyRate,
-                    totalHours: totalHours
-                };
-    
-                db.collection('reports').add(reportDetails)
-                    .then(() => {
-                        console.log('Report salvato nello storico.');
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Report Generato',
-                            text: 'Il report è stato salvato nello storico. Usa i pulsanti sotto l\'anteprima per esportare.',
-                            confirmButtonText: 'OK'
-                        });
-                    })
-                    .catch(error => {
-                        console.error('Errore nel salvataggio del report nello storico:', error);
-                    });
-    
-            })
-            .catch(error => {
-                console.error('Errore nel caricamento dei dati per il report:', error);
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Errore',
-                    text: 'Si è verificato un errore durante il caricamento dei dati del report.',
-                    confirmButtonText: 'OK'
-                });
+                reportData.push(dataRow);
             });
+
+            // Helper: dopo l'export, chiedi se marcare i timer come riportati
+            async function askMarkAsReported() {
+                const confirmed = await notify.confirm('Contrassegnare come riportati?', 'Vuoi contrassegnare i timer inclusi nel report come già riportati?', { icon: 'question', confirmText: 'Sì, contrassegna', cancelText: 'No, lascia invariati' });
+                if (confirmed) {
+                    markTimersAsReported(timerIds);
+                    notify.toast(`${timerIds.length} timer contrassegnati come riportati`);
+                }
+            }
+
+            // Bind export buttons
+            const clientNameLegacy = document.getElementById('filter-client').options[document.getElementById('filter-client').selectedIndex]?.text || '';
+            const legacyMetaInfo = clientNameLegacy ? `${clientNameLegacy} \u00b7 ${new Date(startDateInputVal).toLocaleDateString('it-IT')} — ${new Date(endDateInputVal).toLocaleDateString('it-IT')} \u00b7 ${reportData.length} timer` : null;
+            downloadPdfBtn.onclick = () => {
+                generatePDF(reportHeader, reportData, totalHours, totalAmount, companyLogoBase64, sanitizedReportFileName, includeHourlyRate, getActiveTemplate(), getAccentColor(), getTaxDiscount(), getActiveColumns(), legacyMetaInfo);
+                askMarkAsReported();
+            };
+
+            exportGoogleDocBtn.onclick = () => {
+                const reportContentString = generateReportContentString(reportHeader, reportData, totalHours, totalAmount, includeHourlyRate);
+                handleAuthClick(() => {
+                    createGoogleDoc(reportContentString, sanitizedReportFileName);
+                    askMarkAsReported();
+                });
+            };
+
+            exportGoogleSheetBtn.onclick = () => {
+                const reportValuesArray = generateReportValuesArray(reportHeader, reportData, totalHours, totalAmount, includeHourlyRate);
+                handleAuthClick(() => {
+                    createGoogleSheet(reportValuesArray, sanitizedReportFileName);
+                    askMarkAsReported();
+                });
+            };
+
+            // Show export buttons
+            if (exportButtonsContainer) exportButtonsContainer.style.display = '';
+
+            let filterClientName = '';
+            let filterprojectName = '';
+            let filterWorktypeName = '';
+
+            if (document.getElementById('filter-client').value) {
+                filterClientName = document.getElementById('filter-client').options[document.getElementById('filter-client').selectedIndex].text;
+            }
+            if (document.getElementById('filter-project').value) {
+                filterprojectName = document.getElementById('filter-project').options[document.getElementById('filter-project').selectedIndex].text;
+            }
+            if (document.getElementById('filter-worktype').value) {
+                filterWorktypeName = document.getElementById('filter-worktype').options[document.getElementById('filter-worktype').selectedIndex].text;
+            }
+
+            const reportDetails = {
+                uid: currentUser.uid,
+                reportHeader: reportHeader,
+                startDate: startDateInputVal,
+                endDate: endDateInputVal,
+                filterClient: filterClient || null,
+                filterProject: filterProject || null,
+                filterWorktype: filterWorktype || null,
+                filterClientName: filterClientName,
+                filterprojectName: filterprojectName,
+                filterWorktypeName: filterWorktypeName,
+                totalAmount: totalAmount,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                companyLogoBase64: companyLogoBase64,
+                reportName: sanitizedReportFileName,
+                reportDataArray: reportData,
+                includeHourlyRate: includeHourlyRate,
+                totalHours: totalHours
+            };
+
+            try {
+                await db.collection('reports').add(reportDetails);
+                console.log('Report salvato nello storico.');
+                notify.success('Report Generato', 'Il report è stato salvato nello storico. Usa i pulsanti sotto l\'anteprima per esportare.');
+            } catch (saveError) {
+                console.error('Errore nel salvataggio del report nello storico:', saveError);
+            }
+
+        } catch (error) {
+            console.error('Errore nel caricamento dei dati per il report:', error);
+            notify.error('Errore', 'Si è verificato un errore durante il caricamento dei dati del report.');
+        }
     }
-    
+
     const accessToken = localStorage.getItem('googleAccessToken');
     if (accessToken) {
-        initializeGoogleApiClient(accessToken).then(() => {
+        try {
+            await initializeGoogleApiClient(accessToken);
             if (exportGoogleDocBtn) exportGoogleDocBtn.disabled = false;
             if (exportGoogleSheetBtn) exportGoogleSheetBtn.disabled = false;
-        }).catch(error => {
+        } catch (error) {
             console.error('Errore durante l\'inizializzazione del client Google API:', error);
             if (exportGoogleDocBtn) exportGoogleDocBtn.disabled = true;
             if (exportGoogleSheetBtn) exportGoogleSheetBtn.disabled = true;
-        });
+        }
     } else {
         if (exportGoogleDocBtn) exportGoogleDocBtn.disabled = true;
         if (exportGoogleSheetBtn) exportGoogleSheetBtn.disabled = true;

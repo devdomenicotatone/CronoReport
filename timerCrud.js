@@ -1,7 +1,8 @@
 // timerCrud.js — Operazioni CRUD: crea timer (la modifica inline è ora in timerCard.js)
-import { parseLocalDateTime, getHourlyRate } from './timerHelpers.js';
+import { parseLocalDateTime } from './timerHelpers.js';
 import { loadRecentTasks, loadTodaySummary, loadTodayLog, updateActiveTimerCount } from './timerWidgets.js';
 import { createTimerCard, startTimer, activeTimers } from './timerCard.js';
+import * as notify from './notify.js';
 
 // === CREATE NEW TIMER ===
 
@@ -28,11 +29,11 @@ export async function createNewTimer(clientId, projectId, worktypeId, link, note
     const manualEndTime = manualEndTimeValue ? parseLocalDateTime(manualEndTimeValue) : null;
 
     if (manualStartTimeValue && !manualStartTime) {
-        Swal.fire({ icon: 'error', title: 'Errore', text: 'L\'ora di inizio inserita non è valida.', confirmButtonText: 'OK' });
+        notify.error('Errore', 'L\'ora di inizio inserita non è valida.');
         return;
     }
     if (manualEndTimeValue && !manualEndTime) {
-        Swal.fire({ icon: 'error', title: 'Errore', text: 'L\'ora di fine inserita non è valida.', confirmButtonText: 'OK' });
+        notify.error('Errore', 'L\'ora di fine inserita non è valida.');
         return;
     }
 
@@ -40,39 +41,39 @@ export async function createNewTimer(clientId, projectId, worktypeId, link, note
         // === MANUAL START + END: Save directly as timeLog ===
         const durationInSeconds = (manualEndTime - manualStartTime) / 1000;
         if (durationInSeconds <= 0) {
-            Swal.fire({ icon: 'error', title: 'Errore', text: 'L\'ora di fine deve essere successiva all\'ora di inizio.', confirmButtonText: 'OK' });
+            notify.error('Errore', 'L\'ora di fine deve essere successiva all\'ora di inizio.');
             return;
         }
 
-        let hourlyRate = await getHourlyRate();
 
-        db.collection('timeLogs').add({
-            uid: currentUser.uid,
-            clientId, projectId, worktypeId,
-            clientName, projectName, worktypeName,
-            link: link || '',
-            note: note || '',
-            startTime: firebase.firestore.Timestamp.fromDate(manualStartTime),
-            endTime: firebase.firestore.Timestamp.fromDate(manualEndTime),
-            duration: durationInSeconds,
-            isReported: false,
-            isDeleted: false,
-            hourlyRate: hourlyRate
-        }).then(() => {
-            Swal.fire({ icon: 'success', title: 'Timer Salvato', text: 'Il timer è stato registrato con successo.', confirmButtonText: 'OK' });
+        try {
+            await db.collection('timeLogs').add({
+                uid: currentUser.uid,
+                clientId, projectId, worktypeId,
+                clientName, projectName, worktypeName,
+                link: link || '',
+                note: note || '',
+                startTime: firebase.firestore.Timestamp.fromDate(manualStartTime),
+                endTime: firebase.firestore.Timestamp.fromDate(manualEndTime),
+                duration: durationInSeconds,
+                isReported: false,
+                isDeleted: false,
+                hourlyRate: hourlyRate
+            });
+            notify.success('Timer Salvato', 'Il timer è stato registrato con successo.');
             loadRecentTasks();
             loadTodaySummary();
             loadTodayLog();
-        }).catch(error => {
+        } catch (error) {
             console.error('Errore nel salvataggio del timer:', error);
-            Swal.fire({ icon: 'error', title: 'Errore', text: 'Si è verificato un errore durante il salvataggio del timer.', confirmButtonText: 'OK' });
-        });
+            notify.error('Errore', 'Si è verificato un errore durante il salvataggio del timer.');
+        }
 
     } else if (manualStartTime && !manualEndTime) {
         // === MANUAL START ONLY: Create active timer from past ===
         const now = new Date();
         if (manualStartTime > now) {
-            Swal.fire({ icon: 'error', title: 'Errore', text: 'L\'ora di inizio non può essere futura.', confirmButtonText: 'OK' });
+            notify.error('Errore', 'L\'ora di inizio non può essere futura.');
             return;
         }
 
@@ -90,28 +91,29 @@ export async function createNewTimer(clientId, projectId, worktypeId, link, note
             hourlyRate: hourlyRate
         };
 
-        db.collection('timers').add({
-            uid: currentUser.uid,
-            clientId, projectId, worktypeId,
-            clientName, projectName, worktypeName,
-            link: link || '',
-            note: note || '',
-            accumulatedElapsedTime: 0,
-            lastStartTime: firebase.firestore.Timestamp.fromDate(manualStartTime),
-            isPaused: false,
-            isActive: true,
-            hourlyRate: hourlyRate
-        }).then(docRef => {
+        try {
+            const docRef = await db.collection('timers').add({
+                uid: currentUser.uid,
+                clientId, projectId, worktypeId,
+                clientName, projectName, worktypeName,
+                link: link || '',
+                note: note || '',
+                accumulatedElapsedTime: 0,
+                lastStartTime: firebase.firestore.Timestamp.fromDate(manualStartTime),
+                isPaused: false,
+                isActive: true,
+                hourlyRate: hourlyRate
+            });
             timer.id = docRef.id;
             activeTimers.push(timer);
             const timerCard = createTimerCard(timer);
             document.getElementById('timer-cards').appendChild(timerCard);
             startTimer(timer);
             updateActiveTimerCount(activeTimers);
-        }).catch(error => {
+        } catch (error) {
             console.error('Errore nel salvataggio del timer:', error);
-            Swal.fire({ icon: 'error', title: 'Errore', text: 'Si è verificato un errore durante il salvataggio del timer.', confirmButtonText: 'OK' });
-        });
+            notify.error('Errore', 'Si è verificato un errore durante il salvataggio del timer.');
+        }
 
     } else {
         // === LIVE TIMER: Start now ===
@@ -129,27 +131,28 @@ export async function createNewTimer(clientId, projectId, worktypeId, link, note
             hourlyRate: hourlyRate
         };
 
-        db.collection('timers').add({
-            uid: currentUser.uid,
-            clientId, projectId, worktypeId,
-            clientName, projectName, worktypeName,
-            link: link || '',
-            note: note || '',
-            accumulatedElapsedTime: 0,
-            lastStartTime: firebase.firestore.FieldValue.serverTimestamp(),
-            isPaused: false,
-            isActive: true,
-            hourlyRate: hourlyRate
-        }).then(docRef => {
+        try {
+            const docRef = await db.collection('timers').add({
+                uid: currentUser.uid,
+                clientId, projectId, worktypeId,
+                clientName, projectName, worktypeName,
+                link: link || '',
+                note: note || '',
+                accumulatedElapsedTime: 0,
+                lastStartTime: firebase.firestore.FieldValue.serverTimestamp(),
+                isPaused: false,
+                isActive: true,
+                hourlyRate: hourlyRate
+            });
             timer.id = docRef.id;
             activeTimers.push(timer);
             const timerCard = createTimerCard(timer);
             document.getElementById('timer-cards').appendChild(timerCard);
             startTimer(timer);
             updateActiveTimerCount(activeTimers);
-        }).catch(error => {
+        } catch (error) {
             console.error('Errore nel salvataggio del timer:', error);
-            Swal.fire({ icon: 'error', title: 'Errore', text: 'Si è verificato un errore durante il salvataggio del timer.', confirmButtonText: 'OK' });
-        });
+            notify.error('Errore', 'Si è verificato un errore durante il salvataggio del timer.');
+        }
     }
 }

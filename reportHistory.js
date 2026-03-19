@@ -1,4 +1,5 @@
 // reportHistory.js
+import * as notify from './notify.js';
 import { generatePDF } from './reportConfig.js';
 import { loadClientColors, getClientBgStyle, getClientHexColor } from './clientColors.js';
 // Template per la sezione Storico Report
@@ -80,38 +81,37 @@ export function initializeReportHistoryEvents() {
     // I colori dei clienti vengono caricati da Firestore tramite clientColors.js
 
     // === Quick Filter: Year/Month Detection ===
-    function loadRhAvailableYears() {
-        return db.collection('reports')
-            .where('uid', '==', currentUser.uid)
-            .orderBy('timestamp', 'desc')
-            .get()
-            .then(snapshot => {
-                const yearMonthMap = {};
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    if (data.isDeleted) return;
-                    const ts = data.timestamp;
-                    if (ts) {
-                        const d = ts.toDate();
-                        const year = d.getFullYear();
-                        const month = d.getMonth() + 1;
-                        if (!yearMonthMap[year]) yearMonthMap[year] = new Set();
-                        yearMonthMap[year].add(month);
-                    }
-                });
-                rhAvailableMonthsByYear = {};
-                for (const year in yearMonthMap) {
-                    rhAvailableMonthsByYear[year] = Array.from(yearMonthMap[year]).sort((a, b) => a - b);
+    async function loadRhAvailableYears() {
+        try {
+            const snapshot = await db.collection('reports')
+                .where('uid', '==', currentUser.uid)
+                .orderBy('timestamp', 'desc')
+                .get();
+            const yearMonthMap = {};
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                if (data.isDeleted) return;
+                const ts = data.timestamp;
+                if (ts) {
+                    const d = ts.toDate();
+                    const year = d.getFullYear();
+                    const month = d.getMonth() + 1;
+                    if (!yearMonthMap[year]) yearMonthMap[year] = new Set();
+                    yearMonthMap[year].add(month);
                 }
-                const years = Object.keys(rhAvailableMonthsByYear).map(Number).sort((a, b) => b - a);
-                populateRhYearChips(years);
-                updateRhQuickFilterBar();
-                return years;
-            })
-            .catch(error => {
-                console.error('Errore caricamento anni report:', error);
-                return [];
             });
+            rhAvailableMonthsByYear = {};
+            for (const year in yearMonthMap) {
+                rhAvailableMonthsByYear[year] = Array.from(yearMonthMap[year]).sort((a, b) => a - b);
+            }
+            const years = Object.keys(rhAvailableMonthsByYear).map(Number).sort((a, b) => b - a);
+            populateRhYearChips(years);
+            updateRhQuickFilterBar();
+            return years;
+        } catch (error) {
+            console.error('Errore caricamento anni report:', error);
+            return [];
+        }
     }
 
     function populateRhYearChips(years) {
@@ -217,8 +217,8 @@ export function initializeReportHistoryEvents() {
             query = query.where('timestamp', '<=', firebase.firestore.Timestamp.fromDate(endDate));
         }
 
-        query.orderBy('timestamp', 'desc').get()
-            .then(snapshot => {
+        try {
+            const snapshot = await query.orderBy('timestamp', 'desc').get();
                 if (snapshot.empty) {
                     reportHistoryAccordion.innerHTML = `
                         <div class="text-center py-12">
@@ -310,20 +310,10 @@ export function initializeReportHistoryEvents() {
 
                     // Evento elimina per cliente
                     const deleteClientBtn = header.querySelector('.rh-delete-client-btn');
-                    deleteClientBtn.addEventListener('click', (e) => {
+                    deleteClientBtn.addEventListener('click', async (e) => {
                         e.stopPropagation();
-                        Swal.fire({
-                            title: 'Sei sicuro?',
-                            text: `Eliminare tutti i report di "${clientName}"? Saranno spostati nel cestino.`,
-                            icon: 'warning',
-                            showCancelButton: true,
-                            confirmButtonColor: '#d33',
-                            cancelButtonColor: '#6c757d',
-                            confirmButtonText: 'Sì, elimina tutti!',
-                            cancelButtonText: 'Annulla'
-                        }).then(result => {
-                            if (result.isConfirmed) deleteReportsByClient(clientName);
-                        });
+                        const confirmed = await notify.confirm('Sei sicuro?', `Eliminare tutti i report di "${clientName}"? Saranno spostati nel cestino.`, { confirmText: 'Sì, elimina tutti!' });
+                        if (confirmed) deleteReportsByClient(clientName);
                     });
 
                     section.appendChild(header);
@@ -490,30 +480,21 @@ export function initializeReportHistoryEvents() {
                         delBtn.className = 'tl-edit-btn ml-1';
                         delBtn.title = 'Elimina';
                         delBtn.innerHTML = '<i class="fas fa-trash-alt text-xs"></i>';
-                        delBtn.addEventListener('click', (e) => {
+                        delBtn.addEventListener('click', async (e) => {
                             e.stopPropagation();
-                            Swal.fire({
-                                title: 'Eliminare questo report?',
-                                text: 'Sarà spostato nel cestino.',
-                                icon: 'warning',
-                                showCancelButton: true,
-                                confirmButtonColor: '#d33',
-                                cancelButtonColor: '#6c757d',
-                                confirmButtonText: 'Sì, elimina!',
-                                cancelButtonText: 'Annulla'
-                            }).then(result => {
-                                if (result.isConfirmed) {
-                                    db.collection('reports').doc(report.id).update({
+                            const confirmed = await notify.confirm('Eliminare questo report?', 'Sarà spostato nel cestino.', { confirmText: 'Sì, elimina!' });
+                            if (confirmed) {
+                                try {
+                                    await db.collection('reports').doc(report.id).update({
                                         isDeleted: true,
                                         deletedAt: firebase.firestore.FieldValue.serverTimestamp()
-                                    }).then(() => {
-                                        Swal.fire({ icon: 'success', title: 'Eliminato!', text: 'Report spostato nel cestino.', confirmButtonText: 'OK' });
-                                        loadReportHistory(searchReportInput.value.trim());
-                                    }).catch(error => {
-                                        console.error('Errore eliminazione report:', error);
                                     });
+                                    notify.success('Eliminato!', 'Report spostato nel cestino.');
+                                    loadReportHistory(searchReportInput.value.trim());
+                                } catch (error) {
+                                    console.error('Errore eliminazione report:', error);
                                 }
-                            });
+                            }
                         });
                         detailRow.appendChild(delBtn);
 
@@ -530,47 +511,37 @@ export function initializeReportHistoryEvents() {
 
                     reportHistoryAccordion.appendChild(section);
                 });
-            })
-            .catch(error => {
-                console.error('Errore nel caricamento dello storico report:', error);
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Errore',
-                    text: 'Si è verificato un errore durante il caricamento dello storico report.',
-                    confirmButtonText: 'OK'
-                });
-            });
+        } catch (error) {
+            console.error('Errore nel caricamento dello storico report:', error);
+            notify.error('Errore', 'Si è verificato un errore durante il caricamento dello storico report.');
+        }
     }
 
     /**
      * Elimina tutti i report di un cliente (soft delete)
      */
-    function deleteReportsByClient(clientName) {
-        let query = db.collection('reports').where('uid', '==', currentUser.uid);
-        if (clientName === 'Cliente Sconosciuto') {
-            query = query.where('filterClientName', 'in', [null, '']);
-        } else {
-            query = query.where('filterClientName', '==', clientName);
-        }
-
-        query.get()
-            .then(snapshot => {
-                const batch = db.batch();
-                snapshot.forEach(doc => {
-                    batch.update(doc.ref, {
-                        isDeleted: true,
-                        deletedAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
+    async function deleteReportsByClient(clientName) {
+        try {
+            let query = db.collection('reports').where('uid', '==', currentUser.uid);
+            if (clientName === 'Cliente Sconosciuto') {
+                query = query.where('filterClientName', 'in', [null, '']);
+            } else {
+                query = query.where('filterClientName', '==', clientName);
+            }
+            const snapshot = await query.get();
+            const batch = db.batch();
+            snapshot.forEach(doc => {
+                batch.update(doc.ref, {
+                    isDeleted: true,
+                    deletedAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
-                return batch.commit();
-            })
-            .then(() => {
-                Swal.fire({ icon: 'success', title: 'Eliminati!', text: `Tutti i report di "${clientName}" spostati nel cestino.`, confirmButtonText: 'OK' });
-                loadReportHistory(searchReportInput.value.trim());
-            })
-            .catch(error => {
-                console.error('Errore eliminazione report cliente:', error);
             });
+            await batch.commit();
+            notify.success('Eliminati!', `Tutti i report di "${clientName}" spostati nel cestino.`);
+            loadReportHistory(searchReportInput.value.trim());
+        } catch (error) {
+            console.error('Errore eliminazione report cliente:', error);
+        }
     }
 
     /**
@@ -588,7 +559,7 @@ export function initializeReportHistoryEvents() {
                 reportData.includeHourlyRate || false
             );
         } else {
-            Swal.fire({ icon: 'info', title: 'Nessun Dato', text: 'Non ci sono dati disponibili per questo report.', confirmButtonText: 'OK' });
+            notify.info('Nessun Dato', 'Non ci sono dati disponibili per questo report.');
         }
     }
 
@@ -633,99 +604,77 @@ export function initializeReportHistoryEvents() {
     }
 
     // === DRAFTS ===
-    function loadDrafts() {
+    async function loadDrafts() {
         const section = document.getElementById('rh-drafts-section');
         const list = document.getElementById('rh-drafts-list');
         if (!section || !list) return;
 
-        db.collection('reportDrafts')
-            .where('uid', '==', currentUser.uid)
-            .where('isDeleted', '==', false)
-            .orderBy('timestamp', 'desc')
-            .limit(10)
-            .get()
-            .then(snapshot => {
-                if (snapshot.empty) {
-                    section.style.display = 'none';
-                    return;
-                }
-                section.style.display = 'block';
-                list.innerHTML = '';
+        try {
+            const snapshot = await db.collection('reportDrafts')
+                .where('uid', '==', currentUser.uid)
+                .where('isDeleted', '==', false)
+                .orderBy('timestamp', 'desc')
+                .limit(10)
+                .get();
 
-                snapshot.forEach(doc => {
-                    const d = doc.data();
-                    const row = document.createElement('div');
-                    row.className = 'tl-timer-row';
-                    row.innerHTML = `
-                        <div class="flex-1 min-w-0">
-                            <div class="flex items-center gap-2">
-                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700">
-                                    <i class="fas fa-bookmark text-[0.6rem]"></i> Bozza
-                                </span>
-                                <span class="text-sm font-medium text-surface-700 truncate">${d.reportHeader || 'Bozza'}</span>
-                                <span class="flex-1"></span>
-                                <span class="text-xs text-surface-400">${d.filterClientName || ''}</span>
-                            </div>
-                            <div class="flex items-center gap-3 mt-1">
-                                <span class="text-xs text-surface-400">${d.startDate || '—'} → ${d.endDate || '—'}</span>
-                                <span class="text-xs text-surface-300">${d.template ? '• ' + d.template.charAt(0).toUpperCase() + d.template.slice(1) : ''}</span>
-                                <span class="flex-1"></span>
-                                <button class="rh-resume-draft-btn text-xs text-indigo-500 hover:text-indigo-700 transition-colors flex items-center gap-1" title="Riprendi bozza">
-                                    <i class="fas fa-play"></i> Riprendi
-                                </button>
-                                <button class="rh-delete-draft-btn tl-edit-btn ml-1" title="Elimina bozza">
-                                    <i class="fas fa-trash-alt text-xs"></i>
-                                </button>
-                            </div>
+            if (snapshot.empty) {
+                section.style.display = 'none';
+                return;
+            }
+            section.style.display = 'block';
+            list.innerHTML = '';
+
+            snapshot.forEach(doc => {
+                const d = doc.data();
+                const row = document.createElement('div');
+                row.className = 'tl-timer-row';
+                row.innerHTML = `
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2">
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700">
+                                <i class="fas fa-bookmark text-[0.6rem]"></i> Bozza
+                            </span>
+                            <span class="text-sm font-medium text-surface-700 truncate">${d.reportHeader || 'Bozza'}</span>
+                            <span class="flex-1"></span>
+                            <span class="text-xs text-surface-400">${d.filterClientName || ''}</span>
                         </div>
-                    `;
+                        <div class="flex items-center gap-3 mt-1">
+                            <span class="text-xs text-surface-400">${d.startDate || '—'} → ${d.endDate || '—'}</span>
+                            <span class="text-xs text-surface-300">${d.template ? '• ' + d.template.charAt(0).toUpperCase() + d.template.slice(1) : ''}</span>
+                            <span class="flex-1"></span>
+                            <button class="rh-resume-draft-btn text-xs text-indigo-500 hover:text-indigo-700 transition-colors flex items-center gap-1" title="Riprendi bozza">
+                                <i class="fas fa-play"></i> Riprendi
+                            </button>
+                            <button class="rh-delete-draft-btn tl-edit-btn ml-1" title="Elimina bozza">
+                                <i class="fas fa-trash-alt text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
 
-                    // Resume draft event
-                    row.querySelector('.rh-resume-draft-btn').addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        // Dispatch event to Report section
-                        window.dispatchEvent(new CustomEvent('loadDraft', { detail: { ...d, docId: doc.id } }));
-                        // Navigate to Report
-                        const reportLink = document.querySelector('[data-section="report"]');
-                        if (reportLink) reportLink.click();
-                        Swal.fire({
-                            icon: 'info',
-                            title: 'Bozza caricata',
-                            text: 'La configurazione è stata ripristinata nella sezione Report.',
-                            confirmButtonText: 'OK',
-                            timer: 2000,
-                            timerProgressBar: true
-                        });
-                    });
-
-                    // Delete draft
-                    row.querySelector('.rh-delete-draft-btn').addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        Swal.fire({
-                            title: 'Eliminare questa bozza?',
-                            icon: 'warning',
-                            showCancelButton: true,
-                            confirmButtonColor: '#d33',
-                            cancelButtonColor: '#6c757d',
-                            confirmButtonText: 'Sì, elimina!',
-                            cancelButtonText: 'Annulla'
-                        }).then(result => {
-                            if (result.isConfirmed) {
-                                db.collection('reportDrafts').doc(doc.id).update({ isDeleted: true })
-                                    .then(() => {
-                                        loadDrafts();
-                                        Swal.fire({ icon: 'success', title: 'Eliminata!', timer: 1500, timerProgressBar: true, showConfirmButton: false });
-                                    });
-                            }
-                        });
-                    });
-
-                    list.appendChild(row);
+                row.querySelector('.rh-resume-draft-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    window.dispatchEvent(new CustomEvent('loadDraft', { detail: { ...d, docId: doc.id } }));
+                    const reportLink = document.querySelector('[data-section="report"]');
+                    if (reportLink) reportLink.click();
+                    notify.toast('Bozza caricata');
                 });
-            })
-            .catch(error => {
-                console.error('Errore caricamento bozze:', error);
+
+                row.querySelector('.rh-delete-draft-btn').addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    const confirmed = await notify.confirm('Eliminare questa bozza?', '', { confirmText: 'Sì, elimina!' });
+                    if (confirmed) {
+                        await db.collection('reportDrafts').doc(doc.id).update({ isDeleted: true });
+                        loadDrafts();
+                        notify.toast('Bozza eliminata');
+                    }
+                });
+
+                list.appendChild(row);
             });
+        } catch (error) {
+            console.error('Errore caricamento bozze:', error);
+        }
     }
 
     // Carica lo storico + anni disponibili + bozze all'avvio

@@ -1,5 +1,6 @@
 // savedTimersUI.js
 import { CrModal } from './uiComponents.js';
+import * as notify from './notify.js';
 
 // NOTE: le seguenti dipendenze circolari sono risolte con import() dinamico nei punti di utilizzo:
 // - getCurrentFilters, loadSavedTimers da savedTimersData.js
@@ -252,31 +253,21 @@ export const savedTimersTemplate = `
 // Il template viene inserito nel DOM da loadSection() in main.js
 // NON creiamo una copia nascosta qui per evitare ID duplicati nel DOM.
 
-export function deleteTimerById(timerId) {
+export async function deleteTimerById(timerId) {
     const timerRef = db.collection('timeLogs').doc(timerId);
-    timerRef.update({
-        isDeleted: true,
-        deletedAt: firebase.firestore.FieldValue.serverTimestamp()
-    }).then(() => {
-        Swal.fire({
-            icon: 'success',
-            title: 'Timer Eliminato',
-            text: 'Il timer è stato spostato nel cestino.',
-            confirmButtonText: 'OK'
+    try {
+        await timerRef.update({
+            isDeleted: true,
+            deletedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
-        // Chiudi la modale
+        notify.success('Timer Eliminato', 'Il timer è stato spostato nel cestino.');
         CrModal.hide('edit-saved-timer-modal');
-        // Ricarica la lista dei timer salvati per riflettere il cambiamento
-        import('./savedTimersData.js').then(m => m.loadSavedTimers(m.getCurrentFilters()));
-    }).catch(error => {
+        const m = await import('./savedTimersData.js');
+        m.loadSavedTimers(m.getCurrentFilters());
+    } catch (error) {
         console.error('Errore durante l\'eliminazione del timer:', error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Errore',
-            text: 'Si è verificato un errore durante l\'eliminazione del timer.',
-            confirmButtonText: 'OK'
-        });
-    });
+        notify.error('Errore', 'Si è verificato un errore durante l\'eliminazione del timer.');
+    }
 }
 
 // Funzione per creare l'elemento HTML di un timer salvato come riga di tabella
@@ -352,8 +343,9 @@ export function createTimerRow(timerId, logData, isRecycleBin = false) {
         const restoreBtn = document.createElement('button');
         restoreBtn.className = 'cr-btn cr-btn-sm bg-emerald-500 hover:bg-emerald-600 text-white';
         restoreBtn.innerHTML = '<i class="fas fa-undo mr-1"></i> Ripristina';
-        restoreBtn.addEventListener('click', () => {
-            import('./recycleBinTimers.js').then(m => m.restoreTimer(timerId, row));
+        restoreBtn.addEventListener('click', async () => {
+            const m = await import('./recycleBinTimers.js');
+            m.restoreTimer(timerId, row);
         });
         actionCell.appendChild(restoreBtn);
     } else {
@@ -376,8 +368,9 @@ export function attachSavedTimersListeners() {
     // Inline editing — nessun listener modale necessario
 }
 
-export function initializeSavedTimersSection() {
-    import('./savedTimersEvents.js').then(m => m.initializeSavedTimersEvents());
+export async function initializeSavedTimersSection() {
+    const m = await import('./savedTimersEvents.js');
+    m.initializeSavedTimersEvents();
 }
 
 
@@ -438,16 +431,18 @@ export function createRecycleBinRow(timerId, logData) {
     restoreBtn.className = 'cr-btn cr-btn-sm bg-emerald-500 hover:bg-emerald-600 text-white mr-1';
     restoreBtn.title = 'Ripristina Timer';
     restoreBtn.innerHTML = '<i class="fas fa-undo"></i>';
-    restoreBtn.addEventListener('click', () => {
-        import('./recycleBinTimers.js').then(m => m.restoreTimer(timerId, row));
+    restoreBtn.addEventListener('click', async () => {
+        const m = await import('./recycleBinTimers.js');
+        m.restoreTimer(timerId, row);
     });
 
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'cr-btn cr-btn-sm bg-rose-500 hover:bg-rose-600 text-white';
     deleteBtn.title = 'Elimina Definitivamente';
     deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
-    deleteBtn.addEventListener('click', () => {
-        import('./recycleBinTimers.js').then(m => m.permanentlyDeleteTimer(timerId, row));
+    deleteBtn.addEventListener('click', async () => {
+        const m = await import('./recycleBinTimers.js');
+        m.permanentlyDeleteTimer(timerId, row);
     });
 
     actionCell.appendChild(restoreBtn);

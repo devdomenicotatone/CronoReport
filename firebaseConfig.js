@@ -1,4 +1,5 @@
 // firebaseConfig.js — Google API initialization (Firebase-integrated)
+import * as notify from './notify.js';
 // Usa il token OAuth ottenuto durante il login Firebase (zero popup aggiuntivi)
 // Firebase config e initializeApp sono nell'inline script di index.html
 
@@ -97,12 +98,7 @@ export async function handleAuthClick(callback) {
         if (callback) callback();
     } catch (error) {
         console.error('Errore autenticazione Google:', error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Errore Autenticazione',
-            text: error.message || 'Impossibile autenticarsi con Google. Riprova.',
-            confirmButtonText: 'OK'
-        });
+        notify.error('Errore Autenticazione', error.message || 'Impossibile autenticarsi con Google. Riprova.');
     }
 }
 
@@ -118,15 +114,16 @@ export function handleSignOutClick() {
 // ── Inizializzazione client con access token (usata da reportEvents.js) ──
 export function initializeGoogleApiClient(accessToken) {
     return new Promise((resolve, reject) => {
-        gapi.load('client', () => {
-            gapi.client.init({
-                discoveryDocs: DISCOVERY_DOCS
-            }).then(() => {
+        gapi.load('client', async () => {
+            try {
+                await gapi.client.init({
+                    discoveryDocs: DISCOVERY_DOCS
+                });
                 gapi.client.setToken({ access_token: accessToken });
                 resolve();
-            }, (error) => {
+            } catch (error) {
                 reject(error);
-            });
+            }
         });
     });
 }

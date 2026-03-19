@@ -7,12 +7,12 @@ export function initializeMenu() {
     // === Sidebar Navigation (Desktop) ===
     const sidebarLinks = document.querySelectorAll('#sidebar-nav .nav-link');
     sidebarLinks.forEach(link => {
-        link.addEventListener('click', (e) => {
+        link.addEventListener('click', async (e) => {
             e.preventDefault();
             const section = link.getAttribute('data-section');
             if (section) {
-                // Usa import dinamico per evitare dipendenza circolare con main.js
-                import('./main.js').then(m => m.loadSection(section));
+                const m = await import('./main.js');
+                m.loadSection(section);
                 setActiveNav(section);
             }
         });
@@ -21,11 +21,12 @@ export function initializeMenu() {
     // === Bottom Navigation (Mobile) ===
     const bottomLinks = document.querySelectorAll('#bottom-nav .bottom-nav-link');
     bottomLinks.forEach(link => {
-        link.addEventListener('click', (e) => {
+        link.addEventListener('click', async (e) => {
             e.preventDefault();
             const section = link.getAttribute('data-section');
             if (section) {
-                import('./main.js').then(m => m.loadSection(section));
+                const m = await import('./main.js');
+                m.loadSection(section);
                 setActiveNav(section);
                 closeMoreMenu();
             }
@@ -52,11 +53,12 @@ export function initializeMenu() {
         // More menu links
         const moreLinks = morePopup.querySelectorAll('.more-nav-link');
         moreLinks.forEach(link => {
-            link.addEventListener('click', (e) => {
+            link.addEventListener('click', async (e) => {
                 e.preventDefault();
                 const section = link.getAttribute('data-section');
                 if (section) {
-                    import('./main.js').then(m => m.loadSection(section));
+                    const m = await import('./main.js');
+                    m.loadSection(section);
                     setActiveNav(section);
                     closeMoreMenu();
                 }
@@ -67,25 +69,27 @@ export function initializeMenu() {
     // === Logout ===
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) {
-        logoutBtn.addEventListener('click', (e) => {
+        logoutBtn.addEventListener('click', async (e) => {
             e.preventDefault();
-            auth.signOut().then(() => {
+            try {
+                await auth.signOut();
                 window.location.href = 'login.html';
-            }).catch((error) => {
+            } catch (error) {
                 console.error('Errore durante il logout:', error);
-            });
+            }
         });
     }
 
     const mobileLogoutBtn = document.getElementById('mobile-logout-btn');
     if (mobileLogoutBtn) {
-        mobileLogoutBtn.addEventListener('click', (e) => {
+        mobileLogoutBtn.addEventListener('click', async (e) => {
             e.preventDefault();
-            auth.signOut().then(() => {
+            try {
+                await auth.signOut();
                 window.location.href = 'login.html';
-            }).catch((error) => {
+            } catch (error) {
                 console.error('Errore durante il logout:', error);
-            });
+            }
         });
     }
 }

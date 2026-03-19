@@ -1,5 +1,10 @@
 // reportConfig.js
+import * as notify from './notify.js';
 import { handleAuthClick } from './firebaseConfig.js';
+import { loadTimerClientDropdown as loadClients, loadProjects, loadWorktypes } from './timerHelpers.js';
+
+// Re-export per backward compatibility con reportEvents.js
+export { loadClients, loadProjects, loadWorktypes };
 
 // Variabili globali necessarie per configurazioni e logo
 let savedConfigs = {}; // Oggetto per memorizzare le configurazioni salvate
@@ -294,145 +299,54 @@ export function clearLogoPreview() {
     }
 }
 
-// Caricamento filtri
-export function loadClients(selectElement) {
-    selectElement.innerHTML = '<option value="">--Seleziona Cliente--</option>';
-    return db.collection('clients')
-        .where('uid', '==', currentUser.uid)
-        .orderBy('name')
-        .get()
-        .then(snapshot => {
-            snapshot.forEach(doc => {
-                const client = doc.data();
-                const option = document.createElement('option');
-                option.value = doc.id;
-                option.textContent = client.name;
-                selectElement.appendChild(option);
-            });
-        })
-        .catch(error => {
-            console.error('Errore nel caricamento dei clienti:', error);
-            return Promise.reject(error);
-        });
-}
-
-export function loadProjects(selectElement, selectedClientId) {
-    selectElement.innerHTML = '<option value="">--Seleziona Progetto--</option>';
-    let query = db.collection('projects')
-        .where('uid', '==', currentUser.uid)
-        .where('clientId', '==', selectedClientId)
-        .orderBy('name');
-
-    return query.get()
-        .then(snapshot => {
-            if (snapshot.empty) {
-                selectElement.disabled = true;
-            } else {
-                selectElement.disabled = false;
-                snapshot.forEach(doc => {
-                    const project = doc.data();
-                    const option = document.createElement('option');
-                    option.value = doc.id;
-                    option.textContent = project.name;
-                    selectElement.appendChild(option);
-                });
-            }
-        })
-        .catch(error => {
-            console.error('Errore nel caricamento dei progetti:', error);
-            throw error;
-        });
-}
-
-export function loadWorktypes(selectElement, selectedClientId) {
-    selectElement.innerHTML = '<option value="">--Seleziona Tipo di Lavoro--</option>';
-    let query = db.collection('worktypes')
-        .where('uid', '==', currentUser.uid)
-        .where('clientId', '==', selectedClientId)
-        .orderBy('name');
-
-    return query.get()
-        .then(snapshot => {
-            if (snapshot.empty) {
-                selectElement.disabled = true;
-            } else {
-                selectElement.disabled = false;
-                snapshot.forEach(doc => {
-                    const worktype = doc.data();
-                    const option = document.createElement('option');
-                    option.value = doc.id;
-                    option.textContent = worktype.name;
-                    selectElement.appendChild(option);
-                });
-            }
-        })
-        .catch(error => {
-            console.error('Errore nel caricamento dei tipi di lavoro:', error);
-            throw error;
-        });
-}
+// loadClients, loadProjects, loadWorktypes → importati e ri-esportati da timerHelpers.js (vedi top)
 
 // Funzione per caricare le configurazioni salvate
-export function loadSavedConfigs() {
+export async function loadSavedConfigs() {
     const savedConfigSelect = document.getElementById('saved-config-select');
     const deleteConfigBtn = document.getElementById('delete-config-btn');
 
     savedConfigSelect.innerHTML = '<option value="">-- Seleziona una configurazione --</option>';
     deleteConfigBtn.style.display = 'none';
-    db.collection('reportConfigs')
-        .where('uid', '==', currentUser.uid)
-        .orderBy('timestamp', 'desc')
-        .get()
-        .then(snapshot => {
-            savedConfigs = {};
-            if (!snapshot.empty) {
-                snapshot.forEach(doc => {
-                    const config = doc.data();
-                    savedConfigs[doc.id] = config;
-                    const option = document.createElement('option');
-                    option.value = doc.id;
-                    option.textContent = config.name;
-                    savedConfigSelect.appendChild(option);
-                });
-            }
-        })
-        .catch(error => {
-            console.error('Errore nel caricamento delle configurazioni salvate:', error);
-            Swal.fire({
-                icon: 'error',
-                title: 'Errore',
-                text: 'Si è verificato un errore durante il caricamento delle configurazioni salvate.',
-                confirmButtonText: 'OK'
+    try {
+        const snapshot = await db.collection('reportConfigs')
+            .where('uid', '==', currentUser.uid)
+            .orderBy('timestamp', 'desc')
+            .get();
+        savedConfigs = {};
+        if (!snapshot.empty) {
+            snapshot.forEach(doc => {
+                const config = doc.data();
+                savedConfigs[doc.id] = config;
+                const option = document.createElement('option');
+                option.value = doc.id;
+                option.textContent = config.name;
+                savedConfigSelect.appendChild(option);
             });
-        });
+        }
+    } catch (error) {
+        console.error('Errore nel caricamento delle configurazioni salvate:', error);
+        notify.error('Errore', 'Si è verificato un errore durante il caricamento delle configurazioni salvate.');
+    }
 }
 
 // Funzione per salvare una configurazione
-export function saveReportConfig(config) {
-    db.collection('reportConfigs').add({
-        uid: currentUser.uid,
-        name: config.name,
-        reportHeader: config.reportHeader,
-        companyLogoBase64: config.companyLogoBase64,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp()
-    }).then(() => {
-        Swal.fire({
-            icon: 'success',
-            title: 'Configurazione Salvata',
-            text: 'La configurazione è stata salvata con successo.',
-            confirmButtonText: 'OK'
+export async function saveReportConfig(config) {
+    try {
+        await db.collection('reportConfigs').add({
+            uid: currentUser.uid,
+            name: config.name,
+            reportHeader: config.reportHeader,
+            companyLogoBase64: config.companyLogoBase64,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
+        notify.success('Configurazione Salvata', 'La configurazione è stata salvata con successo.');
         loadSavedConfigs();
         document.getElementById('config-name').value = '';
-    }).catch(error => {
+    } catch (error) {
         console.error('Errore nel salvataggio della configurazione:', error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Errore',
-            text: 'Si è verificato un errore durante il salvataggio della configurazione.',
-            confirmButtonText: 'OK'
-        });
-    });
+        notify.error('Errore', 'Si è verificato un errore durante il salvataggio della configurazione.');
+    }
 }
 
 // Funzione per applicare una configurazione salvata
@@ -826,18 +740,19 @@ export function exportReportToGoogleSheet(reportValues, fileName) {
     });
 }
 
-export function createGoogleDoc(reportContent, fileName) {
-    gapi.client.docs.documents.create({
-        title: fileName
-    }).then((response) => {
+export async function createGoogleDoc(reportContent, fileName) {
+    try {
+        const response = await gapi.client.docs.documents.create({
+            title: fileName
+        });
         const documentId = response.result.documentId;
         insertContentIntoDoc(documentId, reportContent);
-    }, (error) => {
+    } catch (error) {
         console.error('Errore durante la creazione del documento:', error);
-    });
+    }
 }
 
-export function insertContentIntoDoc(documentId, reportContent) {
+export async function insertContentIntoDoc(documentId, reportContent) {
     const requests = [{
         insertText: {
             location: { index: 1 },
@@ -845,15 +760,16 @@ export function insertContentIntoDoc(documentId, reportContent) {
         }
     }];
 
-    gapi.client.docs.documents.batchUpdate({
-        documentId: documentId,
-        requests: requests
-    }).then((response) => {
+    try {
+        const response = await gapi.client.docs.documents.batchUpdate({
+            documentId: documentId,
+            requests: requests
+        });
         console.log('Contenuto inserito nel documento:', response);
         window.open(`https://docs.google.com/document/d/${documentId}/edit`, '_blank');
-    }, (error) => {
+    } catch (error) {
         console.error('Errore durante l\'inserimento del contenuto:', error);
-    });
+    }
 }
 
 export function generateReportContentString(reportHeader, reportData, totalAmount, includeHourlyRate) {
@@ -872,32 +788,34 @@ export function generateReportContentString(reportHeader, reportData, totalAmoun
     return content;
 }
 
-export function createGoogleSheet(reportValues, fileName) {
-    gapi.client.sheets.spreadsheets.create({
-        properties: { title: fileName }
-    }).then((response) => {
+export async function createGoogleSheet(reportValues, fileName) {
+    try {
+        const response = await gapi.client.sheets.spreadsheets.create({
+            properties: { title: fileName }
+        });
         const spreadsheetId = response.result.spreadsheetId;
         const sheetName = response.result.sheets[0].properties.title;
         insertDataIntoSheet(spreadsheetId, sheetName, reportValues);
-    }, (error) => {
+    } catch (error) {
         console.error('Errore durante la creazione del foglio di calcolo:', error);
-    });
+    }
 }
 
-export function insertDataIntoSheet(spreadsheetId, sheetName, reportValues) {
+export async function insertDataIntoSheet(spreadsheetId, sheetName, reportValues) {
     const range = `${sheetName}!A1`;
 
-    gapi.client.sheets.spreadsheets.values.update({
-        spreadsheetId: spreadsheetId,
-        range: range,
-        valueInputOption: 'RAW',
-        values: reportValues
-    }).then((response) => {
+    try {
+        const response = await gapi.client.sheets.spreadsheets.values.update({
+            spreadsheetId: spreadsheetId,
+            range: range,
+            valueInputOption: 'RAW',
+            values: reportValues
+        });
         console.log('Dati inseriti nel foglio di calcolo:', response);
         window.open(`https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`, '_blank');
-    }, (error) => {
+    } catch (error) {
         console.error('Errore durante l\'inserimento dei dati:', error);
-    });
+    }
 }
 
 export function generateReportValuesArray(reportHeader, reportData, totalAmount, includeHourlyRate) {
