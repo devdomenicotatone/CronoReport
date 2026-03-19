@@ -1,4 +1,4 @@
-// firebaseConfig.js — GAPI + GIS initialization
+// firebaseConfig.js — GAPI + GIS initialization (modern programmatic loading)
 // Firebase config e initializeApp sono nell'inline script di index.html
 
 // Google API Config
@@ -8,51 +8,62 @@ const API_KEY = 'AIzaSyA1yoFNujcHvWFib5_J1dFiMSDzBMv-b4s';
 const DISCOVERY_DOCS = [
     'https://docs.googleapis.com/$discovery/rest?version=v1',
     'https://sheets.googleapis.com/$discovery/rest?version=v4'
-  ];
-  
-  const SCOPES = 'https://www.googleapis.com/auth/documents https://www.googleapis.com/auth/spreadsheets';
-  
-  // firebase.initializeApp — già eseguito nell'inline script di index.html
-  
-  let tokenClient;
-  export let gapiInited = false;
-  export let gisInited = false;
-  
-  // Funzione chiamata quando la libreria GAPI è caricata
-  function gapiLoaded() {
-    gapi.load('client', initializeGapiClient);
-  }
-  
-  // Funzione per inizializzare il client GAPI
-  async function initializeGapiClient() {
-    try {
-      await gapi.client.init({
-          apiKey: API_KEY,
-          discoveryDocs: DISCOVERY_DOCS,
-      });
-      gapiInited = true;
-      maybeEnableButtons();
+];
 
-      // Dispatch an event to notify that the Google API client is initialized
-      document.dispatchEvent(new Event('google-api-initialized'));
-    } catch (error) {
-      console.warn('Google API client non inizializzato (API key o rete non disponibile):', error.result?.error?.message || error);
-    }
-  }
-  
-  // Funzione chiamata quando la libreria GIS è caricata
-  function gisLoaded() {
+const SCOPES = 'https://www.googleapis.com/auth/documents https://www.googleapis.com/auth/spreadsheets';
+
+let tokenClient;
+export let gapiInited = false;
+export let gisInited = false;
+
+// ── Helper: carica uno script esterno e ritorna una Promise ──
+function loadScript(src) {
+    return new Promise((resolve, reject) => {
+        // Se lo script è già presente nel DOM, risolvi subito
+        if (document.querySelector(`script[src="${src}"]`)) {
+            resolve();
+            return;
+        }
+        const script = document.createElement('script');
+        script.src = src;
+        script.async = true;
+        script.onload = resolve;
+        script.onerror = () => reject(new Error(`Impossibile caricare: ${src}`));
+        document.head.appendChild(script);
+    });
+}
+
+// ── Inizializzazione GAPI (Google API Client) ──
+async function initGapi() {
+    await loadScript('https://apis.google.com/js/api.js');
+    await new Promise(resolve => gapi.load('client', resolve));
+    await gapi.client.init({
+        apiKey: API_KEY,
+        discoveryDocs: DISCOVERY_DOCS,
+    });
+    gapiInited = true;
+    maybeEnableButtons();
+}
+
+// ── Inizializzazione GIS (Google Identity Services) ──
+async function initGis() {
+    await loadScript('https://accounts.google.com/gsi/client');
     tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: CLIENT_ID,
         scope: SCOPES,
-        callback: '', 
+        callback: '',
     });
     gisInited = true;
     maybeEnableButtons();
-  }
-  
-  // Funzione per gestire l'autenticazione e l'autorizzazione con rinnovo silente del token
-  export function handleAuthClick(callback) {
+}
+
+// ── Avvia entrambi in parallelo ──
+Promise.all([initGapi(), initGis()]).catch(err => {
+    console.warn('Google API non disponibile — i pulsanti export resteranno disabilitati:', err.message || err);
+});
+
+// ── Auth: gestione token OAuth2 con rinnovo silente ──
+export function handleAuthClick(callback) {
     tokenClient.callback = async (response) => {
         if (response.error) {
             console.error('Errore durante l\'autenticazione:', response);
@@ -60,67 +71,46 @@ const DISCOVERY_DOCS = [
         }
         callback();
     };
-  
+
     const token = gapi.client.getToken();
     if (!token) {
         tokenClient.requestAccessToken({ prompt: 'consent' });
     } else {
         tokenClient.requestAccessToken({ prompt: '' });
     }
-  }
-  
-  // Funzione per gestire la disconnessione
-  export function handleSignOutClick() {
+}
+
+// ── Sign out ──
+export function handleSignOutClick() {
     const token = gapi.client.getToken();
     if (token) {
         google.accounts.oauth2.revoke(token.access_token);
         gapi.client.setToken('');
     }
-  }
-  
-  export function initializeGoogleApiClient(accessToken) {
+}
+
+// ── Inizializzazione client con access token esistente (usata da reportEvents.js) ──
+export function initializeGoogleApiClient(accessToken) {
     return new Promise((resolve, reject) => {
         gapi.load('client', () => {
             gapi.client.init({
-                discoveryDocs: [
-                    'https://docs.googleapis.com/$discovery/rest?version=v1',
-                    'https://sheets.googleapis.com/$discovery/rest?version=v4'
-                ]
+                discoveryDocs: DISCOVERY_DOCS
             }).then(() => {
-                // Imposta il token di accesso per le richieste
-                gapi.client.setToken({
-                    access_token: accessToken
-                });
+                gapi.client.setToken({ access_token: accessToken });
                 resolve();
             }, (error) => {
                 reject(error);
             });
         });
     });
-  }
-  
-  function handleClientLoad() {
-    const accessToken = localStorage.getItem('googleAccessToken');
-    if (accessToken) {
-        initializeGoogleApiClient(accessToken).then(() => {
-            maybeEnableButtons();
-        }).catch(error => {
-            console.warn('Google API non disponibile — i pulsanti export resteranno disabilitati');
-        });
-    }
-  }
-  
-  // Modifica maybeEnableButtons per essere accessibile globalmente e verificare se i pulsanti esistono
-  export function maybeEnableButtons() {
+}
+
+// ── Abilita bottoni export quando entrambe le API sono pronte ──
+export function maybeEnableButtons() {
     if (gapiInited && gisInited) {
-        // Buttons use id="export-google-doc-btn" (not class)
         const docBtn = document.getElementById('export-google-doc-btn');
         const sheetBtn = document.getElementById('export-google-sheet-btn');
         if (docBtn) docBtn.disabled = false;
         if (sheetBtn) sheetBtn.disabled = false;
     }
-  }
-
-// gapiLoaded e gisLoaded devono restare su window perché chiamati da onload="" in index.html
-window.gapiLoaded = gapiLoaded;
-window.gisLoaded = gisLoaded;
+}
