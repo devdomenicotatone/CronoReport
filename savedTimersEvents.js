@@ -724,16 +724,7 @@ export function filterDisplayedTimers(searchTerm) {
 }
 
 // Funzione per esportare i timer in Google Docs
-export function exportTimersToGoogleDoc() {
-    if (!gapiInited || !gisInited) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Google API non pronta',
-            text: 'Le API di Google non sono ancora caricate. Ricarica la pagina e riprova.',
-            confirmButtonText: 'OK'
-        });
-        return;
-    }
+export async function exportTimersToGoogleDoc() {
     if (displayedTimers.length === 0) {
         Swal.fire({
             icon: 'info',
@@ -744,10 +735,11 @@ export function exportTimersToGoogleDoc() {
         return;
     }
 
-    handleAuthClick(() => {
+    await handleAuthClick(() => {
         proceedWithExportToGoogleDoc();
     });
 }
+
 
 export function proceedWithExportToGoogleDoc() {
     // Genera il contenuto del report
@@ -760,16 +752,7 @@ export function proceedWithExportToGoogleDoc() {
 }
 
 // Funzione per esportare i timer in Google Sheets
-export function exportTimersToGoogleSheet() {
-    if (!gapiInited || !gisInited) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Google API non pronta',
-            text: 'Le API di Google non sono ancora caricate. Ricarica la pagina e riprova.',
-            confirmButtonText: 'OK'
-        });
-        return;
-    }
+export async function exportTimersToGoogleSheet() {
     if (displayedTimers.length === 0) {
         Swal.fire({
             icon: 'info',
@@ -780,10 +763,11 @@ export function exportTimersToGoogleSheet() {
         return;
     }
 
-    handleAuthClick(() => {
+    await handleAuthClick(() => {
         proceedWithExportToGoogleSheet();
     });
 }
+
 
 export function proceedWithExportToGoogleSheet() {
     // Genera l'array di valori

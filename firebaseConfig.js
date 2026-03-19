@@ -1,8 +1,8 @@
-// firebaseConfig.js — GAPI + GIS initialization (modern programmatic loading)
+// firebaseConfig.js — Google API initialization (Firebase-integrated)
+// Usa il token OAuth ottenuto durante il login Firebase (zero popup aggiuntivi)
 // Firebase config e initializeApp sono nell'inline script di index.html
 
 // Google API Config
-const CLIENT_ID = '1032884571304-7t9shq2pb29o92qhthovhsj65l99l9t4.apps.googleusercontent.com';
 const API_KEY = 'AIzaSyA1yoFNujcHvWFib5_J1dFiMSDzBMv-b4s';
 
 const DISCOVERY_DOCS = [
@@ -10,20 +10,12 @@ const DISCOVERY_DOCS = [
     'https://sheets.googleapis.com/$discovery/rest?version=v4'
 ];
 
-const SCOPES = 'https://www.googleapis.com/auth/documents https://www.googleapis.com/auth/spreadsheets';
-
-let tokenClient;
-export let gapiInited = false;
-export let gisInited = false;
+export let gapiReady = false;
 
 // ── Helper: carica uno script esterno e ritorna una Promise ──
 function loadScript(src) {
     return new Promise((resolve, reject) => {
-        // Se lo script è già presente nel DOM, risolvi subito
-        if (document.querySelector(`script[src="${src}"]`)) {
-            resolve();
-            return;
-        }
+        if (document.querySelector(`script[src="${src}"]`)) { resolve(); return; }
         const script = document.createElement('script');
         script.src = src;
         script.async = true;
@@ -33,7 +25,7 @@ function loadScript(src) {
     });
 }
 
-// ── Inizializzazione GAPI (Google API Client) ──
+// ── Inizializzazione GAPI (solo client library, niente GIS) ──
 async function initGapi() {
     await loadScript('https://apis.google.com/js/api.js');
     await new Promise(resolve => gapi.load('client', resolve));
@@ -41,42 +33,76 @@ async function initGapi() {
         apiKey: API_KEY,
         discoveryDocs: DISCOVERY_DOCS,
     });
-    gapiInited = true;
+    gapiReady = true;
+
+    // Se c'è un token salvato dal login, impostalo subito
+    const savedToken = localStorage.getItem('googleAccessToken');
+    if (savedToken) {
+        gapi.client.setToken({ access_token: savedToken });
+    }
+
     maybeEnableButtons();
 }
 
-// ── Inizializzazione GIS (Google Identity Services) ──
-async function initGis() {
-    await loadScript('https://accounts.google.com/gsi/client');
-    tokenClient = google.accounts.oauth2.initTokenClient({
-        client_id: CLIENT_ID,
-        scope: SCOPES,
-        callback: '',
-    });
-    gisInited = true;
-    maybeEnableButtons();
-}
-
-// ── Avvia entrambi in parallelo ──
-Promise.all([initGapi(), initGis()]).catch(err => {
+// Avvia init
+initGapi().catch(err => {
     console.warn('Google API non disponibile — i pulsanti export resteranno disabilitati:', err.message || err);
 });
 
-// ── Auth: gestione token OAuth2 con rinnovo silente ──
-export function handleAuthClick(callback) {
-    tokenClient.callback = async (response) => {
-        if (response.error) {
-            console.error('Errore durante l\'autenticazione:', response);
-            return;
-        }
-        callback();
-    };
+// ── Ensure Auth: verifica/rinnova il token prima di ogni chiamata API ──
+// Usa il token Firebase (già ottenuto al login), nessun popup aggiuntivo.
+// Se il token è scaduto, riautentica via Firebase Google provider.
+export async function ensureGoogleAuth() {
+    if (!gapiReady) {
+        throw new Error('Google API client non ancora inizializzato. Riprova tra qualche secondo.');
+    }
 
-    const token = gapi.client.getToken();
-    if (!token) {
-        tokenClient.requestAccessToken({ prompt: 'consent' });
-    } else {
-        tokenClient.requestAccessToken({ prompt: '' });
+    const currentToken = gapi.client.getToken();
+    if (currentToken && currentToken.access_token) {
+        // Token già impostato — proviamo se è ancora valido
+        return;
+    }
+
+    // Prova con il token salvato in localStorage
+    const savedToken = localStorage.getItem('googleAccessToken');
+    if (savedToken) {
+        gapi.client.setToken({ access_token: savedToken });
+        return;
+    }
+
+    // Nessun token disponibile: riautentica via Firebase
+    await refreshGoogleToken();
+}
+
+// ── Rinnova il token via Firebase Google Sign-In ──
+async function refreshGoogleToken() {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    provider.addScope('https://www.googleapis.com/auth/drive.file');
+    provider.addScope('https://www.googleapis.com/auth/documents');
+    provider.addScope('https://www.googleapis.com/auth/spreadsheets');
+
+    const result = await firebase.auth().signInWithPopup(provider);
+    const credential = result.credential;
+    const accessToken = credential.accessToken;
+
+    localStorage.setItem('googleAccessToken', accessToken);
+    gapi.client.setToken({ access_token: accessToken });
+}
+
+// ── handleAuthClick: compatibilità con il codice esistente ──
+// Ora usa ensureGoogleAuth() (token Firebase) anziché GIS popup
+export async function handleAuthClick(callback) {
+    try {
+        await ensureGoogleAuth();
+        if (callback) callback();
+    } catch (error) {
+        console.error('Errore autenticazione Google:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Errore Autenticazione',
+            text: error.message || 'Impossibile autenticarsi con Google. Riprova.',
+            confirmButtonText: 'OK'
+        });
     }
 }
 
@@ -84,12 +110,12 @@ export function handleAuthClick(callback) {
 export function handleSignOutClick() {
     const token = gapi.client.getToken();
     if (token) {
-        google.accounts.oauth2.revoke(token.access_token);
         gapi.client.setToken('');
     }
+    localStorage.removeItem('googleAccessToken');
 }
 
-// ── Inizializzazione client con access token esistente (usata da reportEvents.js) ──
+// ── Inizializzazione client con access token (usata da reportEvents.js) ──
 export function initializeGoogleApiClient(accessToken) {
     return new Promise((resolve, reject) => {
         gapi.load('client', () => {
@@ -105,12 +131,17 @@ export function initializeGoogleApiClient(accessToken) {
     });
 }
 
-// ── Abilita bottoni export quando entrambe le API sono pronte ──
+// ── Abilita bottoni export quando GAPI è pronto ──
 export function maybeEnableButtons() {
-    if (gapiInited && gisInited) {
+    if (gapiReady) {
         const docBtn = document.getElementById('export-google-doc-btn');
         const sheetBtn = document.getElementById('export-google-sheet-btn');
         if (docBtn) docBtn.disabled = false;
         if (sheetBtn) sheetBtn.disabled = false;
     }
 }
+
+// Retrocompatibilità: export gapiInited e gisInited per i moduli che li importano
+// gisInited è sempre true perché non usiamo più GIS — legato a gapiReady
+export { gapiReady as gapiInited };
+export const gisInited = true;
