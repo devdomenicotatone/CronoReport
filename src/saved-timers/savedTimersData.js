@@ -1,8 +1,8 @@
 // savedTimersData.js
-import { CrModal } from './uiComponents.js';
-import { loadClientColors, getClientBgStyle, getClientHexColor } from './clientColors.js';
+import { CrModal } from '../ui/uiComponents.js';
+import { loadClientColors, getClientBgStyle, getClientHexColor } from '../core/clientColors.js';
 import { createTimerRow, formatDuration, getMonthName, formatDate, formatTimeShort } from './savedTimersUI.js';
-import * as notify from './notify.js';
+import * as notify from '../core/notify.js';
 
 // Shared state: displayedTimers ora vive qui per evitare dipendenza circolare con savedTimersEvents.js
 export let displayedTimers = [];
@@ -424,12 +424,12 @@ export async function saveReminderSettings(clientName, reminderAmount, reminderD
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
                 CrModal.hide('setReminderModal');
-                const m = await import('./main.js');
+                const m = await import('../pages/main.js');
                 m.showAlert('success', 'Promemoria Salvato', 'Le impostazioni di promemoria sono state aggiornate.');
                 loadSavedTimers(getCurrentFilters());
             } catch (error) {
                 console.error('Errore nell\'aggiornamento del promemoria:', error);
-                const m = await import('./main.js');
+                const m = await import('../pages/main.js');
                 m.showAlert('error', 'Errore', 'Si è verificato un errore durante il salvataggio del promemoria.');
             }
         } else {
@@ -442,12 +442,12 @@ export async function saveReminderSettings(clientName, reminderAmount, reminderD
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
                 CrModal.hide('setReminderModal');
-                const m = await import('./main.js');
+                const m = await import('../pages/main.js');
                 m.showAlert('success', 'Promemoria Salvato', 'Le impostazioni di promemoria sono state salvate.');
                 loadSavedTimers(getCurrentFilters());
             } catch (error) {
                 console.error('Errore nel salvataggio del promemoria:', error);
-                const m = await import('./main.js');
+                const m = await import('../pages/main.js');
                 m.showAlert('error', 'Errore', 'Si è verificato un errore durante il salvataggio del promemoria.');
             }
         }
@@ -552,7 +552,7 @@ export async function showSetReminderModal(clientName, currentAmount) {
         const reminderDate = document.getElementById('reminder-date').value;
 
         if (isNaN(reminderAmount) && !reminderDate) {
-            const m = await import('./main.js');
+            const m = await import('../pages/main.js');
             m.showAlert('warning', 'Attenzione', 'Inserisci almeno un valore per il promemoria.');
             return;
         }
@@ -1376,7 +1376,7 @@ export function applyAdvancedFilters(timers) {
 // ============================================
 export async function exportTimersToCSV(timers) {
     if (!timers || timers.length === 0) {
-        const m = await import('./main.js');
+        const m = await import('../pages/main.js');
         m.showAlert('info', 'Nessun Dato', 'Non ci sono timer da esportare.');
         return;
     }
@@ -1420,7 +1420,7 @@ export async function exportTimersToCSV(timers) {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    const m = await import('./main.js');
+    const m = await import('../pages/main.js');
     m.showAlert('success', 'CSV Esportato', `${timers.length} timer esportati con successo.`);
 }
 
@@ -1429,7 +1429,7 @@ export async function exportTimersToCSV(timers) {
 // ============================================
 export async function exportTimersToPDF(timers) {
     if (!timers || timers.length === 0) {
-        const m = await import('./main.js');
+        const m = await import('../pages/main.js');
         m.showAlert('info', 'Nessun Dato', 'Non ci sono timer da esportare.');
         return;
     }
@@ -1593,6 +1593,6 @@ export async function exportTimersToPDF(timers) {
     const fileName = `CronoReport_Timer_${new Date().toISOString().slice(0, 10)}.pdf`;
     doc.save(fileName);
 
-    const mPdf = await import('./main.js');
+    const mPdf = await import('../pages/main.js');
     mPdf.showAlert('success', 'PDF Esportato', `${timers.length} timer esportati in "${fileName}".`);
 }

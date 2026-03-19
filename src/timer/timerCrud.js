@@ -2,7 +2,7 @@
 import { parseLocalDateTime } from './timerHelpers.js';
 import { loadRecentTasks, loadTodaySummary, loadTodayLog, updateActiveTimerCount } from './timerWidgets.js';
 import { createTimerCard, startTimer, activeTimers } from './timerCard.js';
-import * as notify from './notify.js';
+import * as notify from '../core/notify.js';
 
 // === CREATE NEW TIMER ===
 

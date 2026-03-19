@@ -1,6 +1,6 @@
 // savedTimersUI.js
-import { CrModal } from './uiComponents.js';
-import * as notify from './notify.js';
+import { CrModal } from '../ui/uiComponents.js';
+import * as notify from '../core/notify.js';
 
 // NOTE: le seguenti dipendenze circolari sono risolte con import() dinamico nei punti di utilizzo:
 // - getCurrentFilters, loadSavedTimers da savedTimersData.js
@@ -344,7 +344,7 @@ export function createTimerRow(timerId, logData, isRecycleBin = false) {
         restoreBtn.className = 'cr-btn cr-btn-sm bg-emerald-500 hover:bg-emerald-600 text-white';
         restoreBtn.innerHTML = '<i class="fas fa-undo mr-1"></i> Ripristina';
         restoreBtn.addEventListener('click', async () => {
-            const m = await import('./recycleBinTimers.js');
+            const m = await import('../recycle-bin/recycleBinTimers.js');
             m.restoreTimer(timerId, row);
         });
         actionCell.appendChild(restoreBtn);
@@ -432,7 +432,7 @@ export function createRecycleBinRow(timerId, logData) {
     restoreBtn.title = 'Ripristina Timer';
     restoreBtn.innerHTML = '<i class="fas fa-undo"></i>';
     restoreBtn.addEventListener('click', async () => {
-        const m = await import('./recycleBinTimers.js');
+        const m = await import('../recycle-bin/recycleBinTimers.js');
         m.restoreTimer(timerId, row);
     });
 
@@ -441,7 +441,7 @@ export function createRecycleBinRow(timerId, logData) {
     deleteBtn.title = 'Elimina Definitivamente';
     deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
     deleteBtn.addEventListener('click', async () => {
-        const m = await import('./recycleBinTimers.js');
+        const m = await import('../recycle-bin/recycleBinTimers.js');
         m.permanentlyDeleteTimer(timerId, row);
     });
 

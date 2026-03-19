@@ -1,5 +1,5 @@
 // recycleBinReports.js
-import * as notify from './notify.js';
+import * as notify from '../core/notify.js';
 
 export const recycleBinTemplate = `
 <div id="recycle-bin-section" class="max-w-6xl mx-auto px-4 py-6">
@@ -49,7 +49,7 @@ export const recycleBinTemplate = `
 </div>
 `;
 
-import { loadClientColors, getClientBgStyle } from './clientColors.js';
+import { loadClientColors, getClientBgStyle } from '../core/clientColors.js';
 
 // Funzione per inizializzare gli eventi della sezione Cestino Report
 export function initializeRecycleBinReportsEvents() {

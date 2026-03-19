@@ -1,11 +1,11 @@
 // timerInit.js — Inizializzazione eventi e caricamento timer attivi
-import { timerTemplate } from './templates.js';
+import { timerTemplate } from '../ui/templates.js';
 import { loadTimerClientDropdown, loadProjects, loadWorktypes, formatDuration, updateLiveAmount } from './timerHelpers.js';
 import { createTimerCard, startTimer, pauseTimer, stopTimer, activeTimers } from './timerCard.js';
 import { loadRecentTasks, loadTodaySummary, loadTodayLog, updateActiveTimerCount } from './timerWidgets.js';
 import { createNewTimer } from './timerCrud.js';
-import { loadClientColors } from './clientColors.js';
-import * as notify from './notify.js';
+import { loadClientColors } from '../core/clientColors.js';
+import * as notify from '../core/notify.js';
 
 // Variabili per i selettori
 let clientSelect, projectSelect, worktypeSelect, linkInput, noteInput;

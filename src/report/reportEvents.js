@@ -1,9 +1,9 @@
 // reportEvents.js
-import * as notify from './notify.js';
+import * as notify from '../core/notify.js';
 import { loadClients, loadProjects, loadWorktypes, loadSavedConfigs, saveReportConfig, generatePDF, generateReportContentString, generateReportValuesArray, exportReportToGoogleSheet, createGoogleDoc, createGoogleSheet, extractDomainName, displayLogoPreview, clearLogoPreview, applySavedConfig } from './reportConfig.js';
-import { gapiInited, gisInited, handleAuthClick, maybeEnableButtons, initializeGoogleApiClient } from './firebaseConfig.js';
-import { formatDuration } from './timerHelpers.js';
-import { getUserPreference, saveUserPreference } from './userPreferences.js';
+import { gapiInited, gisInited, handleAuthClick, maybeEnableButtons, initializeGoogleApiClient } from '../core/firebaseConfig.js';
+import { formatDuration } from '../timer/timerHelpers.js';
+import { getUserPreference, saveUserPreference } from '../core/userPreferences.js';
 // Variabili globali necessarie
 let worktypeRates = {};
 let companyLogoBase64 = null;

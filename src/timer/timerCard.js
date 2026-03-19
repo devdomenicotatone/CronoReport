@@ -1,8 +1,8 @@
 // timerCard.js — Card UI e Timer Lifecycle (start, pause, resume, stop)
 import { createFaviconEl, loadRecentTasks, loadTodaySummary, loadTodayLog, updateActiveTimerCount } from './timerWidgets.js';
 import { formatDuration, updateLiveAmount, hhmmssToSeconds, secondsToHHMMSS } from './timerHelpers.js';
-import { getClientHexColor } from './clientColors.js';
-import * as notify from './notify.js';
+import { getClientHexColor } from '../core/clientColors.js';
+import * as notify from '../core/notify.js';
 
 // Shared state: activeTimers vive qui per evitare dipendenza circolare con timerInit/timerCrud
 export let activeTimers = [];

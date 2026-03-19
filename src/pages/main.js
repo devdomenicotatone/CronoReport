@@ -1,19 +1,19 @@
 // main.js — Orchestratore: Auth + Routing
 // DEV_MODE, auth, db sono definiti globalmente in index.html — accesso centralizzato via appState.js
-import { dataManagementTemplate, timerTemplate } from './templates.js';
+import { dataManagementTemplate, timerTemplate } from '../ui/templates.js';
 import { initializeMenu, updateUserDisplay, setActiveNav } from './menu.js';
-import { initializeTimerEvents } from './timerInit.js';
-import { savedTimersTemplate, initializeSavedTimersSection } from './savedTimersUI.js';
-import { initializeSavedTimersEvents } from './savedTimersEvents.js';
-import { initializeRecycleBinTimersEvents } from './recycleBinTimers.js';
-import { initializeRecycleBinReportsEvents, recycleBinTemplate } from './recycleBinReports.js';
-import { reportTemplate } from './reportConfig.js';
-import { initializeReportEvents } from './reportEvents.js';
-import { reportHistoryTemplate, initializeReportHistoryEvents } from './reportHistory.js';
-import { dashboardTemplate, initializeDashboardEvents } from './dashboard.js';
-import { CrTabs } from './uiComponents.js';
-import { setCurrentUser } from './appState.js';
-import { initializeDataManagementEvents } from './dataManagement.js';
+import { initializeTimerEvents } from '../timer/timerInit.js';
+import { savedTimersTemplate, initializeSavedTimersSection } from '../saved-timers/savedTimersUI.js';
+import { initializeSavedTimersEvents } from '../saved-timers/savedTimersEvents.js';
+import { initializeRecycleBinTimersEvents } from '../recycle-bin/recycleBinTimers.js';
+import { initializeRecycleBinReportsEvents, recycleBinTemplate } from '../recycle-bin/recycleBinReports.js';
+import { reportTemplate } from '../report/reportConfig.js';
+import { initializeReportEvents } from '../report/reportEvents.js';
+import { reportHistoryTemplate, initializeReportHistoryEvents } from '../report/reportHistory.js';
+import { dashboardTemplate, initializeDashboardEvents } from '../dashboard/dashboard.js';
+import { CrTabs } from '../ui/uiComponents.js';
+import { setCurrentUser } from '../core/appState.js';
+import { initializeDataManagementEvents } from '../data/dataManagement.js';
 
 if (DEV_MODE) {
     // Fake user per sviluppo

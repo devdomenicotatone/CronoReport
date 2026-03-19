@@ -1,7 +1,7 @@
 // dataManagement.js — Gestione Dati: Clienti, Progetti, Tipi di Lavoro
 // Estratto da main.js per Single Responsibility
-import { invalidateColorCache } from './clientColors.js';
-import * as notify from './notify.js';
+import { invalidateColorCache } from '../core/clientColors.js';
+import * as notify from '../core/notify.js';
 
 let _currentDmFilter = 'active';
 

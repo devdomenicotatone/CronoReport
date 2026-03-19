@@ -1,7 +1,7 @@
 // reportHistory.js
-import * as notify from './notify.js';
+import * as notify from '../core/notify.js';
 import { generatePDF } from './reportConfig.js';
-import { loadClientColors, getClientBgStyle, getClientHexColor } from './clientColors.js';
+import { loadClientColors, getClientBgStyle, getClientHexColor } from '../core/clientColors.js';
 // Template per la sezione Storico Report
 export const reportHistoryTemplate = `
 <div id="report-history-section" class="max-w-6xl mx-auto px-4 py-6" style="padding-bottom: 5.5rem;">

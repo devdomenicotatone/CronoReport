@@ -1,8 +1,8 @@
 // recycleBinTimers.js
-import * as notify from './notify.js';
-import { formatTimeShort } from './savedTimersUI.js';
-import { loadSavedTimers, getCurrentFilters } from './savedTimersData.js';
-import { loadClientColors, getClientBgStyle } from './clientColors.js';
+import * as notify from '../core/notify.js';
+import { formatTimeShort } from '../saved-timers/savedTimersUI.js';
+import { loadSavedTimers, getCurrentFilters } from '../saved-timers/savedTimersData.js';
+import { loadClientColors, getClientBgStyle } from '../core/clientColors.js';
 
 // Funzione per inizializzare gli eventi della sezione Cestino Timer
 export function initializeRecycleBinTimersEvents() {

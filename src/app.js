@@ -5,34 +5,34 @@
 // (dichiarate nell'inline script non-module in index.html).
 
 // Firebase GAPI/GIS initialization
-import '../firebaseConfig.js';
+import './core/firebaseConfig.js';
 
 // UI Components (CrModal, CrTabs, CrCollapse)
-import '../uiComponents.js';
+import './ui/uiComponents.js';
 
 // Theme Configuration (SweetAlert2, Chart.js, Flatpickr)
-import '../themeConfig.js';
+import './core/themeConfig.js';
 
 // Mock data in DEV MODE
 import '../devData.js';
 
 // Feature modules
-import '../dashboard.js';
-import '../reportConfig.js';
-import '../reportEvents.js';
-import '../reportHistory.js';
-import '../savedTimersUI.js';
-import '../savedTimersData.js';
-import '../savedTimersEvents.js';
-import '../recycleBinTimers.js';
-import '../recycleBinReports.js';
-import '../timerHelpers.js';
-import '../timerWidgets.js';
-import '../timerCard.js';
-import '../timerCrud.js';
-import '../timerInit.js';
-import '../menu.js';
-import '../templates.js';
+import './dashboard/dashboard.js';
+import './report/reportConfig.js';
+import './report/reportEvents.js';
+import './report/reportHistory.js';
+import './saved-timers/savedTimersUI.js';
+import './saved-timers/savedTimersData.js';
+import './saved-timers/savedTimersEvents.js';
+import './recycle-bin/recycleBinTimers.js';
+import './recycle-bin/recycleBinReports.js';
+import './timer/timerHelpers.js';
+import './timer/timerWidgets.js';
+import './timer/timerCard.js';
+import './timer/timerCrud.js';
+import './timer/timerInit.js';
+import './pages/menu.js';
+import './ui/templates.js';
 
 // Main orchestrator (deve essere ultimo — usa tutto il resto)
-import '../main.js';
+import './pages/main.js';

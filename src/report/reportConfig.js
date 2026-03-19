@@ -1,7 +1,7 @@
 // reportConfig.js
-import * as notify from './notify.js';
-import { handleAuthClick } from './firebaseConfig.js';
-import { loadTimerClientDropdown as loadClients, loadProjects, loadWorktypes } from './timerHelpers.js';
+import * as notify from '../core/notify.js';
+import { handleAuthClick } from '../core/firebaseConfig.js';
+import { loadTimerClientDropdown as loadClients, loadProjects, loadWorktypes } from '../timer/timerHelpers.js';
 
 // Re-export per backward compatibility con reportEvents.js
 export { loadClients, loadProjects, loadWorktypes };

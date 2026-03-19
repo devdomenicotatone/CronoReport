@@ -1,8 +1,8 @@
 // savedTimersEvents.js
-import { gapiInited, gisInited, handleAuthClick, maybeEnableButtons } from './firebaseConfig.js';
+import { gapiInited, gisInited, handleAuthClick, maybeEnableButtons } from '../core/firebaseConfig.js';
 import { loadSavedTimers, getCurrentFilters, loadAvailableYears, loadClientsForFilter, updateQuickFilterBar, activeQuickYear, activeQuickMonth, populateMonthChips, displayTimers, setActiveQuickYear, setActiveQuickMonth, displayUnreportedAmounts, displayedTimers, activeStatusFilter, activeWorktypeFilter, setActiveStatusFilter, setActiveWorktypeFilter, applyAdvancedFilters, exportTimersToCSV, exportTimersToPDF } from './savedTimersData.js';
 import { attachSavedTimersListeners, deleteTimerById, formatDuration, getMonthName, formatDateTime } from './savedTimersUI.js';
-import * as notify from './notify.js';
+import * as notify from '../core/notify.js';
 
 // Variabili globali
 let lastOperation = null;
