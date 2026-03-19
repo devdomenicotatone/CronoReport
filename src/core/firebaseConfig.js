@@ -60,19 +60,39 @@ export async function ensureGoogleAuth() {
 
     const currentToken = gapi.client.getToken();
     if (currentToken && currentToken.access_token) {
-        // Token già impostato — proviamo se è ancora valido
-        return;
+        // Verifica se il token è ancora valido con un test leggero
+        const isValid = await testTokenValidity(currentToken.access_token);
+        if (isValid) return;
+        // Token scaduto — rimuovi e rinnova
+        console.warn('Token Google scaduto, rinnovo in corso...');
+        gapi.client.setToken('');
+        localStorage.removeItem('googleAccessToken');
     }
 
     // Prova con il token salvato in localStorage
     const savedToken = localStorage.getItem('googleAccessToken');
     if (savedToken) {
-        gapi.client.setToken({ access_token: savedToken });
-        return;
+        const isValid = await testTokenValidity(savedToken);
+        if (isValid) {
+            gapi.client.setToken({ access_token: savedToken });
+            return;
+        }
+        // Token salvato scaduto
+        localStorage.removeItem('googleAccessToken');
     }
 
-    // Nessun token disponibile: riautentica via Firebase
+    // Nessun token valido: riautentica via Firebase
     await refreshGoogleToken();
+}
+
+// Test veloce della validità del token (evita 401 sulle chiamate API vere)
+async function testTokenValidity(token) {
+    try {
+        const res = await fetch(`https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=${token}`);
+        return res.ok;
+    } catch {
+        return false;
+    }
 }
 
 // ── Rinnova il token via Firebase Google Sign-In ──
