@@ -365,7 +365,7 @@ export function initializeReportHistoryEvents() {
                             <span class="text-sm font-semibold text-surface-600">${monthName}</span>
                             <span class="text-xs text-surface-400">${monthReports.length} report</span>
                             <span class="flex-1"></span>
-                            <span class="text-xs font-mono text-emerald-600 font-semibold">€ ${monthTotal.toFixed(2)}</span>
+                            <span class="text-xs font-mono text-surface-500 font-semibold">€ ${monthTotal.toFixed(2)}</span>
                         `;
 
                         // Month Body
@@ -414,7 +414,7 @@ export function initializeReportHistoryEvents() {
 
                         // Importo
                         const amountSpan = document.createElement('span');
-                        amountSpan.className = 'font-mono text-base font-bold text-emerald-600 flex-shrink-0';
+                        amountSpan.className = 'font-mono text-base font-bold text-indigo-600 flex-shrink-0';
                         amountSpan.textContent = `€ ${parseFloat(r.totalAmount || 0).toFixed(2)}`;
 
                         mainRow.appendChild(icon);
@@ -466,7 +466,7 @@ export function initializeReportHistoryEvents() {
 
                         // Scarica PDF button
                         const pdfBtn = document.createElement('button');
-                        pdfBtn.className = 'text-xs text-emerald-500 hover:text-emerald-700 transition-colors flex items-center gap-1';
+                        pdfBtn.className = 'text-xs text-indigo-400 hover:text-indigo-600 transition-colors flex items-center gap-1';
                         pdfBtn.innerHTML = '<i class="fas fa-file-pdf"></i> PDF';
                         pdfBtn.title = 'Scarica PDF';
                         pdfBtn.addEventListener('click', (e) => {
