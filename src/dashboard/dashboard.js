@@ -6,6 +6,8 @@
 // ═══════════════════════════════════════════════
 let dashActivePeriod = 'month'; // today | week | month | quarter | year | all
 let dashChartInstances = {};
+let dashHeatmapView = 'week'; // 'week' (7 celle) | 'month' (31 celle) — solo per periodi lunghi
+let lastHeatmapArgs = null; // {vm, start, end, period} per re-render dal toggle
 const DASH_CLIENT_COLORS = [
     { main: '#6366f1', light: 'rgba(99,102,241,0.18)' },   // indigo
     { main: '#10b981', light: 'rgba(16,185,129,0.18)' },   // emerald
@@ -136,6 +138,10 @@ export const dashboardTemplate = `
         <div class="dash-chart-card">
             <div class="dash-chart-header" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed);">
                 <span class="dash-chart-title"><i class="fas fa-fire"></i> Mappa Attività</span>
+                <div class="dash-hm-toggle" id="dash-hm-toggle" style="display:none;">
+                    <button class="dash-hm-toggle-btn dash-hm-toggle-active" data-view="week">Settimana</button>
+                    <button class="dash-hm-toggle-btn" data-view="month">Mese</button>
+                </div>
             </div>
             <div class="dash-chart-body" id="dash-heatmap-container">
                 <!-- Populated dynamically -->
@@ -174,6 +180,20 @@ export function initializeDashboardEvents() {
             chip.classList.add('dash-period-chip-active');
             dashActivePeriod = chip.dataset.period;
             loadDashboardData();
+        });
+
+        // Heatmap view toggle
+        const hmToggle = document.getElementById('dash-hm-toggle');
+        hmToggle.addEventListener('click', (e) => {
+            const btn = e.target.closest('.dash-hm-toggle-btn');
+            if (!btn) return;
+            hmToggle.querySelectorAll('.dash-hm-toggle-btn').forEach(b => b.classList.remove('dash-hm-toggle-active'));
+            btn.classList.add('dash-hm-toggle-active');
+            dashHeatmapView = btn.dataset.view;
+            // Re-render senza ricaricare dati
+            if (lastHeatmapArgs) {
+                renderHeatmap(lastHeatmapArgs.vm, lastHeatmapArgs.start, lastHeatmapArgs.end, lastHeatmapArgs.period);
+            }
         });
 
         // Initial load
@@ -257,6 +277,7 @@ function computeDashboardData(timeLogs) {
         const date = l.startTime.toDate();
         const isoDate = date.toISOString().split('T')[0];
         const dateLabel = date.toLocaleDateString('it-IT', { day: '2-digit', month: 'short' });
+        const dateLabelFull = date.toLocaleDateString('it-IT', { weekday: 'short', day: '2-digit', month: 'short' });
         const cn = l.clientName || 'Sconosciuto';
         const wt = l.worktypeName || 'Altro';
         const dow = date.getDay();
@@ -274,7 +295,7 @@ function computeDashboardData(timeLogs) {
         vm.clientMap[cn].earnings += earning;
 
         // Aggregati per data (per grafici bar/area e heatmap)
-        if (!vm.dateMap[isoDate]) vm.dateMap[isoDate] = { label: dateLabel, hours: 0, earnings: 0, clients: {} };
+        if (!vm.dateMap[isoDate]) vm.dateMap[isoDate] = { label: dateLabel, labelFull: dateLabelFull, hours: 0, earnings: 0, clients: {} };
         vm.dateMap[isoDate].hours += hours;
         vm.dateMap[isoDate].earnings += earning;
         vm.dateMap[isoDate].clients[cn] = (vm.dateMap[isoDate].clients[cn] || 0) + hours;
@@ -354,7 +375,7 @@ export async function loadDashboardData() {
         renderEarningsChart(vm);
         renderWorktypeChart(vm);
         renderClientRanking(vm);
-        renderHeatmap(vm, start, end);
+        renderHeatmap(vm, start, end, dashActivePeriod);
         renderInsights(vm, prevVm, dashActivePeriod);
 
     } catch (error) {
@@ -465,6 +486,12 @@ function renderWorkedTimeChart(vm) {
                 legend: { position: 'bottom', labels: { boxWidth: 14, padding: 16, font: { size: 12 } } },
                 tooltip: {
                     callbacks: {
+                        title: (items) => {
+                            if (!items.length) return '';
+                            const idx = items[0].dataIndex;
+                            const key = sortedDates[idx];
+                            return vm.dateMap[key]?.labelFull || items[0].label;
+                        },
                         label: (ctx) => ` ${ctx.dataset.label}: ${fmtHoursToHM(ctx.parsed.y)}`
                     }
                 }
@@ -539,6 +566,12 @@ function renderEarningsChart(vm) {
                 legend: { position: 'bottom', labels: { boxWidth: 14, padding: 16, font: { size: 12 } } },
                 tooltip: {
                     callbacks: {
+                        title: (items) => {
+                            if (!items.length) return '';
+                            const idx = items[0].dataIndex;
+                            const key = sortedKeys[idx];
+                            return vm.dateMap[key]?.labelFull || items[0].label;
+                        },
                         label: (ctx) => ` ${ctx.dataset.label}: €${ctx.parsed.y.toFixed(2)}`
                     }
                 }
@@ -697,23 +730,80 @@ function renderClientRanking(vm) {
 // ═══════════════════════════════════════════════
 //  HEATMAP
 // ═══════════════════════════════════════════════
-function renderHeatmap(vm, start, end) {
+function renderHeatmap(vm, start, end, period) {
     const container = document.getElementById('dash-heatmap-container');
     if (!container) return;
     container.innerHTML = '';
 
-    // Usa dateMap pre-computato per le ore giornaliere
-    const dayMap = {};
-    for (const [isoDate, d] of Object.entries(vm.dateMap)) {
-        dayMap[isoDate] = d.hours;
+    const now = new Date();
+    const isLongPeriod = period === 'quarter' || period === 'year' || period === 'all';
+
+    // Salva args per re-render dal toggle
+    lastHeatmapArgs = { vm, start, end, period };
+
+    // Mostra/nascondi toggle
+    const toggleEl = document.getElementById('dash-hm-toggle');
+    if (toggleEl) toggleEl.style.display = isLongPeriod ? 'flex' : 'none';
+
+    if (!isLongPeriod) {
+        // === PERIODI BREVI: CALENDARIO REALE ===
+        renderHeatmapCalendar(container, vm, start, end, period, now);
+    } else if (dashHeatmapView === 'week') {
+        // === 7 CELLE: MEDIA PER GIORNO DELLA SETTIMANA ===
+        renderHeatmapWeekView(container, vm, period);
+    } else {
+        // === 31 CELLE: MEDIA PER GIORNO DEL MESE ===
+        renderHeatmapMonthView(container, vm, start, end, period, now);
     }
 
-    const maxH = Math.max(...Object.values(dayMap), 1);
+    // Legenda
+    const legend = document.createElement('div');
+    legend.className = 'dash-hm-legend';
+    legend.innerHTML = `
+        <span class="text-xs text-surface-400">Meno</span>
+        <div class="dash-hm-cell dash-hm-cell-legend" style="background:#f1f5f9;"></div>
+        <div class="dash-hm-cell dash-hm-cell-legend" style="background:rgba(99,102,241,0.2);"></div>
+        <div class="dash-hm-cell dash-hm-cell-legend" style="background:rgba(99,102,241,0.45);"></div>
+        <div class="dash-hm-cell dash-hm-cell-legend" style="background:rgba(99,102,241,0.7);"></div>
+        <div class="dash-hm-cell dash-hm-cell-legend" style="background:rgba(99,102,241,1);"></div>
+        <span class="text-xs text-surface-400">Più</span>
+    `;
+    container.appendChild(legend);
+}
 
-    // Day labels
+/**
+ * Calendario reale: per periodi brevi (oggi/settimana/mese)
+ * Mostra le ore effettive per ogni giorno
+ */
+function renderHeatmapCalendar(container, vm, start, end, period, now) {
     const dayLabels = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
+    const hmEndDate = new Date(Math.min(end.getTime(), now.getTime()));
+    hmEndDate.setHours(23, 59, 59, 999);
 
-    // Create header
+    let hmStart, hmEnd;
+    if (period === 'today' || period === 'week') {
+        const dow = hmEndDate.getDay() || 7;
+        hmStart = new Date(hmEndDate);
+        hmStart.setDate(hmEndDate.getDate() - dow + 1);
+        hmStart.setHours(0, 0, 0, 0);
+        hmEnd = hmEndDate;
+    } else {
+        hmStart = new Date(hmEndDate.getFullYear(), hmEndDate.getMonth(), 1);
+        hmEnd = hmEndDate;
+    }
+
+    // Estrai ore reali nel range
+    const dayMap = {};
+    let maxH = 0.1;
+    for (const [isoDate, d] of Object.entries(vm.dateMap)) {
+        const date = new Date(isoDate + 'T12:00:00');
+        if (date >= hmStart && date <= hmEnd) {
+            dayMap[isoDate] = d.hours;
+            maxH = Math.max(maxH, d.hours);
+        }
+    }
+
+    // Header
     const headerRow = document.createElement('div');
     headerRow.className = 'dash-hm-header';
     dayLabels.forEach(d => {
@@ -723,20 +813,10 @@ function renderHeatmap(vm, start, end) {
     });
     container.appendChild(headerRow);
 
-    // Build weeks — compatto: max 5 settimane
+    // Grid
     const gridEl = document.createElement('div');
     gridEl.className = 'dash-hm-grid';
-    container.style.overflowX = '';
 
-    const MAX_WEEKS = 5;
-    const now = new Date();
-    let hmEnd = new Date(Math.min(end.getTime(), now.getTime()));
-    hmEnd.setHours(23, 59, 59, 999);
-    let hmStart = new Date(hmEnd);
-    hmStart.setDate(hmStart.getDate() - (MAX_WEEKS * 7) + 1);
-    if (hmStart < start) hmStart = new Date(start);
-
-    // Find first Monday on or before hmStart
     const cur = new Date(hmStart);
     const dow = cur.getDay() || 7;
     cur.setDate(cur.getDate() - dow + 1);
@@ -748,11 +828,12 @@ function renderHeatmap(vm, start, end) {
             const key = cellDate.toISOString().split('T')[0];
             const hours = dayMap[key] || 0;
             const intensity = hours > 0 ? Math.max(0.15, hours / maxH) : 0;
+            const inRange = cellDate >= hmStart && cellDate <= hmEnd;
 
             const cell = document.createElement('div');
             cell.className = 'dash-hm-cell';
 
-            if (cellDate < hmStart || cellDate > hmEnd) {
+            if (!inRange) {
                 cell.style.opacity = '0.15';
                 cell.style.background = '#f1f5f9';
             } else if (hours > 0) {
@@ -761,28 +842,164 @@ function renderHeatmap(vm, start, end) {
                 cell.style.background = '#f1f5f9';
             }
 
-            cell.title = `${cellDate.toLocaleDateString('it-IT')}: ${hours > 0 ? fmtHoursToHM(hours) : 'Nessuna attività'}`;
+            if (inRange) {
+                cell.classList.add('dash-hm-cell-numbered');
+                const dayNum = document.createElement('span');
+                dayNum.className = 'dash-hm-day-num';
+                dayNum.textContent = cellDate.getDate();
+                cell.appendChild(dayNum);
+            }
+
+            const dateLabel = cellDate.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' });
+            cell.title = inRange
+                ? `${dateLabel}: ${hours > 0 ? fmtHoursToHM(hours) : 'Nessuna attività'}`
+                : '';
 
             gridEl.appendChild(cell);
         }
         cur.setDate(cur.getDate() + 7);
     }
+    container.appendChild(gridEl);
+}
+
+/**
+ * Vista Settimana: 7 celle grandi con media per giorno della settimana
+ */
+function renderHeatmapWeekView(container, vm, period) {
+    const dayNames = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
+    const periodLabels = { quarter: 'nel trimestre', year: "nell'anno", all: 'nello storico' };
+
+    // Sottotitolo
+    const subtitle = document.createElement('div');
+    subtitle.className = 'dash-hm-subtitle';
+    subtitle.textContent = `Media ore per giorno della settimana ${periodLabels[period] || ''}`;
+    container.appendChild(subtitle);
+
+    // Calcola medie per DOW
+    const dayAvgs = vm.dayOfWeekMap.map(d => d.days.size > 0 ? d.sec / d.days.size : 0);
+    const maxAvg = Math.max(...dayAvgs, 1);
+
+    // Grid 7 celle grandi
+    const gridEl = document.createElement('div');
+    gridEl.className = 'dash-hm-week-grid';
+
+    dayNames.forEach((name, i) => {
+        const avgSec = dayAvgs[i];
+        const avgHours = avgSec / 3600;
+        const intensity = avgSec > 0 ? Math.max(0.15, avgSec / maxAvg) : 0;
+        const daysCount = vm.dayOfWeekMap[i].days.size;
+
+        const cell = document.createElement('div');
+        cell.className = 'dash-hm-week-cell';
+
+        if (avgSec > 0) {
+            cell.style.background = `rgba(99,102,241,${intensity})`;
+        } else {
+            cell.style.background = '#f1f5f9';
+        }
+
+        const labelEl = document.createElement('span');
+        labelEl.className = 'dash-hm-week-label';
+        labelEl.textContent = name;
+
+        const valueEl = document.createElement('span');
+        valueEl.className = 'dash-hm-week-value';
+        valueEl.textContent = avgSec > 0 ? fmtHM(avgSec) : '—';
+
+        // Contrasto testo
+        if (intensity > 0.55) {
+            labelEl.style.color = 'rgba(255,255,255,0.7)';
+            valueEl.style.color = 'white';
+        }
+
+        cell.appendChild(labelEl);
+        cell.appendChild(valueEl);
+        cell.title = daysCount > 0
+            ? `${name}: media ${fmtHM(avgSec)} su ${daysCount} giorni`
+            : `${name}: Nessuna attività`;
+
+        gridEl.appendChild(cell);
+    });
 
     container.appendChild(gridEl);
+}
 
-    // Legend
-    const legend = document.createElement('div');
-    legend.className = 'dash-hm-legend';
-    legend.innerHTML = `
-        <span class="text-xs text-surface-400">Meno</span>
-        <div class="dash-hm-cell" style="background:#f1f5f9;width:14px;height:14px;"></div>
-        <div class="dash-hm-cell" style="background:rgba(99,102,241,0.2);width:14px;height:14px;"></div>
-        <div class="dash-hm-cell" style="background:rgba(99,102,241,0.45);width:14px;height:14px;"></div>
-        <div class="dash-hm-cell" style="background:rgba(99,102,241,0.7);width:14px;height:14px;"></div>
-        <div class="dash-hm-cell" style="background:rgba(99,102,241,1);width:14px;height:14px;"></div>
-        <span class="text-xs text-surface-400">Più</span>
-    `;
-    container.appendChild(legend);
+/**
+ * Vista Mese: 31 celle sequenziali, media per giorno del mese
+ * Flusso 1→31 senza header Lun-Dom
+ */
+function renderHeatmapMonthView(container, vm, start, end, period, now) {
+    const periodLabels = { quarter: 'nel trimestre', year: "nell'anno", all: 'nello storico' };
+
+    // Sottotitolo
+    const subtitle = document.createElement('div');
+    subtitle.className = 'dash-hm-subtitle';
+    subtitle.textContent = `Media ore per giorno del mese ${periodLabels[period] || ''}`;
+    container.appendChild(subtitle);
+
+    // Calcola media per giorno del mese (1-31)
+    const dayOfMonthStats = {};
+    for (const [isoDate, d] of Object.entries(vm.dateMap)) {
+        const date = new Date(isoDate + 'T12:00:00');
+        const dom = date.getDate();
+        if (!dayOfMonthStats[dom]) dayOfMonthStats[dom] = { totalHours: 0, count: 0 };
+        dayOfMonthStats[dom].totalHours += d.hours;
+        dayOfMonthStats[dom].count++;
+    }
+
+    // Conta mesi nel periodo
+    const periodStart = new Date(Math.max(start.getTime(), new Date(2020, 0, 1).getTime()));
+    const periodEnd = new Date(Math.min(end.getTime(), now.getTime()));
+    let totalMonths = 0;
+    const ms = new Date(periodStart.getFullYear(), periodStart.getMonth(), 1);
+    while (ms <= periodEnd) { totalMonths++; ms.setMonth(ms.getMonth() + 1); }
+    totalMonths = Math.max(totalMonths, 1);
+
+    // Calcola le medie
+    let maxAvg = 0.1;
+    const avgByDay = {};
+    for (let day = 1; day <= 31; day++) {
+        const stats = dayOfMonthStats[day];
+        const avg = stats ? stats.totalHours / totalMonths : 0;
+        avgByDay[day] = { avg, count: stats?.count || 0 };
+        maxAvg = Math.max(maxAvg, avg);
+    }
+
+    // Grid sequenziale 7 colonne
+    const gridEl = document.createElement('div');
+    gridEl.className = 'dash-hm-grid';
+
+    for (let day = 1; day <= 31; day++) {
+        const { avg, count } = avgByDay[day];
+        const intensity = avg > 0 ? Math.max(0.15, avg / maxAvg) : 0;
+
+        const cell = document.createElement('div');
+        cell.className = 'dash-hm-cell dash-hm-cell-numbered';
+
+        if (avg > 0) {
+            cell.style.background = `rgba(99,102,241,${intensity})`;
+        } else {
+            cell.style.background = '#f1f5f9';
+        }
+
+        const dayNum = document.createElement('span');
+        dayNum.className = 'dash-hm-day-num';
+        dayNum.textContent = day;
+
+        // Contrasto
+        if (intensity > 0.55) {
+            dayNum.style.color = 'rgba(255,255,255,0.8)';
+        }
+
+        cell.appendChild(dayNum);
+        cell.title = count > 0
+            ? `Giorno ${day}: media ${fmtHoursToHM(avg)}/mese (${count} volte)`
+            : `Giorno ${day}: Nessuna attività`;
+
+        gridEl.appendChild(cell);
+    }
+
+    container.appendChild(gridEl);
 }
 
 // ═══════════════════════════════════════════════
@@ -800,7 +1017,22 @@ function renderInsights(vm, prevVm, period) {
         return;
     }
 
-    // 1. Giorno più produttivo — FIX BUG-4: usa giorni unici, non conteggio log
+    // 1. 🏆 GIORNO RECORD — il singolo giorno con più ore lavorate
+    const dateEntries = Object.entries(vm.dateMap);
+    if (dateEntries.length > 0) {
+        const [recordDate, recordData] = dateEntries.reduce((best, curr) =>
+            curr[1].hours > best[1].hours ? curr : best
+        );
+        const recordDateObj = new Date(recordDate + 'T12:00:00');
+        const recordLabel = recordDateObj.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
+        insights.push({
+            icon: 'fa-trophy',
+            color: '#f59e0b',
+            text: `Il tuo giorno record è <strong>${recordLabel}</strong> con <strong>${fmtHoursToHM(recordData.hours)}</strong> lavorate`
+        });
+    }
+
+    // 2. 📅 PATTERN SETTIMANALE — in media, quale giorno della settimana è il più attivo
     const dayNames = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'];
     const dayAvgs = vm.dayOfWeekMap.map(d => d.days.size > 0 ? d.sec / d.days.size : 0);
     const bestDayIdx = dayAvgs.indexOf(Math.max(...dayAvgs));
@@ -808,21 +1040,22 @@ function renderInsights(vm, prevVm, period) {
         insights.push({
             icon: 'fa-calendar-check',
             color: '#10b981',
-            text: `Il tuo giorno più produttivo è il <strong>${dayNames[bestDayIdx]}</strong> (media ${fmtHM(dayAvgs[bestDayIdx])})`
+            text: `In media, lavori di più il <strong>${dayNames[bestDayIdx]}</strong> (${fmtHM(dayAvgs[bestDayIdx])}/giorno su ${vm.dayOfWeekMap[bestDayIdx].days.size} ${dayNames[bestDayIdx].toLowerCase().slice(0, -1)}ì)`
         });
     }
 
-    // 2. Tipo di lavoro più redditizio — FIX BUG-5: usa guadagno totale, non rate massimo
+    // 3. 💎 TIPO DI LAVORO PIÙ REDDITIZIO
     const bestWt = Object.entries(vm.worktypeMap).sort((a, b) => b[1].earnings - a[1].earnings)[0];
     if (bestWt && bestWt[1].earnings > 0) {
+        const wtPct = vm.totalEarnings > 0 ? ((bestWt[1].earnings / vm.totalEarnings) * 100).toFixed(0) : 0;
         insights.push({
             icon: 'fa-gem',
             color: '#8b5cf6',
-            text: `Il tipo di lavoro più redditizio è <strong>${bestWt[0]}</strong> (${fmtEuro(bestWt[1].earnings)} totali)`
+            text: `Il tipo di lavoro più redditizio è <strong>${bestWt[0]}</strong> (${fmtEuro(bestWt[1].earnings)} — ${wtPct}% del totale)`
         });
     }
 
-    // 3. Trend vs periodo precedente
+    // 4. 📈 TREND VS PERIODO PRECEDENTE
     if (prevVm.totalSec > 0) {
         const pctChange = ((vm.totalSec - prevVm.totalSec) / prevVm.totalSec * 100).toFixed(0);
         const isUp = vm.totalSec >= prevVm.totalSec;
@@ -834,7 +1067,47 @@ function renderInsights(vm, prevVm, period) {
         });
     }
 
-    // 4. Timer non reportati
+    // 5. 🔥 STREAK — giorni lavorativi consecutivi più lunghi
+    if (dateEntries.length > 1) {
+        const sortedDates = Object.keys(vm.dateMap).sort();
+        let maxStreak = 1, currentStreak = 1;
+        let streakEnd = sortedDates[0];
+        let bestStreakEnd = sortedDates[0];
+
+        for (let i = 1; i < sortedDates.length; i++) {
+            const prev = new Date(sortedDates[i - 1] + 'T12:00:00');
+            const curr = new Date(sortedDates[i] + 'T12:00:00');
+            const diffDays = Math.round((curr - prev) / 86400000);
+
+            if (diffDays === 1) {
+                currentStreak++;
+                streakEnd = sortedDates[i];
+            } else {
+                currentStreak = 1;
+                streakEnd = sortedDates[i];
+            }
+
+            if (currentStreak > maxStreak) {
+                maxStreak = currentStreak;
+                bestStreakEnd = streakEnd;
+            }
+        }
+
+        if (maxStreak >= 3) {
+            const endDate = new Date(bestStreakEnd + 'T12:00:00');
+            const startDate = new Date(endDate);
+            startDate.setDate(startDate.getDate() - maxStreak + 1);
+            const startLabel = startDate.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
+            const endLabel = endDate.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
+            insights.push({
+                icon: 'fa-fire',
+                color: '#ef4444',
+                text: `Streak record: <strong>${maxStreak} giorni consecutivi</strong> (${startLabel} → ${endLabel})`
+            });
+        }
+    }
+
+    // 6. ⚠️ TIMER NON REPORTATI
     if (vm.unreportedCount > 0) {
         insights.push({
             icon: 'fa-exclamation-circle',
@@ -843,11 +1116,13 @@ function renderInsights(vm, prevVm, period) {
         });
     }
 
-    // 5. Clienti nel periodo
+    // 7. 👥 CLIENTI + MEDIA GIORNALIERA
+    const workedDaysCount = vm.workedDays.size;
+    const avgHoursPerDay = workedDaysCount > 0 ? (vm.totalSec / 3600) / workedDaysCount : 0;
     insights.push({
         icon: 'fa-users',
         color: '#6366f1',
-        text: `Hai lavorato con <strong>${vm.clientCount} client${vm.clientCount !== 1 ? 'i' : 'e'}</strong> in questo periodo`
+        text: `<strong>${vm.clientCount} client${vm.clientCount !== 1 ? 'i' : 'e'}</strong> nel periodo · media <strong>${fmtHoursToHM(avgHoursPerDay)}/giorno</strong> su ${workedDaysCount} giorni lavorati`
     });
 
     // Render

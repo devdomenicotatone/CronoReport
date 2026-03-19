@@ -339,6 +339,40 @@
         border-radius: 3px;
         transition: all 0.15s ease;
         cursor: default;
+        position: relative;
+    }
+
+    .dash-hm-cell-numbered {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .dash-hm-day-num {
+        font-size: 0.5rem;
+        font-weight: 700;
+        color: rgba(30, 41, 59, 0.45);
+        line-height: 1;
+        pointer-events: none;
+    }
+
+    /* Contrasto testo su sfondo scuro */
+    .dash-hm-cell[style*="rgba(99,102,241,0.7)"] .dash-hm-day-num,
+    .dash-hm-cell[style*="rgba(99,102,241,0.8)"] .dash-hm-day-num,
+    .dash-hm-cell[style*="rgba(99,102,241,0.9)"] .dash-hm-day-num,
+    .dash-hm-cell[style*="rgba(99,102,241,1)"] .dash-hm-day-num {
+        color: rgba(255, 255, 255, 0.7);
+    }
+
+    .dash-hm-cell-sm {
+        width: 12px;
+        height: 12px;
+        border-radius: 2px;
+    }
+
+    .dash-hm-cell-legend {
+        width: 14px !important;
+        height: 14px !important;
     }
 
     .dash-hm-cell:hover {
@@ -354,6 +388,86 @@
         justify-content: center;
         gap: 0.25rem;
         margin-top: 0.75rem;
+    }
+
+    .dash-hm-subtitle {
+        font-size: 0.65rem;
+        font-weight: 600;
+        color: #94a3b8;
+        text-align: center;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 0.5rem;
+    }
+
+    /* --- Heatmap Toggle --- */
+    .dash-hm-toggle {
+        display: flex;
+        gap: 2px;
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 6px;
+        padding: 2px;
+    }
+
+    .dash-hm-toggle-btn {
+        padding: 0.2rem 0.6rem;
+        border: none;
+        border-radius: 4px;
+        font-size: 0.65rem;
+        font-weight: 700;
+        color: rgba(255, 255, 255, 0.6);
+        background: transparent;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .dash-hm-toggle-btn:hover {
+        color: rgba(255, 255, 255, 0.9);
+    }
+
+    .dash-hm-toggle-active {
+        background: rgba(255, 255, 255, 0.25);
+        color: white;
+    }
+
+    /* --- Heatmap Week View (7 celle grandi) --- */
+    .dash-hm-week-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 4px;
+        padding: 0 4px;
+    }
+
+    .dash-hm-week-cell {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+        transition: all 0.2s ease;
+        cursor: default;
+        padding: 8px 4px;
+        gap: 1px;
+    }
+
+    .dash-hm-week-cell:hover {
+        transform: scale(1.05);
+        box-shadow: 0 3px 10px rgba(99, 102, 241, 0.2);
+    }
+
+    .dash-hm-week-label {
+        font-size: 0.55rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        color: rgba(30, 41, 59, 0.5);
+    }
+
+    .dash-hm-week-value {
+        font-size: 0.65rem;
+        font-weight: 800;
+        color: #1e293b;
+        font-variant-numeric: tabular-nums;
     }
 
     /* --- Insights Card --- */
