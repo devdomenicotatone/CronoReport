@@ -4,10 +4,14 @@
 // ═══════════════════════════════════════════════
 //  STATE
 // ═══════════════════════════════════════════════
-let dashActivePeriod = 'month'; // today | week | month | quarter | year | all
+let dashActivePeriod = 'month'; // today | week | month | quarter | year | all | custom
 let dashChartInstances = {};
 let dashHeatmapView = 'week'; // 'week' (7 celle) | 'month' (31 celle) — solo per periodi lunghi
 let lastHeatmapArgs = null; // {vm, start, end, period} per re-render dal toggle
+let dashCustomStart = null; // Date — inizio range personalizzato
+let dashCustomEnd = null;   // Date — fine range personalizzato
+let dashFpStart = null;     // Flatpickr instance — picker "Da"
+let dashFpEnd = null;       // Flatpickr instance — picker "A"
 const DASH_CLIENT_COLORS = [
     { main: '#6366f1', light: 'rgba(99,102,241,0.18)' },   // indigo
     { main: '#10b981', light: 'rgba(16,185,129,0.18)' },   // emerald
@@ -60,6 +64,48 @@ export const dashboardTemplate = `
         <button class="dash-period-chip" data-period="quarter">Trimestre</button>
         <button class="dash-period-chip" data-period="year">Anno</button>
         <button class="dash-period-chip" data-period="all">Tutto</button>
+        <button class="dash-period-chip dash-period-chip-custom" data-period="custom">
+            <i class="fas fa-calendar-range"></i> Personalizzato
+        </button>
+    </div>
+
+    <!-- ═══ CUSTOM DATE RANGE PANEL ═══ -->
+    <div class="dash-custom-range" id="dash-custom-range">
+        <div class="dash-custom-range-inner">
+            <!-- Shortcut Pills -->
+            <div class="dash-custom-shortcuts" id="dash-custom-shortcuts">
+                <button class="dash-shortcut-pill" data-shortcut="last3m"><i class="fas fa-bolt"></i> Ultimi 3 mesi</button>
+                <button class="dash-shortcut-pill" data-shortcut="last6m"><i class="fas fa-bolt"></i> Ultimi 6 mesi</button>
+                <button class="dash-shortcut-pill" data-shortcut="lastyear"><i class="fas fa-calendar-check"></i> Anno scorso</button>
+                <button class="dash-shortcut-pill" data-shortcut="ytd"><i class="fas fa-arrow-trend-up"></i> Da inizio anno</button>
+            </div>
+
+            <!-- Date Pickers -->
+            <div class="dash-custom-pickers">
+                <div class="dash-custom-picker-group">
+                    <label class="dash-custom-label"><i class="fas fa-calendar-day"></i> Da</label>
+                    <input type="text" id="dash-fp-start" class="dash-custom-input" placeholder="Seleziona data..." readonly>
+                </div>
+                <div class="dash-custom-picker-sep">
+                    <i class="fas fa-arrow-right"></i>
+                </div>
+                <div class="dash-custom-picker-group">
+                    <label class="dash-custom-label"><i class="fas fa-calendar-day"></i> A</label>
+                    <input type="text" id="dash-fp-end" class="dash-custom-input" placeholder="Seleziona data..." readonly>
+                </div>
+            </div>
+
+            <!-- Range Summary + Apply -->
+            <div class="dash-custom-footer">
+                <div class="dash-custom-summary" id="dash-custom-summary">
+                    <i class="fas fa-info-circle"></i>
+                    <span>Seleziona un intervallo di date</span>
+                </div>
+                <button class="dash-custom-apply" id="dash-custom-apply" disabled>
+                    <i class="fas fa-check"></i> Applica
+                </button>
+            </div>
+        </div>
     </div>
 
     <!-- ═══ KPI STRIP ═══ -->
@@ -173,13 +219,80 @@ export function initializeDashboardEvents() {
     requestAnimationFrame(() => {
         // Period selector
         const periodBar = document.getElementById('dash-period-bar');
+        const customPanel = document.getElementById('dash-custom-range');
+
         periodBar.addEventListener('click', (e) => {
             const chip = e.target.closest('.dash-period-chip');
             if (!chip) return;
             periodBar.querySelectorAll('.dash-period-chip').forEach(c => c.classList.remove('dash-period-chip-active'));
             chip.classList.add('dash-period-chip-active');
             dashActivePeriod = chip.dataset.period;
+
+            if (dashActivePeriod === 'custom') {
+                // Apri pannello custom
+                customPanel.classList.add('dash-custom-range-open');
+                // Non caricare subito — aspetta che l'utente selezioni le date
+                if (dashCustomStart && dashCustomEnd) {
+                    loadDashboardData();
+                }
+            } else {
+                // Chiudi pannello custom + carica dati
+                customPanel.classList.remove('dash-custom-range-open');
+                loadDashboardData();
+            }
+        });
+
+        // ═══ CUSTOM RANGE: Flatpickr Init ═══
+        initCustomRangePickers();
+
+        // ═══ CUSTOM RANGE: Shortcuts ═══
+        const shortcutsBar = document.getElementById('dash-custom-shortcuts');
+        shortcutsBar.addEventListener('click', (e) => {
+            const pill = e.target.closest('.dash-shortcut-pill');
+            if (!pill) return;
+            const shortcut = pill.dataset.shortcut;
+            const now = new Date();
+            let s, en;
+
+            switch (shortcut) {
+                case 'last3m':
+                    s = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+                    en = new Date(now.getFullYear(), now.getMonth(), 0); // ultimo giorno mese precedente
+                    break;
+                case 'last6m':
+                    s = new Date(now.getFullYear(), now.getMonth() - 6, 1);
+                    en = new Date(now.getFullYear(), now.getMonth(), 0);
+                    break;
+                case 'lastyear':
+                    s = new Date(now.getFullYear() - 1, 0, 1);
+                    en = new Date(now.getFullYear() - 1, 11, 31);
+                    break;
+                case 'ytd':
+                    s = new Date(now.getFullYear(), 0, 1);
+                    en = now;
+                    break;
+                default: return;
+            }
+
+            // Aggiorna Flatpickr + state
+            dashCustomStart = s;
+            dashCustomEnd = en;
+            if (dashFpStart) dashFpStart.setDate(s, false);
+            if (dashFpEnd) dashFpEnd.setDate(en, false);
+
+            // Highlight shortcut attivo
+            shortcutsBar.querySelectorAll('.dash-shortcut-pill').forEach(p => p.classList.remove('dash-shortcut-active'));
+            pill.classList.add('dash-shortcut-active');
+
+            updateCustomRangeSummary();
             loadDashboardData();
+        });
+
+        // ═══ CUSTOM RANGE: Apply Button ═══
+        document.getElementById('dash-custom-apply').addEventListener('click', () => {
+            if (dashCustomStart && dashCustomEnd) {
+                loadDashboardData();
+            }
         });
 
         // Heatmap view toggle
@@ -199,6 +312,81 @@ export function initializeDashboardEvents() {
         // Initial load
         loadDashboardData();
     });
+}
+
+// ═══════════════════════════════════════════════
+//  CUSTOM RANGE PICKER SETUP
+// ═══════════════════════════════════════════════
+function initCustomRangePickers() {
+    const fpConfig = {
+        locale: flatpickr.l10ns.it || 'it',
+        dateFormat: 'd M Y',
+        altInput: true,
+        altFormat: 'd M Y',
+        disableMobile: true,
+        monthSelectorType: 'dropdown',
+        animate: true,
+        position: 'below',
+    };
+
+    dashFpStart = flatpickr('#dash-fp-start', {
+        ...fpConfig,
+        defaultDate: dashCustomStart,
+        onChange: ([date]) => {
+            dashCustomStart = date || null;
+            // Imposta minDate sul picker fine
+            if (dashFpEnd && date) {
+                dashFpEnd.set('minDate', date);
+            }
+            clearShortcutHighlight();
+            updateCustomRangeSummary();
+        }
+    });
+
+    dashFpEnd = flatpickr('#dash-fp-end', {
+        ...fpConfig,
+        defaultDate: dashCustomEnd,
+        onChange: ([date]) => {
+            dashCustomEnd = date || null;
+            // Imposta maxDate sul picker inizio
+            if (dashFpStart && date) {
+                dashFpStart.set('maxDate', date);
+            }
+            clearShortcutHighlight();
+            updateCustomRangeSummary();
+        }
+    });
+}
+
+function updateCustomRangeSummary() {
+    const summary = document.getElementById('dash-custom-summary');
+    const applyBtn = document.getElementById('dash-custom-apply');
+    if (!summary || !applyBtn) return;
+
+    if (dashCustomStart && dashCustomEnd) {
+        const fmtOpts = { day: '2-digit', month: 'short', year: 'numeric' };
+        const startLabel = dashCustomStart.toLocaleDateString('it-IT', fmtOpts);
+        const endLabel = dashCustomEnd.toLocaleDateString('it-IT', fmtOpts);
+
+        // Calcola durata in giorni
+        const diffDays = Math.round((dashCustomEnd - dashCustomStart) / 86400000) + 1;
+
+        summary.innerHTML = `
+            <i class="fas fa-calendar-check"></i>
+            <span><strong>${startLabel}</strong> → <strong>${endLabel}</strong> <span class="dash-custom-days">(${diffDays} giorni)</span></span>
+        `;
+        summary.classList.add('dash-custom-summary-active');
+        applyBtn.disabled = false;
+    } else {
+        summary.innerHTML = '<i class="fas fa-info-circle"></i><span>Seleziona un intervallo di date</span>';
+        summary.classList.remove('dash-custom-summary-active');
+        applyBtn.disabled = true;
+    }
+}
+
+function clearShortcutHighlight() {
+    const bar = document.getElementById('dash-custom-shortcuts');
+    if (bar) bar.querySelectorAll('.dash-shortcut-pill').forEach(p => p.classList.remove('dash-shortcut-active'));
 }
 
 // ═══════════════════════════════════════════════
@@ -240,6 +428,10 @@ function getDashDateRange(period) {
         case 'all':
             start = new Date(2020, 0, 1);
             end = new Date(now.getFullYear() + 1, 0, 1);
+            break;
+        case 'custom':
+            start = dashCustomStart ? new Date(dashCustomStart.getFullYear(), dashCustomStart.getMonth(), dashCustomStart.getDate()) : new Date(2020, 0, 1);
+            end = dashCustomEnd ? new Date(dashCustomEnd.getFullYear(), dashCustomEnd.getMonth(), dashCustomEnd.getDate(), 23, 59, 59, 999) : now;
             break;
         default:
             start = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -348,6 +540,19 @@ export async function loadDashboardData() {
                 const y = l.startTime.toDate().getFullYear();
                 return y === thisYear - 1;
             });
+        } else if (dashActivePeriod === 'custom') {
+            // Per custom: confronto con intervallo identico immediatamente precedente
+            const periodMs = end.getTime() - start.getTime();
+            const prevStart = new Date(start.getTime() - periodMs);
+            const prevEnd = new Date(start.getTime() - 1);
+            const prevQuery = db.collection('timeLogs')
+                .where('uid', '==', currentUser.uid)
+                .where('isDeleted', '==', false)
+                .where('startTime', '>=', firebase.firestore.Timestamp.fromDate(prevStart))
+                .where('startTime', '<=', firebase.firestore.Timestamp.fromDate(prevEnd))
+                .orderBy('startTime', 'desc');
+            const prevSnapshot = await prevQuery.get();
+            prevTimeLogs = prevSnapshot.docs.map(d => d.data());
         } else {
             const periodMs = end.getTime() - start.getTime();
             const prevStart = new Date(start.getTime() - periodMs);
