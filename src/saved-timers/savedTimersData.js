@@ -421,6 +421,7 @@ export async function saveReminderSettings(clientName, reminderAmount, reminderD
                 await db.collection('reminders').doc(docId).update({
                     reminderAmount: reminderAmount,
                     reminderDate: reminderDate,
+                    dismissed: false,
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
                 CrModal.hide('setReminderModal');
@@ -439,6 +440,7 @@ export async function saveReminderSettings(clientName, reminderAmount, reminderD
                     clientName: clientName,
                     reminderAmount: reminderAmount,
                     reminderDate: reminderDate,
+                    dismissed: false,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
                 CrModal.hide('setReminderModal');
@@ -515,8 +517,37 @@ export function checkReminder(clientName, currentAmount, reminderData) {
             console.error('Impossibile trovare il parentElement di reminderCell.');
         }
 
-        // Mostra una notifica all'utente
-        notify.info('Promemoria', `Il cliente "${clientName}" ha raggiunto le condizioni del promemoria.`);
+        // Se l'utente ha già silenziato questo promemoria, non mostrare il dialog
+        if (reminderData.dismissed) return;
+
+        // Mostra una notifica all'utente con opzione per silenziare
+        Swal.fire({
+            icon: 'info',
+            title: 'Promemoria',
+            text: `Il cliente "${clientName}" ha raggiunto le condizioni del promemoria.`,
+            confirmButtonText: 'OK',
+            showDenyButton: true,
+            denyButtonText: 'Non mostrare più',
+            confirmButtonColor: '#6366f1',
+            denyButtonColor: '#64748b',
+        }).then(async (result) => {
+            if (result.isDenied) {
+                try {
+                    const snapshot = await db.collection('reminders')
+                        .where('uid', '==', currentUser.uid)
+                        .where('clientName', '==', clientName)
+                        .get();
+                    if (!snapshot.empty) {
+                        await db.collection('reminders').doc(snapshot.docs[0].id).update({
+                            dismissed: true
+                        });
+                        notify.toast('Promemoria silenziato');
+                    }
+                } catch (err) {
+                    console.error('Errore nel silenziare il promemoria:', err);
+                }
+            }
+        });
     }
 }
 
